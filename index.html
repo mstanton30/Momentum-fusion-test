@@ -1245,5 +1245,40 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Offline support unavailable:', err)));
 }
 </script>
+
+<script>
+/* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
+(function(){
+ const VERSION='9.2.0';
+ const build=document.createElement('div');
+ build.id='momentum-update-control';
+ build.style.cssText='position:fixed;bottom:12px;right:12px;z-index:9999;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 24px);font:12px system-ui,sans-serif';
+ build.innerHTML='<button id="momentum-check-update" type="button" style="border:1px solid #777;border-radius:12px;padding:8px 11px;background:#20262b;color:white">Check for updates · v'+VERSION+'</button><span id="momentum-update-status" role="status" style="display:none;background:#20262b;color:white;border-radius:10px;padding:8px"></span>';
+ document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(build));
+ let pending=false;
+ async function checkUpdate(showResult){
+  const status=document.getElementById('momentum-update-status');
+  try{
+   const r=await fetch('./version.json?check='+Date.now(),{cache:'no-store'});
+   if(!r.ok)throw Error('Version check unavailable');
+   const remote=await r.json();
+   if(remote.version && remote.version!==VERSION){
+    pending=true;
+    const button=document.getElementById('momentum-check-update');
+    button.textContent='Update to Momentum v'+remote.version;
+    button.onclick=()=>location.reload();
+    if(status){status.style.display='inline';status.textContent='New version ready';}
+   }else if(showResult&&status){status.style.display='inline';status.textContent='You have the latest version';setTimeout(()=>{if(!pending)status.style.display='none'},3500);}
+  }catch(e){if(showResult&&status){status.style.display='inline';status.textContent='Could not check. Try again.';}}
+ }
+ document.addEventListener('click',e=>{if(e.target?.id==='momentum-check-update'&&!pending)checkUpdate(true)});
+ window.addEventListener('pageshow',()=>checkUpdate(false));
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate(false)});
+ if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(pending)location.reload()});
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(console.warn));
+ }
+})();
+</script>
 </body>
 </html>

@@ -628,31 +628,27 @@ function perkCard(k,title,pts,mins,blurb,links){ const n=S[k].filter(x=>weekKeys
   ${recent.length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent.map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}</div>` }
 
 
-/* Supabase authenticated screenshot recognition (test environment only). */
+/* Temporary access-code authorization for AI screenshot processing. */
 const HEALTH_SUPABASE_URL='https://naomdmnfqudszqmcirrh.supabase.co';
-const HEALTH_PUBLIC_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hb21kbW5mcXVkc3pxbWNpcnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTIxMTksImV4cCI6MjEwODE2ODExOX0.Zwl-sUNfan_zKQy87f8KxqzPxreoitXScz60LZrrjjE'; // public client key, not a secret
-let healthAuthClient=null;
-function getHealthClient(){
- if(healthAuthClient)return healthAuthClient;
- if(!window.supabase?.createClient)throw Error('Authentication library could not load. Check your connection.');
- healthAuthClient=window.supabase.createClient(HEALTH_SUPABASE_URL,HEALTH_PUBLIC_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
- return healthAuthClient;
-}
+const HEALTH_TOKEN_KEY='momentumfusion.health.access.v1';
+function healthToken(){try{const v=JSON.parse(localStorage.getItem(HEALTH_TOKEN_KEY)||'null');return v&&v.expires>Date.now()?v.token:null}catch{return null}}
 async function healthSendLogin(){
- const email=document.getElementById('healthEmail')?.value?.trim();
- if(!email||!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}
- try{const {error}=await getHealthClient().auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname+'#import'}});if(error)throw error;toast('Check your email for the sign-in link');}catch(e){toast('Sign-in failed: '+e.message)}
+ const el=document.getElementById('healthAccessCode');const code=el?.value?.trim();
+ if(!code){toast('Enter your access code');return}
+ const status=document.getElementById('healthAuthStatus');if(status)status.textContent='Checking code…';
+ try{const res=await fetch(HEALTH_SUPABASE_URL+'/functions/v1/momentum-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const data=await res.json();if(!res.ok)throw Error(data.error||'Authorization failed');localStorage.setItem(HEALTH_TOKEN_KEY,JSON.stringify({token:data.token,expires:Date.now()+7*86400000}));if(el)el.value='';if(status)status.textContent='Authorized for screenshot imports';toast('Access enabled')}
+ catch(e){if(status)status.textContent=e.message||'Access failed'}
 }
-async function healthSignOut(){try{await getHealthClient().auth.signOut();toast('Signed out');render()}catch(e){toast(e.message)}}
+function healthSignOut(){localStorage.removeItem(HEALTH_TOKEN_KEY);render();toast('Access cleared')}
 /* AI screenshot import: calls a separately deployed secure serverless endpoint. */
 let healthExtracted=null;
 const HEALTH_API_KEY='momentumfusion.health.api.v1';
 function vHealthImport(){
- queueMicrotask(async()=>{try{const {data:{session}}=await getHealthClient().auth.getSession();const el=document.getElementById('healthAuthStatus');if(el)el.textContent=session?.user?.email?'Signed in: '+session.user.email:'Not signed in';}catch{const el=document.getElementById('healthAuthStatus');if(el)el.textContent='Authentication unavailable';}});
+ queueMicrotask(()=>{const el=document.getElementById('healthAuthStatus');if(el)el.textContent=healthToken()?'Authorized for screenshot imports':'Enter your access code once to enable AI imports';});
  const recent=[...F.healthImports].reverse().slice(0,8);
  return header('Import Health Data','AI screenshot recognition')+`
  <div class="card"><h3>Import from screenshot</h3><p class="muted sm">Choose a screenshot from Apple Fitness, WHOOP or RENPHO. The secure image service reads visible measurements automatically. The screenshot is sent to the configured service for analysis and is not stored in this app.</p>
- <div class="card" style="margin:8px 0"><h3>Secure sign-in</h3><p class="muted xs">Sign in with your email to authorize AI image analysis. No OpenAI API key is needed on this page.</p><div class="row" style="gap:6px;flex-wrap:wrap"><input id="healthEmail" type="email" placeholder="Your email address" style="flex:1;min-width:150px"><button class="btn small" type="button" data-health-login>Email sign-in link</button><button class="btn small ghost" type="button" data-health-logout>Sign out</button></div><p id="healthAuthStatus" class="muted xs">Checking sign-in…</p></div>
+ <div class="card" style="margin:8px 0"><h3>AI import access</h3><p class="muted xs">Enter your private access code once. Your code is verified on the server and is not stored in the browser.</p><div class="row" style="gap:6px;flex-wrap:wrap"><input id="healthAccessCode" type="password" autocomplete="off" placeholder="Access code" style="flex:1;min-width:150px"><button class="btn small" type="button" data-health-login>Unlock AI imports</button><button class="btn small ghost" type="button" data-health-logout>Clear access</button></div><p id="healthAuthStatus" class="muted xs">Checking access…</p></div>
  <input id="healthScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose a screenshot to start automatic analysis.</p><button class="btn" type="button" data-health-analyze>Analyze screenshot</button></div>
  <div id="healthExtractResult"></div>
  <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
@@ -669,12 +665,12 @@ async function analyzeHealthScreenshot(){
  const endpoint=HEALTH_SUPABASE_URL+'/functions/v1/momentum-extract-health';
  if(!file){if(message)message.textContent='Choose a screenshot first.';return}
  if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024){if(message)message.textContent='Choose a PNG, JPG, or WebP screenshot under 5 MB.';return}
- const {data:{session}}=await getHealthClient().auth.getSession();if(!session?.access_token){if(message)message.textContent='Sign in with your email before analyzing screenshots.';return}
+ const token=healthToken();if(!token){if(message)message.textContent='Enter your access code before analyzing screenshots.';return}
  const btn=document.querySelector('[data-health-analyze]');if(btn)btn.disabled=true;
  if(message)message.textContent='Analyzing screenshot…';healthExtracted=null;renderHealthExtract();
  try{
   const image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});
-  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','apikey':HEALTH_PUBLIC_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({image})});
+  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({image})});
   const result=await res.json();if(!res.ok)throw Error(result.error||'Image analysis failed');
   if(!['workout','weight','recovery'].includes(result.kind))throw Error('No supported health measurements found.');
   healthExtracted=result;renderHealthExtract();if(message)message.textContent='Screenshot analyzed. Save the recognized values below.';

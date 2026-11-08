@@ -1,1 +1,1 @@
-Momentum v9.2.1: Update button now appears only at bottom of Home page, not floating over other screens. Upload all files to test repository root. Do not remove Home Screen app or clear data. Push notification delivery is not yet enabled.
+Momentum v9.3 notification setup: permission button in Coaching; no real remote push yet. To enable real push, secure device enrollment and VAPID server sender must be configured. Do not share public beta until server protections are in place. Upload all files to GitHub test repository root.

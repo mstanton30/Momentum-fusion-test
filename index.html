@@ -742,7 +742,7 @@ function vHome(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.2.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.3.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1046,7 +1046,23 @@ function fDailyCoachPanel(){const d=fDailyCoach();return `<div class="card"><h3>
 <p><b>${esc(d.category)}:</b> ${esc(d.focus)}</p><p class="muted sm">${esc(d.reason)}</p>
 <p class="muted xs">${esc(d.yesterdaySummary)} Recovery guidance is general because Apple Health and WHOOP readiness are not connected. Missing logs never count as failures.</p>
 <p class="muted xs">This preview does not provide medical advice or automatically increase nutrition targets based on calories burned.</p></div>`}
-function fCoachPanel(){const m=fCoachMetrics();return `<h2>Momentum coaching · AI Preview</h2>
+function momentumPushPanel(){
+ const available=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+ const installed=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ return `<div class="card"><h3>iPhone notifications · Setup</h3>
+ <p class="muted sm">Install Momentum on your Home Screen, then enable notifications. Server delivery is not configured yet, so this setup cannot send a real remote push notification.</p>
+ <p class="muted xs">Home Screen: ${installed?'Installed':'Not detected'} · Push support: ${available?'Available':'Unavailable'} · Permission: ${typeof Notification!=='undefined'?Notification.permission:'Unavailable'}</p>
+ <button class="btn small" type="button" data-momentum-push-permission ${!available||!installed?'disabled':''}>Enable iPhone notifications</button>
+ <button class="btn small ghost" type="button" data-momentum-push-status>Check notification status</button>
+ <p id="momentumPushStatus" class="muted xs" role="status">Remote delivery and test-push button will be enabled after secure device registration is configured.</p></div>`;
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-momentum-push-permission],[data-momentum-push-status]');if(!b)return;
+ const el=document.getElementById('momentumPushStatus');
+ if(b.hasAttribute('data-momentum-push-status')){if(el)el.textContent='Permission: '+(typeof Notification==='undefined'?'Unavailable':Notification.permission)+' · Server push: not configured';return}
+ try{const p=await Notification.requestPermission();if(el)el.textContent=p==='granted'?'Permission granted. Remote delivery still needs secure registration.':'Notification permission: '+p;}catch(err){if(el)el.textContent='Permission request failed: '+err.message}
+});
+function fCoachPanel(){const m=fCoachMetrics();return momentumPushPanel()+`<h2>Momentum coaching · AI Preview</h2>
 ${fDailyCoachPanel()}
 <div class="card"><h3>Your weekly performance review</h3><p class="muted xs">Last 7 days · calculated from actual logged data · rule-based coaching, not live AI</p>
 <div class="stat"><div><b>${m.activeDays}/7</b><span>active days</span></div><div><b>${m.workouts}</b><span>workouts logged</span></div><div><b>${m.minutes}</b><span>training minutes</span></div></div>
@@ -1253,7 +1269,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.2.1';
+ const VERSION='9.3.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');

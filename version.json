@@ -1,4 +1,4 @@
 {
-  "version": "9.2.1",
-  "notes": "Move update checker to bottom of Home screen"
+  "version": "9.3.0",
+  "notes": "Notification permission setup and device capability status; server push not yet active"
 }

@@ -742,7 +742,7 @@ function vHome(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.5.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.6.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1299,7 +1299,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.5.1';
+ const VERSION='9.6.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1322,6 +1322,38 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(pending)location.reload()});
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(console.warn));
  }
+})();
+</script>
+
+<script>
+/* Non-blocking reminder sync. Runs only after app initialization; failures never block UI. */
+(function(){
+ let timer=null;
+ async function syncReminders(){
+  try{
+   const secret=localStorage.getItem('momentum.push.device.secret.v1');
+   if(!secret || typeof F==='undefined'||typeof S==='undefined'||typeof ymd!=='function')return;
+   const date=ymd(new Date());
+   const meals=F.entries.filter(e=>e.type==='meal'&&e.date===date);
+   const slots=new Set(meals.map(e=>typeof fusionMealSlot==='function'?fusionMealSlot(e):e.mealSlot));
+   const done=F.entries.some(e=>e.type==='activity'&&e.date===date)||
+     (typeof dayDef==='function'&&typeof sessOf==='function'&&dayDef(date).sessions.some(x=>sessOf(date,x.id).done));
+   const state={date,breakfast:slots.has('b'),lunch:slots.has('l'),dinner:slots.has('d'),workout:done};
+   const payload={action:'sync',deviceSecret:secret,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York',
+     preferences:F.coachPrefs.reminders,dailyState:state};
+   const r=await fetch('https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push',
+     {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+   const d=await r.json();if(!r.ok)throw Error(d.error||'Sync unavailable');
+   localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());
+  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e)}
+ }
+ function queue(){clearTimeout(timer);timer=setTimeout(syncReminders,1400)}
+ window.addEventListener('load',()=>{queue();setInterval(queue,60000)});
+ window.addEventListener('pageshow',queue);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)queue()});
+ document.addEventListener('submit',()=>setTimeout(queue,500));
+ document.addEventListener('click',e=>{if(e.target.closest('button,[data-sel],[data-go]'))setTimeout(queue,700)});
+ window.momentumSyncReminders=syncReminders;
 })();
 </script>
 </body>

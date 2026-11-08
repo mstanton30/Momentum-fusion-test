@@ -1,4 +1,4 @@
 {
-  "version": "9.5.1",
-  "notes": "Recovery build: restore last confirmed working push test, pause reminder sync"
+  "version": "9.6.0",
+  "notes": "Scheduled reminders with nonblocking preference sync"
 }

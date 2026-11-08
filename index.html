@@ -740,7 +740,11 @@ function vHome(){
  <p><b>${esc(coach.category)}:</b> ${esc(coach.focus)}</p><p class="muted sm">${esc(coach.reason)}</p><details><summary>Why this suggestion?</summary><p class="muted sm">Rule-based guidance from your logged data. Missing entries are not treated as missed meals or workouts. No wearable readiness is connected.</p></details></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Progress</h3><button class="btn small ghost" data-go="track">View trends</button></div>
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
- <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>`;
+ <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
+ <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.2.1</button>
+  <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
+ </div>`;
 }
 
 function vTrack(){
@@ -1249,12 +1253,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.2.0';
- const build=document.createElement('div');
- build.id='momentum-update-control';
- build.style.cssText='position:fixed;bottom:12px;right:12px;z-index:9999;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 24px);font:12px system-ui,sans-serif';
- build.innerHTML='<button id="momentum-check-update" type="button" style="border:1px solid #777;border-radius:12px;padding:8px 11px;background:#20262b;color:white">Check for updates · v'+VERSION+'</button><span id="momentum-update-status" role="status" style="display:none;background:#20262b;color:white;border-radius:10px;padding:8px"></span>';
- document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(build));
+ const VERSION='9.2.1';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1265,8 +1264,7 @@ if ('serviceWorker' in navigator) {
    if(remote.version && remote.version!==VERSION){
     pending=true;
     const button=document.getElementById('momentum-check-update');
-    button.textContent='Update to Momentum v'+remote.version;
-    button.onclick=()=>location.reload();
+    if(button){button.textContent='Update to Momentum v'+remote.version;button.onclick=()=>location.reload();}
     if(status){status.style.display='inline';status.textContent='New version ready';}
    }else if(showResult&&status){status.style.display='inline';status.textContent='You have the latest version';setTimeout(()=>{if(!pending)status.style.display='none'},3500);}
   }catch(e){if(showResult&&status){status.style.display='inline';status.textContent='Could not check. Try again.';}}

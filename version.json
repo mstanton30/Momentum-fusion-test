@@ -1,4 +1,4 @@
 {
-  "version": "9.2.0",
-  "notes": "PWA update manager and network-first loading"
+  "version": "9.2.1",
+  "notes": "Move update checker to bottom of Home screen"
 }

@@ -644,11 +644,10 @@ function healthSignOut(){localStorage.removeItem(HEALTH_TOKEN_KEY);render();toas
 let healthExtracted=null;
 const HEALTH_API_KEY='momentumfusion.health.api.v1';
 function vHealthImport(){
- queueMicrotask(()=>{const el=document.getElementById('healthAuthStatus');if(el)el.textContent=healthToken()?'Authorized for screenshot imports':'Enter your access code once to enable AI imports';});
  const recent=[...F.healthImports].reverse().slice(0,8);
  return header('Import Health Data','AI screenshot recognition')+`
  <div class="card"><h3>Import from screenshot</h3><p class="muted sm">Choose a screenshot from Apple Fitness, WHOOP or RENPHO. The secure image service reads visible measurements automatically. The screenshot is sent to the configured service for analysis and is not stored in this app.</p>
- <div class="card" style="margin:8px 0"><h3>AI import access</h3><p class="muted xs">Enter your private access code once. Your code is verified on the server and is not stored in the browser.</p><div class="row" style="gap:6px;flex-wrap:wrap"><input id="healthAccessCode" type="password" autocomplete="off" placeholder="Access code" style="flex:1;min-width:150px"><button class="btn small" type="button" data-health-login>Unlock AI imports</button><button class="btn small ghost" type="button" data-health-logout>Clear access</button></div><p id="healthAuthStatus" class="muted xs">Checking access…</p></div>
+ <p class="muted xs">Test mode: no access code required. Shared limit: 10 screenshot analyses per day.</p>
  <input id="healthScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose a screenshot to start automatic analysis.</p><button class="btn" type="button" data-health-analyze>Analyze screenshot</button></div>
  <div id="healthExtractResult"></div>
  <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
@@ -665,12 +664,12 @@ async function analyzeHealthScreenshot(){
  const endpoint=HEALTH_SUPABASE_URL+'/functions/v1/momentum-extract-health';
  if(!file){if(message)message.textContent='Choose a screenshot first.';return}
  if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024){if(message)message.textContent='Choose a PNG, JPG, or WebP screenshot under 5 MB.';return}
- const token=healthToken();if(!token){if(message)message.textContent='Enter your access code before analyzing screenshots.';return}
+
  const btn=document.querySelector('[data-health-analyze]');if(btn)btn.disabled=true;
  if(message)message.textContent='Analyzing screenshot…';healthExtracted=null;renderHealthExtract();
  try{
   const image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});
-  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({image})});
+  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
   const result=await res.json();if(!res.ok)throw Error(result.error||'Image analysis failed');
   if(!['workout','weight','recovery'].includes(result.kind))throw Error('No supported health measurements found.');
   healthExtracted=result;renderHealthExtract();if(message)message.textContent='Screenshot analyzed. Save the recognized values below.';

@@ -1,1 +1,1 @@
-Momentum v9.7.0: six tabs Home Workout Nutrition Supps Perks Coach. Progress details on Home. Coach has scheduled and custom reminders, sync status, and push test. Upload all eight files to GitHub test repository root. Keep Home Screen installation. Check sync status and schedule reminder 5 minutes ahead. Scheduled delivery has not yet been verified on device.
+Momentum v9.8.0. Five tabs at bottom, Coach button at top right. Fixes syntax issue from v9.7. Upload all files to test repo root. Verify app loads and custom reminder sync before relying on scheduled alerts.

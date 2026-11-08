@@ -421,7 +421,7 @@ const TABS=[
  {id:"nutrition",label:"Nutrition",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c3 2 7 5 7 10a7 7 0 0 1-14 0c0-5 4-8 7-10zM12 3v18"/></svg>',view:vNutrition},
  {id:"supps",label:"Supps",icon:'<svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 14.5l5-5"/></svg>',view:vSupps},
  {id:"perks",label:"Perks",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c-2 3-5 5-5 9a5 5 0 0 0 10 0c0-4-3-6-5-9zM12 21v-4"/></svg>',view:vPerks},
- {id:"coach",label:"Coach",icon:'<svg viewBox="0 0 24 24"><path d="M4 5h16v12H9l-5 4V5zM8 10h8M8 13h5"/></svg>',view:fCoachPanel},
+ {id:"coach",hidden:true,label:"Coach",icon:'<svg viewBox="0 0 24 24"><path d="M4 5h16v12H9l-5 4V5zM8 10h8M8 13h5"/></svg>',view:fCoachPanel},
  {id:"import",hidden:true,label:"Import Health",icon:"",view:vHealthImport},
  {id:"track",hidden:true,label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()}
 ];
@@ -432,7 +432,7 @@ let nutDay=ymd(today());    // selected day on the Nutrition tab
 function checkBtn(on,label,sub,pts,data){ return `<button class="check" role="checkbox" aria-checked="${on}" ${data}><span class="box">${on?CHECK:""}</span><span><b>${esc(label)}</b>${sub?`<br><span class="muted xs">${esc(sub)}</span>`:""}</span><span class="pts">${pts?"+"+pts:""}</span></button>` }
 function minRow(k,id,choices,cur){ return `<div class="minrow">${choices.map(m=>`<button aria-pressed="${cur===m}" data-min-set="${id}" data-k="${k}" data-v="${m}">${m} min</button>`).join("")}</div>` }
 function optionsBlock(kind,label){ return `<details><summary>${esc(label||"Where to do it")}</summary><div class="opts">${OPTIONS[kind].map(([t,d])=>`<b>${esc(t)}</b>${esc(d)}`).join("")}</div></details>` }
-function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>` }
+function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach" style="width:auto;padding:0 10px;border-radius:999px;font-weight:800;font-size:.75rem">✦ Coach</button><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>` }
 
 function vWhy(){
   return `<div class="onb"><div class="eyebrow">Momentum</div><h1>Why we do this</h1>
@@ -743,7 +743,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.7.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.8.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1136,7 +1136,7 @@ document.addEventListener('click',async e=>{
   }
  }catch(err){if(el)el.textContent='Push error: '+String(err.message||err)}
 });
-function fCoachPanel(){const m=fCoachMetrics();return momentumPushPanel()+`<h2>Momentum coaching · AI Preview</h2>
+function fCoachPanel(){const m=fCoachMetrics();return header("Coach","Your personal guide")+momentumPushPanel()+`<h2>Momentum coaching · AI Preview</h2>
 ${fDailyCoachPanel()}
 <div class="card"><h3>Your weekly performance review</h3><p class="muted xs">Last 7 days · calculated from actual logged data · rule-based coaching, not live AI</p>
 <div class="stat"><div><b>${m.activeDays}/7</b><span>active days</span></div><div><b>${m.workouts}</b><span>workouts logged</span></div><div><b>${m.minutes}</b><span>training minutes</span></div></div>
@@ -1343,7 +1343,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.7.0';
+ const VERSION='9.8.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');

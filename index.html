@@ -171,6 +171,7 @@ details>div{padding-top:8px}
 <canvas class="sharecard" id="shareCanvas" width="1080" height="1350"></canvas>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -627,22 +628,64 @@ function perkCard(k,title,pts,mins,blurb,links){ const n=S[k].filter(x=>weekKeys
   ${recent.length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent.map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}</div>` }
 
 
-/* Screenshot-assisted health import: the static prototype does not claim OCR.
-   Image is previewed locally and never saved or uploaded. Only confirmed values persist. */
+/* Supabase authenticated screenshot recognition (test environment only). */
+const HEALTH_SUPABASE_URL='https://naomdmnfqudszqmcirrh.supabase.co';
+const HEALTH_PUBLIC_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hb21kbW5mcXVkc3pxbWNpcnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTIxMTksImV4cCI6MjEwODE2ODExOX0.Zwl-sUNfan_zKQy87f8KxqzPxreoitXScz60LZrrjjE'; // public client key, not a secret
+let healthAuthClient=null;
+function getHealthClient(){
+ if(healthAuthClient)return healthAuthClient;
+ if(!window.supabase?.createClient)throw Error('Authentication library could not load. Check your connection.');
+ healthAuthClient=window.supabase.createClient(HEALTH_SUPABASE_URL,HEALTH_PUBLIC_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ return healthAuthClient;
+}
+async function healthSendLogin(){
+ const email=document.getElementById('healthEmail')?.value?.trim();
+ if(!email||!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}
+ try{const {error}=await getHealthClient().auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname+'#import'}});if(error)throw error;toast('Check your email for the sign-in link');}catch(e){toast('Sign-in failed: '+e.message)}
+}
+async function healthSignOut(){try{await getHealthClient().auth.signOut();toast('Signed out');render()}catch(e){toast(e.message)}}
+/* AI screenshot import: calls a separately deployed secure serverless endpoint. */
+let healthExtracted=null;
+const HEALTH_API_KEY='momentumfusion.health.api.v1';
 function vHealthImport(){
+ queueMicrotask(async()=>{try{const {data:{session}}=await getHealthClient().auth.getSession();const el=document.getElementById('healthAuthStatus');if(el)el.textContent=session?.user?.email?'Signed in: '+session.user.email:'Not signed in';}catch{const el=document.getElementById('healthAuthStatus');if(el)el.textContent='Authentication unavailable';}});
  const recent=[...F.healthImports].reverse().slice(0,8);
- return header('Import Health Data','Screenshot-assisted · review before saving')+`
- <div class="card"><h3>1. Choose a screenshot</h3><p class="muted sm">Works with Apple Fitness, WHOOP, RENPHO, or another health app. Your screenshot stays on this device and is not uploaded to a server. This prototype does <b>not</b> automatically read the image—enter the visible measurements below, then confirm them.</p>
- <input id="healthScreenshot" type="file" accept="image/*" aria-label="Choose health app screenshot"><div id="healthPreview" style="margin-top:12px"></div></div>
- <div class="card"><h3>2. Review the measurements</h3><form id="healthImportForm">
- <div class="fgrid"><label>Source<select name="source" required><option value="Apple Fitness">Apple Fitness / Watch</option><option value="WHOOP">WHOOP</option><option value="RENPHO">RENPHO / Scale</option><option value="Other">Other</option></select></label><label>Measurement type<select name="kind" required><option value="workout">Workout</option><option value="recovery">Recovery / sleep</option><option value="weight">Weight / body composition</option></select></label><label>Measurement date<input name="date" type="date" value="${ymd(today())}" required></label></div>
- <p class="muted xs">Fill in only the values visible in your screenshot. Leave other fields blank. Workouts imported here count toward activity and points, so don't import a workout already logged manually.</p>
- <div class="fgrid"><label>Workout / activity name<input name="activity" placeholder="Basketball, running…"></label><label>Duration (minutes)<input name="minutes" type="number" min="0" max="1440" step="1"></label><label>Active calories (kcal)<input name="activeCalories" type="number" min="0" max="20000" step="1"></label><label>Average heart rate (bpm)<input name="heartRate" type="number" min="0" max="250"></label><label>Intensity<select name="intensity"><option value="moderate">Moderate</option><option value="light">Light</option><option value="vigorous">Vigorous</option></select></label>
- <label>Weight (lb)<input name="weight" type="number" min="1" max="1400" step="0.1"></label><label>Body fat (%)<input name="bodyFat" type="number" min="0" max="100" step="0.1"></label><label>Muscle mass (lb)<input name="muscle" type="number" min="0" max="1400" step="0.1"></label>
- <label>Recovery (%)<input name="recovery" type="number" min="0" max="100" step="1"></label><label>Sleep (hours)<input name="sleep" type="number" min="0" max="24" step="0.1"></label><label>Strain (WHOOP)<input name="strain" type="number" min="0" max="21" step="0.1"></label><label>HRV (ms)<input name="hrv" type="number" min="0" max="500" step="1"></label></div>
- <label><input type="checkbox" name="confirm" required> I reviewed the screenshot and confirmed these values.</label>
- <p id="healthImportMessage" class="muted sm" role="status"></p><button class="btn" type="submit">Save confirmed measurements</button></form></div>
- <div class="card"><h3>Recent screenshot imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Only reviewed measurements are stored. Screenshot images are not retained.</p></div>`;
+ return header('Import Health Data','AI screenshot recognition')+`
+ <div class="card"><h3>Import from screenshot</h3><p class="muted sm">Choose a screenshot from Apple Fitness, WHOOP or RENPHO. The secure image service reads visible measurements automatically. The screenshot is sent to the configured service for analysis and is not stored in this app.</p>
+ <div class="card" style="margin:8px 0"><h3>Secure sign-in</h3><p class="muted xs">Sign in with your email to authorize AI image analysis. No OpenAI API key is needed on this page.</p><div class="row" style="gap:6px;flex-wrap:wrap"><input id="healthEmail" type="email" placeholder="Your email address" style="flex:1;min-width:150px"><button class="btn small" type="button" data-health-login>Email sign-in link</button><button class="btn small ghost" type="button" data-health-logout>Sign out</button></div><p id="healthAuthStatus" class="muted xs">Checking sign-in…</p></div>
+ <input id="healthScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose a screenshot to start automatic analysis.</p><button class="btn" type="button" data-health-analyze>Analyze screenshot</button></div>
+ <div id="healthExtractResult"></div>
+ <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
+}
+function renderHealthExtract(){
+ const el=document.getElementById('healthExtractResult');if(!el)return;
+ if(!healthExtracted){el.innerHTML='';return}
+ const d=healthExtracted;
+ const fields=d.kind==='workout'?[['activity','Activity'],['minutes','Minutes'],['activeCalories','Active calories'],['heartRate','Average HR']]:d.kind==='weight'?[['weight','Weight (lb)'],['bodyFat','Body fat (%)'],['muscle','Muscle (lb)']]:[['recovery','Recovery (%)'],['sleep','Sleep (hours)'],['strain','Strain'],['hrv','HRV (ms)'],['heartRate','Resting HR']];
+ el.innerHTML=`<div class="card"><h3>Recognized ${esc(d.kind)}</h3><p class="muted sm">${esc(d.source)} · ${esc(d.date)} · ${esc(d.confidence||'unknown')} confidence</p><div class="fgrid">${fields.map(([k,label])=>`<div><span class="muted xs">${esc(label)}</span><p><b>${esc(d[k]??'Not visible')}</b></p></div>`).join('')}</div>${d.warnings&&d.warnings.length?`<p class="muted sm">${d.warnings.map(esc).join(' · ')}</p>`:''}<p class="muted xs">Values come from the screenshot. Missing or uncertain required values will not be guessed.</p><button class="btn" type="button" data-health-save ${d.confidence==='low'?'disabled':''}>Save recognized data</button></div>`;
+}
+async function analyzeHealthScreenshot(){
+ const file=document.getElementById('healthScreenshot')?.files?.[0],message=document.getElementById('healthImportMessage');
+ const endpoint=HEALTH_SUPABASE_URL+'/functions/v1/momentum-extract-health';
+ if(!file){if(message)message.textContent='Choose a screenshot first.';return}
+ if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024){if(message)message.textContent='Choose a PNG, JPG, or WebP screenshot under 5 MB.';return}
+ const {data:{session}}=await getHealthClient().auth.getSession();if(!session?.access_token){if(message)message.textContent='Sign in with your email before analyzing screenshots.';return}
+ const btn=document.querySelector('[data-health-analyze]');if(btn)btn.disabled=true;
+ if(message)message.textContent='Analyzing screenshot…';healthExtracted=null;renderHealthExtract();
+ try{
+  const image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});
+  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','apikey':HEALTH_PUBLIC_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({image})});
+  const result=await res.json();if(!res.ok)throw Error(result.error||'Image analysis failed');
+  if(!['workout','weight','recovery'].includes(result.kind))throw Error('No supported health measurements found.');
+  healthExtracted=result;renderHealthExtract();if(message)message.textContent='Screenshot analyzed. Save the recognized values below.';
+ }catch(e){if(message)message.textContent='Could not analyze screenshot: '+String(e.message||e)}finally{if(btn)btn.disabled=false}
+}
+function saveRecognizedHealth(){
+ if(!healthExtracted)return;const x=healthExtracted;
+ const d={...x,source:x.source||'Other',date:x.date||'',kind:x.kind,intensity:x.intensity||'moderate'};
+ for(const k of ['minutes','activeCalories','heartRate','weight','bodyFat','muscle','recovery','sleep','strain','hrv'])d[k]=x[k]===null||x[k]===undefined?'':String(x[k]);
+ const error=saveHealthImport(d);if(error){const msg=document.getElementById('healthImportMessage');if(msg)msg.textContent=error;return}
+ healthExtracted=null;render();toast('Screenshot measurements saved to tracking');
 }
 function saveHealthImport(d){
  const n=k=>d[k]===''?null:Number(d[k]);
@@ -1002,7 +1045,12 @@ function fAI(kind){
   if(status)status.textContent='SIMULATED PREVIEW — Classified as '+intensity+' activity for '+minutes+' minutes. A future backend would estimate energy expenditure from body weight and activity MET ranges; no calorie estimate has been calculated here.';
  }
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-health-login],[data-health-logout],[data-health-config],[data-health-analyze],[data-health-save],[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
+ if(b.dataset.healthLogin!==undefined){healthSendLogin();return}
+ if(b.dataset.healthLogout!==undefined){healthSignOut();return}
+ if(b.dataset.healthConfig!==undefined){const v=document.getElementById('healthEndpoint')?.value?.trim()||'';if(!/^https:\/\//.test(v)){toast('Use a secure HTTPS endpoint');return}localStorage.setItem(HEALTH_API_KEY,v);toast('Connection saved');return}
+ if(b.dataset.healthAnalyze!==undefined){analyzeHealthScreenshot();return}
+ if(b.dataset.healthSave!==undefined){saveRecognizedHealth();return}
  if(b.dataset.healthRemove!==undefined){const x=F.healthImports.find(x=>String(x.id)===b.dataset.healthRemove);if(x){if(x.entryId)F.entries=F.entries.filter(y=>y.id!==x.entryId);if(x.weighId){S.weigh=S.weigh.filter(y=>String(y.id)!==String(x.weighId));save()}F.healthImports=F.healthImports.filter(y=>y!==x);fsave();render();toast('Import removed')}return;}
  if(b.dataset.logSmoothie!==undefined){
   const date=nutDay,recipe=S.smoothie||DEFAULT_SMOOTHIE;
@@ -1021,14 +1069,14 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-health-rem
  if(b.dataset.fremove!==undefined){F.favorites.splice(+b.dataset.fremove,1);toast('Favorite removed')}
  if(b.dataset.fclear!==undefined){const k=b.dataset.fclear;for(const x of fusionActivities(k))if(x.planAction!=='extra')x.planAction='extra';delete F.substitutions[k];delete F.planChoices[k];clearReschedule(k);toast('Substitution cleared')}
  fsave();render();});
-document.addEventListener('submit',e=>{if(e.target.id==='healthImportForm'){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const err=saveHealthImport(d);if(err){const el=document.getElementById('healthImportMessage');if(el)el.textContent=err;return}render();toast('Confirmed health data saved');return}if(!['fMeal','fActivity','fTargets','fFeedback'].includes(e.target.id))return;e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form));
+document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFeedback'].includes(e.target.id))return;e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form));
  if(form.id==='fTargets'){for(const k of ['p','c','f','fiber'])F.targets[k]=Math.max(1,Number(d[k])||1);toast('Targets updated')}
  if(form.id==='fMeal'){const old=F.entries.find(x=>String(x.id)===String(d.editId)&&x.type==='meal');const entry={id:old?old.id:fusionId(),date:old?old.date:nutDay,type:'meal',description:String(d.description||'').trim(),mealSlot:d.mealSlot||'s',qualityChoice:d.qualityChoice||'unknown',p:+d.p||0,c:+d.c||0,f:+d.f||0,fiber:+d.fiber||0,calories:+d.calories||0,source:old?old.source:(form.dataset.ai==='yes'?'demo':'manual')};if(old)Object.assign(old,entry);else F.entries.push(entry);toast(old?'Meal updated':'Meal logged')}
  if(form.id==='fActivity'){const x={id:fusionId(),date:sel,type:'activity',description:String(d.description||'').trim(),minutes:Math.max(1,+d.minutes||1),intensity:d.intensity,components:String(d.components||''),planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:form.dataset.ai==='yes'?'demo':'manual'};F.entries.push(x);if(d.planAction&&d.planAction!=='extra'){for(const prev of fusionActivities(sel))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';clearReschedule(sel);F.substitutions[sel]={description:x.description,minutes:x.minutes,id:x.id};F.planChoices[sel]=d.planAction;if(d.planAction==='move')F.rescheduled[shiftDate(sel,1)]='Original workout moved from '+sel;syncSubstitution(sel);}toast('Activity logged')}
  if(form.id==='fFeedback'){const blob=new Blob([`Momentum Fusion beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
 
-document.addEventListener('change',e=>{if(e.target.id!=='healthScreenshot')return;const holder=document.getElementById('healthPreview');if(!holder)return;holder.replaceChildren();const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith('image/')){holder.textContent='Please choose an image screenshot.';return}if(file.size>12*1024*1024){holder.textContent='Image too large; choose a screenshot under 12 MB.';return}const url=URL.createObjectURL(file),img=document.createElement('img');img.src=url;img.alt='Screenshot preview for manual review';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';img.onload=()=>URL.revokeObjectURL(url);holder.append(img);});
+document.addEventListener('change',e=>{if(e.target.id!=='healthScreenshot')return;const holder=document.getElementById('healthPreview');if(!holder)return;holder.replaceChildren();const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith('image/')){holder.textContent='Please choose an image screenshot.';return}if(file.size>12*1024*1024){holder.textContent='Image too large; choose a screenshot under 12 MB.';return}const url=URL.createObjectURL(file),img=document.createElement('img');img.src=url;img.alt='Screenshot ready for automatic analysis';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';img.onload=()=>URL.revokeObjectURL(url);holder.append(img);});
 
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null;

@@ -1,4 +1,4 @@
 {
-  "version": "9.4.0",
-  "notes": "Device push subscription and real test push beta"
+  "version": "9.5.0",
+  "notes": "Sync reminder preferences and logging-completion flags to Supabase"
 }

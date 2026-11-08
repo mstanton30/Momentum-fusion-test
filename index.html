@@ -275,7 +275,7 @@ for(const k in S.meals){ for(const id in S.meals[k]){ const v=S.meals[k][id]; if
 if(S.ftp&&S.ftp.length){ S.tests=S.ftp.map(x=>({id:x.id,d:x.d,mod:"bike",v:x.w})); delete S.ftp; }
 save();
 function load(){ try{ const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null }catch(e){ return null } }
-function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(S)) }catch(e){ toast("Storage full: delete a photo or two") } }
+function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(S));if(typeof momentumQueueReminderSync==="function")momentumQueueReminderSync() }catch(e){ toast("Storage full: delete a photo or two") } }
 
 /* =========================== HELPERS =========================== */
 const $=s=>document.querySelector(s);
@@ -742,7 +742,7 @@ function vHome(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.4.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.5.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -887,7 +887,7 @@ function shrinkImage(file){ return new Promise(res=>{ const img=new Image(); img
 const FKEY="momentumfusion.extra.v1"; // preserves v1 favorites and entries
 let F=(()=>{try{return JSON.parse(localStorage.getItem(FKEY))||{}}catch{return {}}})();
 F.entries=F.entries||[];F.healthImports=F.healthImports||[];F.favorites=F.favorites||[];F.targets=F.targets||{p:160,c:220,f:70};
-function fsave(){localStorage.setItem(FKEY,JSON.stringify(F))}
+function fsave(){localStorage.setItem(FKEY,JSON.stringify(F));if(typeof momentumQueueReminderSync==='function')momentumQueueReminderSync()}
 function fToday(){return F.entries.filter(x=>x.date===ymd(today()))}
 function fTotals(){return fToday().filter(x=>x.type==='meal').reduce((a,x)=>{for(const k of ['p','c','f'])a[k]+=Number(x[k])||0;return a},{p:0,c:0,f:0})}
 F.entries=F.entries.map(x=>({...x,date:x.date||ymd(today()),fiber:x.fiber||0,calories:x.calories||0}));
@@ -1055,9 +1055,25 @@ function momentumPushSecret(){
  return s;
 }
 function momentumPushKey(s){const x=s.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(x+'='.repeat((4-x.length%4)%4)),c=>c.charCodeAt(0))}
-async function momentumPushCall(action,subscription){
- const r=await fetch(MOMENTUM_PUSH_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,deviceSecret:momentumPushSecret(),...(subscription?{subscription}: {})})});
+async function momentumPushCall(action,subscription,extra={}){
+ const r=await fetch(MOMENTUM_PUSH_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,deviceSecret:momentumPushSecret(),...(subscription?{subscription}: {}),...extra})});
  const data=await r.json();if(!r.ok)throw Error(data.error||'Server request failed');return data;
+}
+
+let momentumSyncTimer=null;
+function momentumQueueReminderSync(){
+ clearTimeout(momentumSyncTimer);
+ momentumSyncTimer=setTimeout(async()=>{
+  if(!localStorage.getItem(MOMENTUM_DEVICE_SECRET_KEY))return;
+  try{
+   const d=ymd(today()), entries=F.entries.filter(x=>x.date===d);
+   const mealSlots=new Set(entries.filter(x=>x.type==='meal').map(x=>fusionMealSlot(x)));
+   const workout=entries.some(x=>x.type==='activity')||dayDef(d).sessions.some(x=>sessOf(d,x.id).done);
+   const dailyState={date:d,breakfast:mealSlots.has('b'),lunch:mealSlots.has('l'),dinner:mealSlots.has('d'),workout};
+   await momentumPushCall('sync',null,{preferences:F.coachPrefs.reminders,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,dailyState});
+   const el=document.getElementById('momentumPushStatus');if(el)el.textContent='Reminder preferences and today’s logging status synced.';
+  }catch(err){console.warn('Reminder sync deferred:',err)}
+ },1200);
 }
 function momentumPushPanel(){
  const available=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
@@ -1082,7 +1098,7 @@ document.addEventListener('click',async e=>{
    let sub=await reg.pushManager.getSubscription();
    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:momentumPushKey(MOMENTUM_VAPID_PUBLIC)});
    await momentumPushCall('register',sub.toJSON());
-   if(el)el.textContent='Device registered! Tap Send test notification.';
+   if(el)el.textContent='Device registered! Tap Send test notification.';momentumQueueReminderSync();
   }else if(b.hasAttribute('data-momentum-push-test')){
    await momentumPushCall('test');
    if(el)el.textContent='Test push accepted by server. Check your iPhone notifications.';
@@ -1299,7 +1315,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.4.0';
+ const VERSION='9.5.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1316,7 +1332,7 @@ if ('serviceWorker' in navigator) {
   }catch(e){if(showResult&&status){status.style.display='inline';status.textContent='Could not check. Try again.';}}
  }
  document.addEventListener('click',e=>{if(e.target?.id==='momentum-check-update'&&!pending)checkUpdate(true)});
- window.addEventListener('pageshow',()=>checkUpdate(false));
+ window.addEventListener('pageshow',()=>{checkUpdate(false);if(typeof momentumQueueReminderSync==='function')momentumQueueReminderSync()});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate(false)});
  if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(pending)location.reload()});

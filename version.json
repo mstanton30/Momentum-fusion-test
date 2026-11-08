@@ -1,4 +1,4 @@
 {
-  "version": "9.8.1",
-  "notes": "Visible persistent reminder sync status, Sync Now button, and iPhone form layout fix"
+  "version": "9.8.2",
+  "notes": "Reminder sync 10-second timeout, error reporting, and single-flight requests"
 }

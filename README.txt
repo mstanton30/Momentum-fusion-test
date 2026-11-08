@@ -1,1 +1,1 @@
-Momentum v9.8.1: fixes reminder synchronization feedback and adds Sync Now. Upload all 8 files to GitHub test repo root. After update, open Coach, tap Sync Now, and report exact status. Do not reinstall app.
+Momentum v9.8.2: fixes indefinite reminder synchronization via 10-second timeout and visible errors. Upload all eight files to GitHub test repo. Do not delete installed app. After update tap Sync Now once and report exact status. Delivery remains unverified.

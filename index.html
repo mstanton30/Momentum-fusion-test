@@ -748,7 +748,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.8.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.8.2</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -970,7 +970,7 @@ function momentumReminderStatus(message){
  try{localStorage.setItem('momentum.reminder.syncstatus',message)}catch{}
  const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent=message;
 }
-document.addEventListener('click',e=>{if(e.target.closest('[data-momentum-sync-now]')){momentumReminderStatus('Synchronizing…');if(typeof window.momentumSyncReminders==='function')window.momentumSyncReminders();else momentumReminderStatus('Sync service not ready. Reopen Momentum and retry.')}});
+document.addEventListener('click',e=>{if(e.target.closest('[data-momentum-sync-now]')){momentumReminderStatus('Starting sync…');if(typeof window.momentumSyncReminders==='function')window.momentumSyncReminders();else momentumReminderStatus('Sync service not ready. Reopen Momentum and retry.')}});
 function momentumCustomReminderPanel(){
  const xs=F.customReminders||[];
  const rows=xs.map(x=>`<div class="frow"><span><b>${esc(x.title)}</b><br><small class="muted">${esc(x.time)} · ${x.repeat==='once'?esc(x.date):x.repeat==='daily'?'Daily':(x.days||[]).map(i=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).join(', ')} · ${x.on?'On':'Paused'}</small></span><div class="row tight"><button class="btn small ghost" data-custom-toggle="${esc(x.id)}">${x.on?'Pause':'Resume'}</button><button class="btn small ghost" data-custom-edit="${esc(x.id)}">Edit</button><button class="btn small ghost" data-custom-remove="${esc(x.id)}">Remove</button></div></div>`).join('');
@@ -1353,7 +1353,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.8.1';
+ const VERSION='9.8.2';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1383,7 +1383,13 @@ if ('serviceWorker' in navigator) {
 /* Non-blocking reminder sync with persistent visible status and explicit manual retry. */
 (function(){
  let timer=null;
+ let syncPromise=null;
  async function syncReminders(){
+  if(syncPromise)return syncPromise;
+  syncPromise=doReminderSync();
+  try{return await syncPromise}finally{syncPromise=null}
+ }
+ async function doReminderSync(){
   try{
    const secret=localStorage.getItem('momentum.push.device.secret.v1');
    if(!secret){momentumReminderStatus('Not synced: enable iPhone push notifications first.');return}
@@ -1398,11 +1404,15 @@ if ('serviceWorker' in navigator) {
    const state={date,breakfast:slots.has('b'),lunch:slots.has('l'),dinner:slots.has('d'),workout:done};
    const payload={action:'sync',deviceSecret:secret,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York',
      preferences:F.coachPrefs?.reminders||{},customReminders:F.customReminders||[],dailyState:state};
-   const r=await fetch('https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push',
-     {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),10000);
+   let r;
+   try{r=await fetch('https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push',
+     {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}
+   finally{clearTimeout(timeout)}
    const d=await r.json().catch(()=>({}));if(!r.ok)throw Error((d.error||'Sync unavailable')+' (HTTP '+r.status+')');
    localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());momentumReminderStatus('Synced successfully at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'.');
-  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e);momentumReminderStatus('Sync failed: '+(e.message||String(e)))}
+  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e);momentumReminderStatus(e.name==='AbortError'?'Sync timed out after 10 seconds. Check connection and retry.':'Sync failed: '+(e.message||String(e)))}
  }
  function queue(){clearTimeout(timer);timer=setTimeout(syncReminders,1400)}
  window.addEventListener('load',()=>{queue();setInterval(queue,60000)});

@@ -742,7 +742,7 @@ function vHome(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.3.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.4.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1046,21 +1046,51 @@ function fDailyCoachPanel(){const d=fDailyCoach();return `<div class="card"><h3>
 <p><b>${esc(d.category)}:</b> ${esc(d.focus)}</p><p class="muted sm">${esc(d.reason)}</p>
 <p class="muted xs">${esc(d.yesterdaySummary)} Recovery guidance is general because Apple Health and WHOOP readiness are not connected. Missing logs never count as failures.</p>
 <p class="muted xs">This preview does not provide medical advice or automatically increase nutrition targets based on calories burned.</p></div>`}
+const MOMENTUM_VAPID_PUBLIC='BMbyrrpzKyYe3LVczZTQCD-U4gV9SLi4bs-NcJzWxVC7y5Z0rFY-N_I35VzGsCjSN5P3rC4OOxoazxjxVI1fhUY';
+const MOMENTUM_PUSH_ENDPOINT='https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push';
+const MOMENTUM_DEVICE_SECRET_KEY='momentum.push.device.secret.v1';
+function momentumPushSecret(){
+ let s=localStorage.getItem(MOMENTUM_DEVICE_SECRET_KEY);
+ if(!s){const bytes=crypto.getRandomValues(new Uint8Array(36));s=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');localStorage.setItem(MOMENTUM_DEVICE_SECRET_KEY,s)}
+ return s;
+}
+function momentumPushKey(s){const x=s.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(x+'='.repeat((4-x.length%4)%4)),c=>c.charCodeAt(0))}
+async function momentumPushCall(action,subscription){
+ const r=await fetch(MOMENTUM_PUSH_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,deviceSecret:momentumPushSecret(),...(subscription?{subscription}: {})})});
+ const data=await r.json();if(!r.ok)throw Error(data.error||'Server request failed');return data;
+}
 function momentumPushPanel(){
  const available=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
  const installed=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
- return `<div class="card"><h3>iPhone notifications · Setup</h3>
- <p class="muted sm">Install Momentum on your Home Screen, then enable notifications. Server delivery is not configured yet, so this setup cannot send a real remote push notification.</p>
+ return `<div class="card"><h3>iPhone push notifications</h3>
+ <p class="muted sm">Enable push delivery to this Home Screen installation, then send a real test notification.</p>
  <p class="muted xs">Home Screen: ${installed?'Installed':'Not detected'} · Push support: ${available?'Available':'Unavailable'} · Permission: ${typeof Notification!=='undefined'?Notification.permission:'Unavailable'}</p>
- <button class="btn small" type="button" data-momentum-push-permission ${!available||!installed?'disabled':''}>Enable iPhone notifications</button>
- <button class="btn small ghost" type="button" data-momentum-push-status>Check notification status</button>
- <p id="momentumPushStatus" class="muted xs" role="status">Remote delivery and test-push button will be enabled after secure device registration is configured.</p></div>`;
+ <button class="btn small" type="button" data-momentum-push-register ${!available||!installed?'disabled':''}>Enable push on this iPhone</button>
+ <button class="btn small ghost" type="button" data-momentum-push-test ${!available||!installed?'disabled':''}>Send test notification</button>
+ <button class="btn small ghost" type="button" data-momentum-push-status>Check status</button>
+ <p id="momentumPushStatus" class="muted xs" role="status">Push subscriptions are stored securely in Supabase. Test notifications are limited to three per day per device.</p></div>`;
 }
 document.addEventListener('click',async e=>{
- const b=e.target.closest('[data-momentum-push-permission],[data-momentum-push-status]');if(!b)return;
+ const b=e.target.closest('[data-momentum-push-register],[data-momentum-push-test],[data-momentum-push-status]');if(!b)return;
  const el=document.getElementById('momentumPushStatus');
- if(b.hasAttribute('data-momentum-push-status')){if(el)el.textContent='Permission: '+(typeof Notification==='undefined'?'Unavailable':Notification.permission)+' · Server push: not configured';return}
- try{const p=await Notification.requestPermission();if(el)el.textContent=p==='granted'?'Permission granted. Remote delivery still needs secure registration.':'Notification permission: '+p;}catch(err){if(el)el.textContent='Permission request failed: '+err.message}
+ if(el)el.textContent='Working…';
+ try{
+  if(b.hasAttribute('data-momentum-push-register')){
+   const permission=await Notification.requestPermission();
+   if(permission!=='granted')throw Error('Notifications were not allowed');
+   const reg=await navigator.serviceWorker.ready;
+   let sub=await reg.pushManager.getSubscription();
+   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:momentumPushKey(MOMENTUM_VAPID_PUBLIC)});
+   await momentumPushCall('register',sub.toJSON());
+   if(el)el.textContent='Device registered! Tap Send test notification.';
+  }else if(b.hasAttribute('data-momentum-push-test')){
+   await momentumPushCall('test');
+   if(el)el.textContent='Test push accepted by server. Check your iPhone notifications.';
+  }else{
+   const result=await momentumPushCall('status');
+   if(el)el.textContent=result.registered?'Device registered · Permission: '+Notification.permission:'Not registered';
+  }
+ }catch(err){if(el)el.textContent='Push error: '+String(err.message||err)}
 });
 function fCoachPanel(){const m=fCoachMetrics();return momentumPushPanel()+`<h2>Momentum coaching · AI Preview</h2>
 ${fDailyCoachPanel()}
@@ -1269,7 +1299,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.3.0';
+ const VERSION='9.4.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');

@@ -1,4 +1,4 @@
-const CACHE='momentum-shell-9.3.0';
+const CACHE='momentum-shell-9.4.0';
 const SHELL=['./index.html','./manifest.json','./version.json','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));

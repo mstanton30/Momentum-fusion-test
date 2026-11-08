@@ -1,1 +1,1 @@
-Momentum v9.8.0. Five tabs at bottom, Coach button at top right. Fixes syntax issue from v9.7. Upload all files to test repo root. Verify app loads and custom reminder sync before relying on scheduled alerts.
+Momentum v9.8.1: fixes reminder synchronization feedback and adds Sync Now. Upload all 8 files to GitHub test repo root. After update, open Coach, tap Sync Now, and report exact status. Do not reinstall app.

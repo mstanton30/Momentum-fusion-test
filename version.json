@@ -1,4 +1,4 @@
 {
-  "version": "9.8.0",
-  "notes": "Five bottom tabs; Coach shortcut at top right on all main screens; fixes JavaScript parse error"
+  "version": "9.8.1",
+  "notes": "Visible persistent reminder sync status, Sync Now button, and iPhone form layout fix"
 }

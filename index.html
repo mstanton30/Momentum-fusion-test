@@ -166,6 +166,11 @@ details>div{padding-top:8px}
 .frow:last-child{border-bottom:0}.frow span{min-width:0;overflow-wrap:anywhere}
 .fmeter{margin:12px 0}.fmeter .meter{margin-top:5px;height:8px}.fmeter .meter i{background:var(--accent)}
 #fActivity textarea,#fMeal textarea{width:100%}
+
+.momentum-reminder-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:12px 0;min-width:0}
+.momentum-reminder-fields label{display:block;min-width:0;font-size:.78rem;color:var(--muted)}
+.momentum-reminder-fields input,.momentum-reminder-fields select{box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;margin-top:3px}
+@media(max-width:430px){.momentum-reminder-fields{grid-template-columns:minmax(0,1fr);gap:8px}}
 </style>
 </head>
 <body>
@@ -961,17 +966,22 @@ function groceryPanel(){
  <div class="card"><h3>Shopping checklist</h3>${total?Object.entries(grouped).map(([cat,items])=>`<h3 style="margin:14px 0 6px">${esc(cat)}</h3>${items.map(x=>`<div class="frow"><span><label style="display:flex;gap:9px;align-items:center"><input style="width:auto" type="checkbox" data-grocery-check="${esc(x.id)}" ${x.checked?'checked':''}><span style="${x.checked?'text-decoration:line-through;opacity:.65':''}">${esc(x.name)}${x.qty?' · '+esc(x.qty):''}</span></label></span><button type="button" class="btn small ghost" data-grocery-remove="${esc(x.id)}">×</button></div>`).join('')}`).join(''):'<p class="muted sm">Your list is empty. Add an item or plan a favorite meal.</p>'}<p class="muted xs">Lists are stored locally on this device. Cross-device syncing is not yet enabled.</p></div>`;
 }
 
+function momentumReminderStatus(message){
+ try{localStorage.setItem('momentum.reminder.syncstatus',message)}catch{}
+ const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent=message;
+}
+document.addEventListener('click',e=>{if(e.target.closest('[data-momentum-sync-now]')){momentumReminderStatus('Synchronizing…');if(typeof window.momentumSyncReminders==='function')window.momentumSyncReminders();else momentumReminderStatus('Sync service not ready. Reopen Momentum and retry.')}});
 function momentumCustomReminderPanel(){
  const xs=F.customReminders||[];
  const rows=xs.map(x=>`<div class="frow"><span><b>${esc(x.title)}</b><br><small class="muted">${esc(x.time)} · ${x.repeat==='once'?esc(x.date):x.repeat==='daily'?'Daily':(x.days||[]).map(i=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).join(', ')} · ${x.on?'On':'Paused'}</small></span><div class="row tight"><button class="btn small ghost" data-custom-toggle="${esc(x.id)}">${x.on?'Pause':'Resume'}</button><button class="btn small ghost" data-custom-edit="${esc(x.id)}">Edit</button><button class="btn small ghost" data-custom-remove="${esc(x.id)}">Remove</button></div></div>`).join('');
  return `<div class="card"><h3>Custom reminders</h3><p class="muted sm">Create personal reminders for anything. Each reminder is sent as an iPhone push at your chosen time.</p>
  ${rows||'<p class="muted xs">No custom reminders yet.</p>'}
  <form id="momentumCustomForm"><label>Reminder<input name="title" required maxlength="100" placeholder="Take vitamins, stretch, drink water…"></label>
- <div class="fgrid"><label>Time<input name="time" type="time" value="09:00" required></label><label>Repeat<select name="repeat" id="momentumRepeat"><option value="daily">Every day</option><option value="weekly">Selected weekdays</option><option value="once">One time</option></select></label></div>
+ <div class="momentum-reminder-fields"><label>Time<input name="time" type="time" value="09:00" required></label><label>Repeat<select name="repeat" id="momentumRepeat"><option value="daily">Every day</option><option value="weekly">Selected weekdays</option><option value="once">One time</option></select></label></div>
  <div id="momentumWeekdays" style="display:none"><p class="muted xs">Days of the week</p><div class="row" style="flex-wrap:wrap">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((x,i)=>`<label style="font-size:12px"><input type="checkbox" name="day_${i}" ${i>0&&i<6?'checked':''}> ${x}</label>`).join('')}</div></div>
  <label id="momentumOnceDate" style="display:none">Date<input type="date" name="date" value="${ymd(today())}"></label>
  <button class="btn" type="submit">Add reminder</button></form>
- <p id="momentumReminderSyncStatus" class="muted xs" role="status">Reminder changes sync to Supabase when this app is open.</p></div>`;
+ <div class="row" style="align-items:center;flex-wrap:wrap;margin-top:12px;gap:10px"><button type="button" class="btn small ghost" data-momentum-sync-now>Sync Now</button><span id="momentumReminderSyncStatus" class="muted xs" role="status">${esc(localStorage.getItem('momentum.reminder.syncstatus')||'Not yet synchronized on this device.')}</span></div></div>`;
 }
 document.addEventListener('change',e=>{
  if(e.target.id!=='momentumRepeat')return;
@@ -989,7 +999,7 @@ document.addEventListener('submit',e=>{
  F.customReminders=F.customReminders||[];
  if(F.customReminders.length>=20){toast('Limit of 20 custom reminders');return}
  F.customReminders.push({id:'r'+crypto.randomUUID().replace(/-/g,''),title:d.title.trim().slice(0,100),time:d.time,repeat:d.repeat,days,date:d.repeat==='once'?d.date:null,on:true});
- fsave();render();window.momentumSyncReminders?.();toast('Reminder added');
+ fsave();render();momentumReminderStatus('Reminder saved locally. Synchronizing…');window.momentumSyncReminders?.();toast('Reminder added');
 });
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-custom-remove],[data-custom-toggle],[data-custom-edit]');if(!b)return;
@@ -999,7 +1009,7 @@ document.addEventListener('click',e=>{
  if(b.dataset.customRemove){if(!confirm('Remove this reminder?'))return;F.customReminders=F.customReminders.filter(y=>y.id!==id)}
  else if(b.dataset.customToggle){x.on=!x.on}
  else{const title=prompt('Reminder message',x.title);if(title===null)return;const time=prompt('Time (HH:MM, 24-hour)',x.time);if(time===null)return;if(!title.trim()||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){toast('Enter a message and valid time');return}x.title=title.trim().slice(0,100);x.time=time}
- fsave();render();window.momentumSyncReminders?.();
+ fsave();render();momentumReminderStatus('Reminder updated locally. Synchronizing…');window.momentumSyncReminders?.();
 });
 function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
  const labels={breakfast:'Breakfast logging',lunch:'Lunch logging',dinner:'Dinner logging',workout:'Workout logging',review:'Sunday progress review',grocery:'Sunday grocery planning'};
@@ -1343,7 +1353,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.8.0';
+ const VERSION='9.8.1';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1370,26 +1380,29 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script>
-/* Non-blocking reminder sync. Runs only after app initialization; failures never block UI. */
+/* Non-blocking reminder sync with persistent visible status and explicit manual retry. */
 (function(){
  let timer=null;
  async function syncReminders(){
   try{
    const secret=localStorage.getItem('momentum.push.device.secret.v1');
-   if(!secret || typeof F==='undefined'||typeof S==='undefined'||typeof ymd!=='function')return;
+   if(!secret){momentumReminderStatus('Not synced: enable iPhone push notifications first.');return}
+   if(typeof F==='undefined'||typeof S==='undefined'||typeof ymd!=='function'){momentumReminderStatus('Not synced: app data not ready. Try Sync Now.');return}
+   momentumReminderStatus('Synchronizing reminder settings…');
    const date=ymd(new Date());
-   const meals=F.entries.filter(e=>e.type==='meal'&&e.date===date);
+   const entries=Array.isArray(F.entries)?F.entries:[];
+   const meals=entries.filter(e=>e.type==='meal'&&e.date===date);
    const slots=new Set(meals.map(e=>typeof fusionMealSlot==='function'?fusionMealSlot(e):e.mealSlot));
-   const done=F.entries.some(e=>e.type==='activity'&&e.date===date)||
-     (typeof dayDef==='function'&&typeof sessOf==='function'&&dayDef(date).sessions.some(x=>sessOf(date,x.id).done));
+   let done=entries.some(e=>e.type==='activity'&&e.date===date);
+   try{if(!done&&typeof dayDef==='function'&&typeof sessOf==='function')done=Boolean(dayDef(date)?.sessions?.some(x=>sessOf(date,x.id)?.done))}catch(e){console.warn('Workout completion check skipped',e)}
    const state={date,breakfast:slots.has('b'),lunch:slots.has('l'),dinner:slots.has('d'),workout:done};
    const payload={action:'sync',deviceSecret:secret,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York',
-     preferences:F.coachPrefs.reminders,customReminders:F.customReminders||[],dailyState:state};
+     preferences:F.coachPrefs?.reminders||{},customReminders:F.customReminders||[],dailyState:state};
    const r=await fetch('https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push',
      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-   const d=await r.json();if(!r.ok)throw Error(d.error||'Sync unavailable');
-   localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent='Reminder settings synced successfully.';
-  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e);const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent='Sync failed: '+e.message}
+   const d=await r.json().catch(()=>({}));if(!r.ok)throw Error((d.error||'Sync unavailable')+' (HTTP '+r.status+')');
+   localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());momentumReminderStatus('Synced successfully at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'.');
+  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e);momentumReminderStatus('Sync failed: '+(e.message||String(e)))}
  }
  function queue(){clearTimeout(timer);timer=setTimeout(syncReminders,1400)}
  window.addEventListener('load',()=>{queue();setInterval(queue,60000)});

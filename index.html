@@ -434,7 +434,7 @@ function optionsBlock(kind,label){ return `<details><summary>${esc(label||"Where
 function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>` }
 
 function vWhy(){
-  return `<div class="onb"><div class="eyebrow">Get Ripped</div><h1>Why we do this</h1>
+  return `<div class="onb"><div class="eyebrow">Momentum</div><h1>Why we do this</h1>
   <p class="muted">A year-long program built by sports medicine physicians who want to train hard and stay healthy, for anyone who wants the same. Everything in it is literature-based and cheap. Nothing in it needs a syringe, a subscription or an influencer.</p>
   <div class="card hero"><div class="eyebrow">The idea</div><h2 style="margin:4px 0 8px;font-size:1.4rem">Inputs in, outputs out</h2>
   <p style="opacity:.9">You control five inputs. The app scores them every week. Every two months you measure the outputs: fitness, muscle, body fat. Keep the input line high and the output lines follow. That's the whole program.</p></div>
@@ -466,7 +466,7 @@ function vWhy(){
 }
 function vOnboard(){
   const p=S.profile||{};
-  return `<div class="onb"><div class="eyebrow">${S.profile?"Your profile":"Welcome"}</div><h1>Get Ripped</h1>
+  return `<div class="onb"><div class="eyebrow">${S.profile?"Your profile":"Welcome"}</div><h1>Momentum</h1>
   <p class="muted">${S.profile?"Change anything here any time. Weight updates from your Friday weigh-ins automatically.":"One screen, then it lives behind the gear icon. This sets your protein target, your VO2 estimate and your baseline for the year. Everything stays on this phone."}</p>
   <form id="fOnboard" class="card">
     <div class="row"><div class="field"><label class="f">First name</label><input name="name" required value="${esc(p.name||"")}"></div><div class="field"><label class="f">Age</label><input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}"></div></div>
@@ -484,7 +484,7 @@ function vWorkout(){
   const isToday=key===tk, future=key>tk, plan=planFor(key);
   const mins=totalTrainingMinutes(key), wp=weekPoints(d), streak=mobStreak();
   const label=isToday?"Today":(future?"Coming up":"Looking back");
-  let h=header("Get Ripped",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
+  let h=header("Momentum",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
   h+=`<div class="row" style="margin:6px 0 12px"><span class="pill">${wp} pts this week</span><span class="pill ${streak>=7?"ok":""}">${streak}-day mobility streak</span>${test?'<span class="pill hot">Test week</span>':""}</div>`;
   h+=`<div class="card hero">
     <div class="eyebrow">${label}${S.profile&&isToday?", "+esc(S.profile.name):""}</div>
@@ -857,7 +857,7 @@ function drawShareCard(){
   const p=S.profile||{}, wp=weekPoints(), wk=weekKeys(), sessions=wk.filter(k=>sessOf(k,"main").done||fusionReplacements(k).length).length, mobs=wk.filter(k=>sessOf(k,"mob").done).length, wn=weekNutrition();
   const rw=rolling("wt"), rf=rolling("bf"), rm=rolling("mm"); const prev={wt:rolling("wt",4,4),bf:rolling("bf",4,4),mm:rolling("mm",4,4)};
   x.fillStyle="#161718"; x.fillRect(0,0,W,H); x.fillStyle="#d6451f"; x.fillRect(0,0,W,22);
-  x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("GET RIPPED · WEEK OF "+fmt(wk[0]).toUpperCase(),80,120);
+  x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("Momentum · WEEK OF "+fmt(wk[0]).toUpperCase(),80,120);
   x.fillStyle="#f4f1ea"; x.font="900 120px Archivo, Helvetica, Arial"; x.fillText(String(wp),80,260); const nw=x.measureText(String(wp)).width; x.font="700 44px Archivo, Helvetica, Arial"; x.fillText("points",80+nw+24,260);
   x.font="600 40px Inter, Helvetica, Arial";
   const rows=[["Sessions",sessions+" / 7"],["Mobility days",mobs+" / 7"],["Training minutes",wk.reduce((a,k)=>a+totalTrainingMinutes(k),0)+""],["Quality eating",wn.pct==null?"–":wn.pct+"%"],["Sauna · cold",weekMinutes(S.heat)+" · "+weekMinutes(S.cold)+" min"],["Sleep avg",weekSleep()!=null?weekSleep().toFixed(1)+" h":"–"]];
@@ -872,9 +872,9 @@ function drawShareCard(){
   return c;
 }
 async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=drawShareCard();
-  c.toBlob(async blob=>{ const file=new File([blob],"get-ripped-week.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"Get Ripped week"}) }catch(e){} }
-    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="get-ripped-week.png"; a.click(); toast("Card saved") } },"image/png"); }
+  c.toBlob(async blob=>{ const file=new File([blob],"momentum-week.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"Momentum week"}) }catch(e){} }
+    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="momentum-week.png"; a.click(); toast("Card saved") } },"image/png"); }
 function exportData(){ const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="get-ripped-"+ymd(today())+".json"; a.click(); toast("Exported") }
 function shrinkImage(file){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const s=Math.min(1,480/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=img.width*s; c.height=img.height*s; c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.7)) }; img.onerror=()=>res(null); img.src=URL.createObjectURL(file) }) }
 
@@ -971,7 +971,7 @@ function fWorkoutPanel(){
 const selected=sel,sub=F.substitutions[selected],future=selected>ymd(today());
 const templates=F.workoutTemplates.map((t,i)=>`<button type="button" class="btn small ghost" data-ftemplate="${i}">${esc(t.name)}</button>`).join(' ');
 return `<h2>Flexible workouts</h2><div class="card"><h3>Today's plan + flexibility</h3>
-<p class="muted sm">Keep Get Ripped's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
+<p class="muted sm">Keep Momentum's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
 ${F.rescheduled[selected]?`<p class="note">${esc(F.rescheduled[selected])}</p>`:''}
 ${sub?`<div class="note"><b>Substituted:</b> ${esc(sub.description)} · ${sub.minutes} min · ${esc(F.planChoices[selected]||'')} · +${customWorkoutPoints(fusionActivities(selected).find(x=>x.id===sub.id)||sub)} points <button class="btn small ghost" data-fclear="${selected}">Undo</button></div>`:''}
 <p class="muted xs">Quick workout buttons — tap to load and edit. Custom sessions earn 2–5 points based on actual duration and intensity; exercise points are capped at 5/day to prevent double counting. Mobility remains separately scored.</p><div class="row" style="gap:6px;flex-wrap:wrap">${templates}</div>

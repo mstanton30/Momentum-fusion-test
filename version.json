@@ -1,4 +1,4 @@
 {
-  "version": "9.5.0",
-  "notes": "Sync reminder preferences and logging-completion flags to Supabase"
+  "version": "9.5.1",
+  "notes": "Recovery build: restore last confirmed working push test, pause reminder sync"
 }

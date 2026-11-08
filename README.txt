@@ -1,1 +1,1 @@
-Momentum v9.5 beta: sends coaching reminder preferences, timezone, and today's logged meal/workout flags to Supabase for the registered device. No full meal or workout records are uploaded. Scheduled push delivery is NOT active yet. Install by uploading all files to the test repository root. Do not delete Home Screen installation.
+Recovery build v9.5.1. Restores last known working push test UI and disables experimental reminder sync. Upload all files to GitHub Pages test repo root. Keep Home Screen app installed and do not clear app data.

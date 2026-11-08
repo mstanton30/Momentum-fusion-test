@@ -323,14 +323,13 @@ function effectiveMeals(k){
   const slot=fusionMealSlot(x);(groups[slot]||(groups[slot]=[])).push(x);
  }
  for(const [slot,items] of Object.entries(groups)){
-  const old=original[slot]||{};
-  const p=items.reduce((n,x)=>n+(+x.p||0),0);
-  const produce=items.some(x=>x.qualityChoice==='quality');
-  const off=items.every(x=>x.qualityChoice==='off');
-  // Manual original meal servings remain authoritative when present.
-  if(mealLogged(old))continue;
+  const p=items.reduce((n,x)=>n+(Number(x.p)||0),0);
+  const hasQuality=items.some(x=>x.qualityChoice==='quality');
+  const hasOff=items.some(x=>x.qualityChoice==='off');
+  // Logged meals are authoritative for their slot; do not count the original
+  // manual quality toggle a second time. Unclassified is not quality.
   result[slot]={p:p>0?Math.max(1,Math.round(p/PROTEIN_PER_SERVING)):0,
-   f:0,v:produce?1:0,c:0,...(off?{n:1}:produce?{q:1}:{n:1})};
+   f:0,v:hasQuality?1:0,c:0,...(hasQuality?{q:1}:hasOff?{n:1}:{n:1})};
  }
  return result;
 }
@@ -369,7 +368,7 @@ function dayPoints(k){
 }
 function weekPoints(d=today()){ return weekKeys(d).reduce((a,k)=>a+dayPoints(k),0) }
 function mealLogged(m){ return !!(m&&(m.n||m.q||Object.values(m).some(n=>n>0))) }
-function mealQuality(m){ if(!m) return false; if(m.n&&!(m.p>0&&(m.f>0||m.v>0))) return false; return !!(m.q||(m.p>0&&(m.f>0||m.v>0))) }
+function mealQuality(m){ if(!m) return false; if(m.q) return true; if(m.n) return false; return !!(m.p>0&&(m.f>0||m.v>0)) }
 /* Day nutrition */
 function dayNutrition(k){ const m=effectiveMeals(k); let p=0,f=0,v=0,c=0,q=0,n=0; for(const [id] of MEALS){ const x=m[id]; if(!mealLogged(x)) continue; p+=x.p||0; f+=x.f||0; v+=x.v||0; c+=x.c||0; if(mealQuality(x)) q++; else n++; } const rw=S.rewards[k]||{}; const r=Object.values(rw).reduce((a,b)=>a+b,0); const drink=!!(S.supps[k]||{}).drink; return {p,f,v,c,q,n,r,drink,protein:p*PROTEIN_PER_SERVING+(drink?DRINK_PROTEIN:0),produce:f+v} }
 /* Week ratio: quality meals / (quality + off-plan meals + reward servings/3). Three beers after a quality day costs one "off" unit, not three. */
@@ -417,6 +416,7 @@ const TABS=[
  {id:"nutrition",label:"Nutrition",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c3 2 7 5 7 10a7 7 0 0 1-14 0c0-5 4-8 7-10zM12 3v18"/></svg>',view:vNutrition},
  {id:"supps",label:"Supps",icon:'<svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 14.5l5-5"/></svg>',view:vSupps},
  {id:"perks",label:"Perks",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c-2 3-5 5-5 9a5 5 0 0 0 10 0c0-4-3-6-5-9zM12 21v-4"/></svg>',view:vPerks},
+ {id:"import",hidden:true,label:"Import Health",icon:"",view:vHealthImport},
  {id:"track",hidden:true,label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()+fCoachPanel()}
 ];
 let tab=location.hash.replace("#","")||"home"; if(!TABS.find(t=>t.id===tab)) tab="home";
@@ -547,7 +547,7 @@ function vNutrition(){
   </div>
   <div class="card hero"><div class="eyebrow">Breakfast smoothie</div><h3 style="margin:4px 0 8px;font-size:1.3rem">The default quality breakfast</h3>
   <ul style="opacity:.92">${(S.smoothie||DEFAULT_SMOOTHIE).split("\n").filter(Boolean).map(l=>`<li>${esc(l)}</li>`).join("")}</ul>
-  <p class="muted xs">Logs as P2 F1 V1 C1. Say "smoothie" in the box below and it fills itself in.</p>
+  <p class="muted xs">Original serving guide: P2 F1 V1 C1. The quick-log macro estimate is editable afterward and varies with ingredients.</p><button class="btn" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button>
   <details style="background:transparent;border-color:color-mix(in srgb,var(--bg) 40%,transparent);color:inherit"><summary>Edit recipe</summary><div><form id="fSmoothie"><textarea name="smoothie">${esc(S.smoothie||DEFAULT_SMOOTHIE)}</textarea><button class="btn small" style="margin-top:8px">Save recipe</button></form></div></details></div>
   <h2>What quality looks like</h2>
   <details><summary>Breakfast</summary><div><ul><li>4 eggs + 2 egg whites, spinach, toast, berries <span class="muted xs">(P2 F1 V1 C1)</span></li><li>Greek yogurt (1 cup) + whey scoop + banana + granola <span class="muted xs">(P2 F1 C1)</span></li><li>Bob's Red Mill oats in milk, whey stirred in, blueberries, walnuts <span class="muted xs">(P1 F1 C1)</span></li></ul></div></details>
@@ -626,6 +626,54 @@ function perkCard(k,title,pts,mins,blurb,links){ const n=S[k].filter(x=>weekKeys
   ${links.length?`<div class="opts" style="margin-top:8px">${links.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a><br>`).join("")}</div>`:""}
   ${recent.length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent.map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}</div>` }
 
+
+/* Screenshot-assisted health import: the static prototype does not claim OCR.
+   Image is previewed locally and never saved or uploaded. Only confirmed values persist. */
+function vHealthImport(){
+ const recent=[...F.healthImports].reverse().slice(0,8);
+ return header('Import Health Data','Screenshot-assisted · review before saving')+`
+ <div class="card"><h3>1. Choose a screenshot</h3><p class="muted sm">Works with Apple Fitness, WHOOP, RENPHO, or another health app. Your screenshot stays on this device and is not uploaded to a server. This prototype does <b>not</b> automatically read the image—enter the visible measurements below, then confirm them.</p>
+ <input id="healthScreenshot" type="file" accept="image/*" aria-label="Choose health app screenshot"><div id="healthPreview" style="margin-top:12px"></div></div>
+ <div class="card"><h3>2. Review the measurements</h3><form id="healthImportForm">
+ <div class="fgrid"><label>Source<select name="source" required><option value="Apple Fitness">Apple Fitness / Watch</option><option value="WHOOP">WHOOP</option><option value="RENPHO">RENPHO / Scale</option><option value="Other">Other</option></select></label><label>Measurement type<select name="kind" required><option value="workout">Workout</option><option value="recovery">Recovery / sleep</option><option value="weight">Weight / body composition</option></select></label><label>Measurement date<input name="date" type="date" value="${ymd(today())}" required></label></div>
+ <p class="muted xs">Fill in only the values visible in your screenshot. Leave other fields blank. Workouts imported here count toward activity and points, so don't import a workout already logged manually.</p>
+ <div class="fgrid"><label>Workout / activity name<input name="activity" placeholder="Basketball, running…"></label><label>Duration (minutes)<input name="minutes" type="number" min="0" max="1440" step="1"></label><label>Active calories (kcal)<input name="activeCalories" type="number" min="0" max="20000" step="1"></label><label>Average heart rate (bpm)<input name="heartRate" type="number" min="0" max="250"></label><label>Intensity<select name="intensity"><option value="moderate">Moderate</option><option value="light">Light</option><option value="vigorous">Vigorous</option></select></label>
+ <label>Weight (lb)<input name="weight" type="number" min="1" max="1400" step="0.1"></label><label>Body fat (%)<input name="bodyFat" type="number" min="0" max="100" step="0.1"></label><label>Muscle mass (lb)<input name="muscle" type="number" min="0" max="1400" step="0.1"></label>
+ <label>Recovery (%)<input name="recovery" type="number" min="0" max="100" step="1"></label><label>Sleep (hours)<input name="sleep" type="number" min="0" max="24" step="0.1"></label><label>Strain (WHOOP)<input name="strain" type="number" min="0" max="21" step="0.1"></label><label>HRV (ms)<input name="hrv" type="number" min="0" max="500" step="1"></label></div>
+ <label><input type="checkbox" name="confirm" required> I reviewed the screenshot and confirmed these values.</label>
+ <p id="healthImportMessage" class="muted sm" role="status"></p><button class="btn" type="submit">Save confirmed measurements</button></form></div>
+ <div class="card"><h3>Recent screenshot imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Only reviewed measurements are stored. Screenshot images are not retained.</p></div>`;
+}
+function saveHealthImport(d){
+ const n=k=>d[k]===''?null:Number(d[k]);
+ const date=d.date,kind=d.kind,source=d.source;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>ymd(today()))return 'Choose a valid date that is not in the future.';
+ if(!['workout','recovery','weight'].includes(kind))return 'Choose a measurement type.';
+ const record={id:fusionId(),date,kind,source,values:{}};
+ if(kind==='workout'){
+  const minutes=n('minutes');if(!(minutes>0&&minutes<=1440)||!String(d.activity||'').trim())return 'Enter a workout name and valid duration.';
+  const activeCalories=n('activeCalories');if(activeCalories!==null&&(!Number.isFinite(activeCalories)||activeCalories<0||activeCalories>20000))return 'Check active calories.';
+  const duplicate=F.entries.some(x=>x.type==='activity'&&x.date===date&&Math.abs((Number(x.minutes)||0)-minutes)<=5&&String(x.description||'').toLowerCase()===String(d.activity).trim().toLowerCase());
+  if(duplicate)return 'Possible duplicate workout: a matching activity and duration are already logged. No changes saved.';
+  record.entryId=fusionId();record.summary=`${String(d.activity).trim()} · ${minutes} min`;
+  record.values={activity:String(d.activity).trim(),minutes,activeCalories,heartRate:n('heartRate')};
+  F.entries.push({id:record.entryId,date,type:'activity',description:record.values.activity,minutes,intensity:d.intensity||'moderate',planAction:'extra',caloriesBurned:activeCalories,calorieSource:activeCalories===null?null:'wearable-active',source:'screenshot-confirmed'});
+ }else if(kind==='weight'){
+  const weight=n('weight');if(!(weight>0&&weight<=1400))return 'Enter a valid weight in pounds.';
+  if(F.healthImports.some(x=>x.kind==='weight'&&x.date===date&&x.source===source))return 'A measurement from this source is already logged on that date. Remove it before replacing.';
+  record.values={weight,bodyFat:n('bodyFat'),muscle:n('muscle')};record.summary=`${weight} lb`;
+  record.weighId=Date.now()+Math.floor(Math.random()*1000);
+  S.weigh.push({id:record.weighId,d:date,wt:String(weight),bf:record.values.bodyFat==null?'':String(record.values.bodyFat),mm:record.values.muscle==null?'':String(record.values.muscle)});
+  save();
+ }else{
+  const vals=['recovery','sleep','strain','hrv','heartRate'].map(k=>n(k));if(vals.every(x=>x===null))return 'Enter at least one recovery or sleep measurement.';
+  if(F.healthImports.some(x=>x.kind==='recovery'&&x.date===date&&x.source===source))return 'A recovery entry from this source is already logged for that date.';
+  record.values=Object.fromEntries(['recovery','sleep','strain','hrv','heartRate'].map((k,i)=>[k,vals[i]]));
+  record.summary=[vals[0]!=null?`Recovery ${vals[0]}%`:'',vals[1]!=null?`Sleep ${vals[1]} h`:'',vals[2]!=null?`Strain ${vals[2]}`:''].filter(Boolean).join(' · ')||'Recovery metrics';
+ }
+ F.healthImports.push(record);fsave();return null;
+}
+
 function vHome(){
  const k=ymd(today()), wk=weekKeys(), meals=F.entries.filter(x=>x.type==='meal'&&x.date===k);
  const totals=fTotalsFor(k), activities=fusionActivities(k), scheduled=dayDef(k).sessions.filter(x=>sessOf(k,x.id).done);
@@ -641,7 +689,7 @@ function vHome(){
  <div class="card hero"><div class="eyebrow">Today · ${esc(fmt(k))}</div><h2 style="margin:8px 0">Your Momentum</h2>
  <div class="stat"><div><b>${pts}</b><span>points today</span></div><div><b>${mins}</b><span>training min</span></div><div><b>${workouts}</b><span>workouts</span></div></div>
  <p class="muted sm" style="margin:14px 0 8px">This week · ${active}/7 active days · ${logged} workouts · ${weekMin} minutes</p><div style="display:flex;gap:5px">${bars}</div></div>
- <div class="row" style="gap:8px;margin-bottom:12px"><button class="btn" style="flex:1" data-go="nutrition">Log meal</button><button class="btn" style="flex:1" data-go="workout">Log workout</button></div>
+ <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn" style="flex:1" data-go="nutrition">Log meal</button><button class="btn" style="flex:1" data-go="workout">Log workout</button><button class="btn ghost" style="flex:1" data-go="import">Import health screenshot</button></div>
  <div class="home-grid"><div class="card"><div class="eyebrow">Nutrition</div><h3>${Math.round(totals.p)}g <span class="muted xs">${proteinGoal?'/ '+proteinGoal+'g protein':'protein'}</span></h3>
  <div class="home-progress"><div style="width:${proteinPct}%"></div></div><p class="muted sm">${meals.length} meal${meals.length===1?'':'s'} logged · ${Math.round(totals.fiber)}g fiber</p><button class="btn small ghost" data-go="nutrition">Nutrition details</button></div>
  <div class="card"><div class="eyebrow">Activity</div><h3>${mins} min</h3><p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p><p class="muted xs">${workouts} workout${workouts===1?'':'s'} today</p><button class="btn small ghost" data-go="workout">Workout details</button></div></div>
@@ -677,6 +725,7 @@ function vTrack(){
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Training minutes / week</h3><span>goal ${DAY_GOAL*7}</span></div>${chart(minSeries,{color:"var(--amber)",baseline:DAY_GOAL*7,fmtV:v=>v.toFixed(0)})}</div>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Weekly points</h3><span>${wp} this week</span></div>${chart(wkSeries,{fmtV:v=>v.toFixed(0)})}<p class="muted xs">Points are the input line. The charts above are the output. Keep the first one high and watch the others follow.</p></div>
 
+  <div class="card"><h3>Health screenshot import</h3><p class="muted sm">Bring Apple Fitness, WHOOP or smart-scale readings into your progress and coaching records.</p><button class="btn small" data-go="import">Import screenshot</button></div>
   <h2>Body composition · RENPHO</h2>
   <div class="card"><div class="eyebrow">Connected data plan</div><h3>RENPHO → Apple Health → Momentum Fusion</h3>
   <p class="muted sm">Your RENPHO scale now syncs with Apple Health. Automatic HealthKit import requires a future iOS bridge; this browser prototype does not access Apple Health.</p>
@@ -790,7 +839,7 @@ function shrinkImage(file){ return new Promise(res=>{ const img=new Image(); img
 /* Momentum Fusion v9: AI Preview uses deterministic sample responses; no external AI service. */
 const FKEY="momentumfusion.extra.v1"; // preserves v1 favorites and entries
 let F=(()=>{try{return JSON.parse(localStorage.getItem(FKEY))||{}}catch{return {}}})();
-F.entries=F.entries||[];F.favorites=F.favorites||[];F.targets=F.targets||{p:160,c:220,f:70};
+F.entries=F.entries||[];F.healthImports=F.healthImports||[];F.favorites=F.favorites||[];F.targets=F.targets||{p:160,c:220,f:70};
 function fsave(){localStorage.setItem(FKEY,JSON.stringify(F))}
 function fToday(){return F.entries.filter(x=>x.date===ymd(today()))}
 function fTotals(){return fToday().filter(x=>x.type==='meal').reduce((a,x)=>{for(const k of ['p','c','f'])a[k]+=Number(x[k])||0;return a},{p:0,c:0,f:0})}
@@ -826,8 +875,9 @@ function fTotalsFor(date){return F.entries.filter(x=>x.date===date&&x.type==='me
 function fTotals(){return fTotalsFor(nutDay)}
 function fMeters(date){const t=fTotalsFor(date);return [['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,label])=>`<div class="fmeter"><div class="row" style="justify-content:space-between"><b>${label}</b><span>${Math.round(t[k])} / ${F.targets[k]}g</span></div><div class="meter"><i style="width:${Math.min(100,t[k]/Math.max(1,F.targets[k])*100)}%"></i></div></div>`).join('')}
 function fFavoriteRows(type){const fav=F.favorites.map((x,i)=>({...x,i})).filter(x=>x.type===type);return fav.length?fav.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${x.p||0}P · ${x.c||0}C · ${x.f||0}F · ${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])}`:`${x.minutes||0} min · +${customWorkoutPoints(x)} pts`}</small></span><div class="row tight"><button class="btn small" data-favorite="${x.i}">+ Log</button><button class="btn small ghost" data-fremove="${x.i}" aria-label="Remove favorite">×</button></div></div>`).join(''):'<p class="muted xs">Your saved favorites will appear here.</p>'}
-function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · +${customWorkoutPoints(x)} pts (daily exercise cap applies) · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':''}</small></span><div class="row tight">${type==='meal'?`<button class="btn small ghost" data-fedit="${x.id}" title="Edit meal">Edit</button>`:''}<button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
-function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. Existing manual meal entries take precedence.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
+function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat · ${x.qualityChoice==='quality'?'Quality':x.qualityChoice==='off'?'Off plan':'Unclassified'}`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · +${customWorkoutPoints(x)} pts (daily exercise cap applies) · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':''}</small></span><div class="row tight">${type==='meal'?`<button class="btn small ghost" data-fedit="${x.id}" title="Edit meal">Edit</button>`:''}<button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
+function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
+<div class="card"><h3>Quick breakfast</h3><p class="muted xs">Uses the saved smoothie recipe, logs it as a quality breakfast, and updates both macro and meal-quality tracking.</p><button class="btn" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button></div>
 <div class="card"><h3>Describe your meal</h3><p class="muted xs">AI PREVIEW ONLY: estimates are simulated examples, not live AI. Review and edit all numbers before saving.</p><form id="fMeal"><input type="hidden" name="editId" value=""><div class="fgrid"><label>Meal slot<select name="mealSlot"><option value="b">Breakfast</option><option value="l">Lunch</option><option value="d">Dinner</option><option value="s">Snack</option></select></label><label>Meal quality<select name="qualityChoice"><option value="quality">Quality: protein + fruit/vegetables</option><option value="off">Off plan</option><option value="unknown">Not sure / unclassified</option></select></label></div><textarea name="description" rows="2" required placeholder="Chicken burrito, rice, salad, two IPAs"></textarea><div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn small" type="button" data-fai="meal">✦ AI Preview: Estimate meal</button><span class="muted xs" id="fAiStatus">Or enter macros yourself below.</span></div><div class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber'],['calories','Calories']].map(([k,n])=>`<label>${n}<input name="${k}" type="number" min="0" step="any" value="0"></label>`).join('')}</div><button class="btn" type="submit">Save meal</button></form></div>
 <div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div><div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
 function fWorkoutPanel(){
@@ -952,7 +1002,13 @@ function fAI(kind){
   if(status)status.textContent='SIMULATED PREVIEW — Classified as '+intensity+' activity for '+minutes+' minutes. A future backend would estimate energy expenditure from body weight and activity MET ranges; no calorie estimate has been calculated here.';
  }
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
+ if(b.dataset.healthRemove!==undefined){const x=F.healthImports.find(x=>String(x.id)===b.dataset.healthRemove);if(x){if(x.entryId)F.entries=F.entries.filter(y=>y.id!==x.entryId);if(x.weighId){S.weigh=S.weigh.filter(y=>String(y.id)!==String(x.weighId));save()}F.healthImports=F.healthImports.filter(y=>y!==x);fsave();render();toast('Import removed')}return;}
+ if(b.dataset.logSmoothie!==undefined){
+  const date=nutDay,recipe=S.smoothie||DEFAULT_SMOOTHIE;
+  const entry={id:fusionId(),date,type:'meal',description:'Breakfast smoothie',recipeSnapshot:recipe,mealSlot:'b',qualityChoice:'quality',p:35,c:55,f:13,fiber:10,calories:480,source:'recipe-estimate'};
+  F.entries.push(entry);fsave();render();toast('Smoothie logged as quality breakfast · estimated macros; edit to match ingredients');return;
+ }
  if(b.dataset.festimate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const weight=latestWeight();if(!weight){toast('Set your weight in your profile first');return}const min=Number(form.elements.minutes.value)||0;if(!min){toast('Enter workout minutes first');return}form.elements.caloriesBurned.value=activityKcal(min,form.elements.intensity.value,weight);form.elements.calorieSource.value='estimated';const n=document.getElementById('fKcalNote');if(n)n.textContent='Approximate total expenditure (including resting energy), not active calories. Adjust using your wearable if available.';return}
  if(b.dataset.fai){fAI(b.dataset.fai);return}
  if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';toast('Workout loaded')}return}
@@ -965,12 +1021,14 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-favorite],
  if(b.dataset.fremove!==undefined){F.favorites.splice(+b.dataset.fremove,1);toast('Favorite removed')}
  if(b.dataset.fclear!==undefined){const k=b.dataset.fclear;for(const x of fusionActivities(k))if(x.planAction!=='extra')x.planAction='extra';delete F.substitutions[k];delete F.planChoices[k];clearReschedule(k);toast('Substitution cleared')}
  fsave();render();});
-document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFeedback'].includes(e.target.id))return;e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form));
+document.addEventListener('submit',e=>{if(e.target.id==='healthImportForm'){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const err=saveHealthImport(d);if(err){const el=document.getElementById('healthImportMessage');if(el)el.textContent=err;return}render();toast('Confirmed health data saved');return}if(!['fMeal','fActivity','fTargets','fFeedback'].includes(e.target.id))return;e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form));
  if(form.id==='fTargets'){for(const k of ['p','c','f','fiber'])F.targets[k]=Math.max(1,Number(d[k])||1);toast('Targets updated')}
  if(form.id==='fMeal'){const old=F.entries.find(x=>String(x.id)===String(d.editId)&&x.type==='meal');const entry={id:old?old.id:fusionId(),date:old?old.date:nutDay,type:'meal',description:String(d.description||'').trim(),mealSlot:d.mealSlot||'s',qualityChoice:d.qualityChoice||'unknown',p:+d.p||0,c:+d.c||0,f:+d.f||0,fiber:+d.fiber||0,calories:+d.calories||0,source:old?old.source:(form.dataset.ai==='yes'?'demo':'manual')};if(old)Object.assign(old,entry);else F.entries.push(entry);toast(old?'Meal updated':'Meal logged')}
  if(form.id==='fActivity'){const x={id:fusionId(),date:sel,type:'activity',description:String(d.description||'').trim(),minutes:Math.max(1,+d.minutes||1),intensity:d.intensity,components:String(d.components||''),planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:form.dataset.ai==='yes'?'demo':'manual'};F.entries.push(x);if(d.planAction&&d.planAction!=='extra'){for(const prev of fusionActivities(sel))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';clearReschedule(sel);F.substitutions[sel]={description:x.description,minutes:x.minutes,id:x.id};F.planChoices[sel]=d.planAction;if(d.planAction==='move')F.rescheduled[shiftDate(sel,1)]='Original workout moved from '+sel;syncSubstitution(sel);}toast('Activity logged')}
  if(form.id==='fFeedback'){const blob=new Blob([`Momentum Fusion beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
+
+document.addEventListener('change',e=>{if(e.target.id!=='healthScreenshot')return;const holder=document.getElementById('healthPreview');if(!holder)return;holder.replaceChildren();const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith('image/')){holder.textContent='Please choose an image screenshot.';return}if(file.size>12*1024*1024){holder.textContent='Image too large; choose a screenshot under 12 MB.';return}const url=URL.createObjectURL(file),img=document.createElement('img');img.src=url;img.alt='Screenshot preview for manual review';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';img.onload=()=>URL.revokeObjectURL(url);holder.append(img);});
 
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null;
@@ -993,7 +1051,10 @@ document.addEventListener("click",e=>{
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
   if(ds.week){ sel=shiftDate(sel,7*+ds.week); lastTab=null; render(); return }
   if(ds.nut){ const n=shiftDate(nutDay,+ds.nut); if(n<=ymd(today())) nutDay=n; render(); return }
-  if(ds.mealset!==undefined){ const k=nutDay; S.meals[k]=S.meals[k]||{}; const v=ds.v; if(v==="q") S.meals[k][ds.mealset]=(mealQuality(S.meals[k][ds.mealset])?S.meals[k][ds.mealset]:{p:1,f:0,v:1,c:0,q:1}); else if(v==="n") S.meals[k][ds.mealset]={p:0,f:0,v:0,c:0,n:1}; else delete S.meals[k][ds.mealset]; save(); render(); return }
+  if(ds.mealset!==undefined){ const k=nutDay; S.meals[k]=S.meals[k]||{}; const v=ds.v;
+   const fusionSlotMeals=F.entries.filter(x=>x.type==='meal'&&x.date===k&&fusionMealSlot(x)===ds.mealset);
+   if(fusionSlotMeals.length){for(const x of fusionSlotMeals)x.qualityChoice=v==='q'?'quality':v==='n'?'off':'unknown';fsave();render();toast('Meal quality updated');return;}
+ if(v==="q") S.meals[k][ds.mealset]=(mealQuality(S.meals[k][ds.mealset])?S.meals[k][ds.mealset]:{p:1,f:0,v:1,c:0,q:1}); else if(v==="n") S.meals[k][ds.mealset]={p:0,f:0,v:0,c:0,n:1}; else delete S.meals[k][ds.mealset]; save(); render(); return }
   if(ds.food){ const k=nutDay; S.meals[k]=S.meals[k]||{}; const m=S.meals[k][ds.meal]||{p:0,f:0,v:0,c:0}; m[ds.food]=Math.max(0,(m[ds.food]||0)+ +ds.dv); delete m.q; delete m.n; S.meals[k][ds.meal]=m; save(); render(); return }
   if(ds.reward){ const k=nutDay; S.rewards[k]=S.rewards[k]||{}; S.rewards[k][ds.reward]=Math.max(0,(S.rewards[k][ds.reward]||0)+ +ds.dv); save(); render(); return }
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }

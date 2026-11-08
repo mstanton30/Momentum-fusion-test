@@ -421,8 +421,9 @@ const TABS=[
  {id:"nutrition",label:"Nutrition",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c3 2 7 5 7 10a7 7 0 0 1-14 0c0-5 4-8 7-10zM12 3v18"/></svg>',view:vNutrition},
  {id:"supps",label:"Supps",icon:'<svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 14.5l5-5"/></svg>',view:vSupps},
  {id:"perks",label:"Perks",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c-2 3-5 5-5 9a5 5 0 0 0 10 0c0-4-3-6-5-9zM12 21v-4"/></svg>',view:vPerks},
+ {id:"coach",label:"Coach",icon:'<svg viewBox="0 0 24 24"><path d="M4 5h16v12H9l-5 4V5zM8 10h8M8 13h5"/></svg>',view:fCoachPanel},
  {id:"import",hidden:true,label:"Import Health",icon:"",view:vHealthImport},
- {id:"track",hidden:true,label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()+fCoachPanel()}
+ {id:"track",hidden:true,label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()}
 ];
 let tab=location.hash.replace("#","")||"home"; if(!TABS.find(t=>t.id===tab)) tab="home";
 let sel=ymd(today());       // selected day on the Workout tab
@@ -717,7 +718,7 @@ function saveHealthImport(d){
  F.healthImports.push(record);fsave();return null;
 }
 
-function vHome(){
+function vHomeDashboard(){
  const k=ymd(today()), wk=weekKeys(), meals=F.entries.filter(x=>x.type==='meal'&&x.date===k);
  const totals=fTotalsFor(k), activities=fusionActivities(k), scheduled=dayDef(k).sessions.filter(x=>sessOf(k,x.id).done);
  const workouts=scheduled.length+activities.length, mins=totalTrainingMinutes(k), pts=dayPoints(k);
@@ -740,13 +741,14 @@ function vHome(){
  <p><b>${esc(coach.category)}:</b> ${esc(coach.focus)}</p><p class="muted sm">${esc(coach.reason)}</p><details><summary>Why this suggestion?</summary><p class="muted sm">Rule-based guidance from your logged data. Missing entries are not treated as missed meals or workouts. No wearable readiness is connected.</p></details></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Progress</h3><button class="btn small ghost" data-go="track">View trends</button></div>
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>weekly points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
- <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="track">Full coaching & progress</button></div>
+ <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.6.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.7.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
 
+function vHome(){return vHomeDashboard()+`<details class="card" style="margin-top:14px"><summary style="font-weight:700;cursor:pointer">Progress & historical trends</summary>${vTrack()}</details>`}
 function vTrack(){
   const p=S.profile||{}, mod=MODALITIES[p.modality||"bike"];
   const w=[...S.weigh].sort((a,b)=>a.d<b.d?1:-1), t=[...S.tests].sort((a,b)=>a.d<b.d?1:-1);
@@ -894,6 +896,7 @@ F.entries=F.entries.map(x=>({...x,date:x.date||ymd(today()),fiber:x.fiber||0,cal
 F.substitutions=F.substitutions||{}; F.coachNotes=F.coachNotes||[];
 F.targets.fiber=F.targets.fiber||30;
 F.grocery=F.grocery||{};F.mealRecipes=F.mealRecipes||{};F.mealPlans=F.mealPlans||{};
+F.customReminders=F.customReminders||[];
 F.coachPrefs=F.coachPrefs||{tone:'balanced',instructions:'',quietStart:'22:00',quietEnd:'07:00',reminders:{breakfast:{on:true,time:'09:00'},lunch:{on:true,time:'13:30'},dinner:{on:true,time:'19:30'},workout:{on:true,time:'19:00'},review:{on:true,time:'18:00'},grocery:{on:true,time:'09:00'}}};
 F.workoutTemplates=F.workoutTemplates||[
 {name:'Basketball',description:'Full-court basketball',minutes:75,intensity:'vigorous',components:'Games'},
@@ -957,6 +960,47 @@ function groceryPanel(){
  <h3 style="margin-top:16px">This week's planned meals</h3>${plan.length?plan.map(x=>`<div class="frow"><span><b>${esc(x.name)}</b><br><small class="muted">${x.servings} serving(s) · ${x.added?'Ingredients added':'Not added to groceries'}</small></span><div class="row tight"><button type="button" class="btn small" data-grocery-ingredients="${esc(x.id)}">+ Ingredients</button><button type="button" class="btn small ghost" data-grocery-unplan="${esc(x.id)}">×</button></div></div>`).join(''):'<p class="muted xs">No meals planned yet.</p>'}</div>
  <div class="card"><h3>Shopping checklist</h3>${total?Object.entries(grouped).map(([cat,items])=>`<h3 style="margin:14px 0 6px">${esc(cat)}</h3>${items.map(x=>`<div class="frow"><span><label style="display:flex;gap:9px;align-items:center"><input style="width:auto" type="checkbox" data-grocery-check="${esc(x.id)}" ${x.checked?'checked':''}><span style="${x.checked?'text-decoration:line-through;opacity:.65':''}">${esc(x.name)}${x.qty?' · '+esc(x.qty):''}</span></label></span><button type="button" class="btn small ghost" data-grocery-remove="${esc(x.id)}">×</button></div>`).join('')}`).join(''):'<p class="muted sm">Your list is empty. Add an item or plan a favorite meal.</p>'}<p class="muted xs">Lists are stored locally on this device. Cross-device syncing is not yet enabled.</p></div>`;
 }
+
+function momentumCustomReminderPanel(){
+ const xs=F.customReminders||[];
+ const rows=xs.map(x=>`<div class="frow"><span><b>${esc(x.title)}</b><br><small class="muted">${esc(x.time)} · ${x.repeat==='once'?esc(x.date):x.repeat==='daily'?'Daily':(x.days||[]).map(i=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).join(', ')} · ${x.on?'On':'Paused'}</small></span><div class="row tight"><button class="btn small ghost" data-custom-toggle="${esc(x.id)}">${x.on?'Pause':'Resume'}</button><button class="btn small ghost" data-custom-edit="${esc(x.id)}">Edit</button><button class="btn small ghost" data-custom-remove="${esc(x.id)}">Remove</button></div></div>`).join('');
+ return `<div class="card"><h3>Custom reminders</h3><p class="muted sm">Create personal reminders for anything. Each reminder is sent as an iPhone push at your chosen time.</p>
+ ${rows||'<p class="muted xs">No custom reminders yet.</p>'}
+ <form id="momentumCustomForm"><label>Reminder<input name="title" required maxlength="100" placeholder="Take vitamins, stretch, drink water…"></label>
+ <div class="fgrid"><label>Time<input name="time" type="time" value="09:00" required></label><label>Repeat<select name="repeat" id="momentumRepeat"><option value="daily">Every day</option><option value="weekly">Selected weekdays</option><option value="once">One time</option></select></label></div>
+ <div id="momentumWeekdays" style="display:none"><p class="muted xs">Days of the week</p><div class="row" style="flex-wrap:wrap">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((x,i)=>`<label style="font-size:12px"><input type="checkbox" name="day_${i}" ${i>0&&i<6?'checked':''}> ${x}</label>`).join('')}</div></div>
+ <label id="momentumOnceDate" style="display:none">Date<input type="date" name="date" value="${ymd(today())}"></label>
+ <button class="btn" type="submit">Add reminder</button></form>
+ <p id="momentumReminderSyncStatus" class="muted xs" role="status">Reminder changes sync to Supabase when this app is open.</p></div>`;
+}
+document.addEventListener('change',e=>{
+ if(e.target.id!=='momentumRepeat')return;
+ const v=e.target.value;
+ document.getElementById('momentumWeekdays').style.display=v==='weekly'?'block':'none';
+ document.getElementById('momentumOnceDate').style.display=v==='once'?'block':'none';
+});
+document.addEventListener('submit',e=>{
+ if(e.target.id!=='momentumCustomForm')return;
+ e.preventDefault();
+ const f=e.target,d=Object.fromEntries(new FormData(f));
+ const days=Array.from({length:7},(_,i)=>i).filter(i=>f.querySelector(`[name="day_${i}"]`)?.checked);
+ if(d.repeat==='weekly'&&!days.length){toast('Choose at least one weekday');return}
+ if(d.repeat==='once'&&(!d.date||d.date<ymd(today()))){toast('Choose today or a future date');return}
+ F.customReminders=F.customReminders||[];
+ if(F.customReminders.length>=20){toast('Limit of 20 custom reminders');return}
+ F.customReminders.push({id:'r'+crypto.randomUUID().replace(/-/g,''),title:d.title.trim().slice(0,100),time:d.time,repeat:d.repeat,days,date:d.repeat==='once'?d.date:null,on:true});
+ fsave();render();window.momentumSyncReminders?.();toast('Reminder added');
+});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-custom-remove],[data-custom-toggle],[data-custom-edit]');if(!b)return;
+ F.customReminders=F.customReminders||[];
+ const id=b.dataset.customRemove||b.dataset.customToggle||b.dataset.customEdit;
+ const x=F.customReminders.find(x=>x.id===id);if(!x)return;
+ if(b.dataset.customRemove){if(!confirm('Remove this reminder?'))return;F.customReminders=F.customReminders.filter(y=>y.id!==id)}
+ else if(b.dataset.customToggle){x.on=!x.on}
+ else{const title=prompt('Reminder message',x.title);if(title===null)return;const time=prompt('Time (HH:MM, 24-hour)',x.time);if(time===null)return;if(!title.trim()||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){toast('Enter a message and valid time');return}x.title=title.trim().slice(0,100);x.time=time}
+ fsave();render();window.momentumSyncReminders?.();
+});
 function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
  const labels={breakfast:'Breakfast logging',lunch:'Lunch logging',dinner:'Dinner logging',workout:'Workout logging',review:'Sunday progress review',grocery:'Sunday grocery planning'};
  return `<div class="card"><h3>Coaching preferences & reminders</h3><p class="muted sm">Choose your preferred coaching style and notification times. Times are suggested defaults and can be changed.</p>
@@ -964,7 +1008,7 @@ function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
  <label>Custom coaching instructions<textarea name="instructions" maxlength="500" rows="3" placeholder="Focus on consistency, protein, and recovery…">${esc(p.instructions||'')}</textarea></label>
  ${Object.entries(labels).map(([k,label])=>`<div class="frow"><label style="flex:1"><input style="width:auto" type="checkbox" name="on_${k}" ${rem[k]?.on?'checked':''}> ${label}</label><input style="max-width:130px" aria-label="${label} time" type="time" name="time_${k}" value="${esc(rem[k]?.time||'09:00')}"></div>`).join('')}
  <div class="fgrid"><label>Quiet hours start<input type="time" name="quietStart" value="${esc(p.quietStart)}"></label><label>Quiet hours end<input type="time" name="quietEnd" value="${esc(p.quietEnd)}"></label></div><button class="btn" type="submit">Save coaching preferences</button></form>
- <p class="note"><b>iPhone push setup pending:</b> These settings are saved now, but notifications will not arrive while the app is closed until we deploy secure device subscriptions, scheduled delivery, and per-user data syncing. iPhone web push also requires installing Momentum to the Home Screen and granting notification permission.</p></div>`;
+ <p class="note"><b>Reminder delivery:</b> Push delivery and scheduling are in testing. Keep this app installed and open it after changing settings to synchronize. iPhone web push also requires installing Momentum to the Home Screen and granting notification permission.</p></div>`;
 }
 
 function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
@@ -1103,7 +1147,7 @@ ${fDailyCoachPanel()}
 <div class="note"><b>Your focus:</b> ${esc(fCoachAdvice(m))}</div>
 <p class="muted xs">Coaching is educational and reflects logging completeness; missing entries are not treated as skipped meals or workouts. Calories burned do not automatically increase food targets.</p>
 <button class="btn small" data-fai="coach">✦ Explain AI coaching preview</button><p id="fAiStatus" class="muted xs"></p></div>
-${coachPrefsPanel()}
+${coachPrefsPanel()}\n${momentumCustomReminderPanel()}
 <div class="card"><h3>Beta feedback</h3><p class="muted xs">Your feedback is downloaded as a text file for sharing with the developers; it is not uploaded to a server.</p><form id="fFeedback"><textarea name="feedback" rows="3" required placeholder="What worked? What should change?"></textarea><button class="btn small">Download feedback</button></form></div>`}
 function fAI(kind){
  const form=document.querySelector(kind==='meal'?'#fMeal':kind==='activity'?'#fActivity':null);
@@ -1299,7 +1343,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.6.0';
+ const VERSION='9.7.0';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');
@@ -1340,12 +1384,12 @@ if ('serviceWorker' in navigator) {
      (typeof dayDef==='function'&&typeof sessOf==='function'&&dayDef(date).sessions.some(x=>sessOf(date,x.id).done));
    const state={date,breakfast:slots.has('b'),lunch:slots.has('l'),dinner:slots.has('d'),workout:done};
    const payload={action:'sync',deviceSecret:secret,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York',
-     preferences:F.coachPrefs.reminders,dailyState:state};
+     preferences:F.coachPrefs.reminders,customReminders:F.customReminders||[],dailyState:state};
    const r=await fetch('https://naomdmnfqudszqmcirrh.supabase.co/functions/v1/momentum-push',
      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
    const d=await r.json();if(!r.ok)throw Error(d.error||'Sync unavailable');
-   localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());
-  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e)}
+   localStorage.setItem('momentum.reminder.lastsync',new Date().toISOString());const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent='Reminder settings synced successfully.';
+  }catch(e){console.warn('Momentum reminder sync (nonfatal):',e);const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent='Sync failed: '+e.message}
  }
  function queue(){clearTimeout(timer);timer=setTimeout(syncReminders,1400)}
  window.addEventListener('load',()=>{queue();setInterval(queue,60000)});

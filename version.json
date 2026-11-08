@@ -1,4 +1,4 @@
 {
-  "version": "9.6.0",
-  "notes": "Scheduled reminders with nonblocking preference sync"
+  "version": "9.7.0",
+  "notes": "Six tabs and custom reminders with scheduled push synchronization"
 }

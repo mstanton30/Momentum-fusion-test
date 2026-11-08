@@ -6,13 +6,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Momentum Fusion">
+<meta name="apple-mobile-web-app-title" content="Momentum">
 <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1113" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
-<link rel="manifest" href="manifest.json">
-<title>Momentum Fusion v9</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Momentum">
+<title>Momentum — Beta v9</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -650,14 +654,14 @@ function vHealthImport(){
  <p class="muted xs">Test mode: no access code required. Shared limit: 10 screenshot analyses per day.</p>
  <input id="healthScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose a screenshot to start automatic analysis.</p><button class="btn" type="button" data-health-analyze>Analyze screenshot</button></div>
  <div id="healthExtractResult"></div>
- <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
+ <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-date="${esc(x.id)}">Correct date</button><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
 }
 function renderHealthExtract(){
  const el=document.getElementById('healthExtractResult');if(!el)return;
  if(!healthExtracted){el.innerHTML='';return}
  const d=healthExtracted;
  const fields=d.kind==='workout'?[['activity','Activity'],['minutes','Minutes'],['activeCalories','Active calories'],['heartRate','Average HR']]:d.kind==='weight'?[['weight','Weight (lb)'],['bodyFat','Body fat (%)'],['muscle','Muscle (lb)']]:[['recovery','Recovery (%)'],['sleep','Sleep (hours)'],['strain','Strain'],['hrv','HRV (ms)'],['heartRate','Resting HR']];
- el.innerHTML=`<div class="card"><h3>Recognized ${esc(d.kind)}</h3><p class="muted sm">${esc(d.source)} · ${esc(d.date)} · ${esc(d.confidence||'unknown')} confidence</p><div class="fgrid">${fields.map(([k,label])=>`<div><span class="muted xs">${esc(label)}</span><p><b>${esc(d[k]??'Not visible')}</b></p></div>`).join('')}</div>${d.warnings&&d.warnings.length?`<p class="muted sm">${d.warnings.map(esc).join(' · ')}</p>`:''}<p class="muted xs">Values come from the screenshot. Missing or uncertain required values will not be guessed.</p><button class="btn" type="button" data-health-save ${d.confidence==='low'?'disabled':''}>Save recognized data</button></div>`;
+ el.innerHTML=`<div class="card"><h3>Recognized ${esc(d.kind)}</h3><p class="muted sm">${esc(d.source)} · ${esc(d.confidence||'unknown')} confidence</p><label>Workout / measurement date (verify before saving)<input id="healthConfirmedDate" type="date" value="${esc(d.date||'')}" max="${ymd(today())}"></label><p class="muted xs">AI can misread years. Please verify the date shown above.</p><div class="fgrid">${fields.map(([k,label])=>`<div><span class="muted xs">${esc(label)}</span><p><b>${esc(d[k]??'Not visible')}</b></p></div>`).join('')}</div>${d.warnings&&d.warnings.length?`<p class="muted sm">${d.warnings.map(esc).join(' · ')}</p>`:''}<p class="muted xs">Values come from the screenshot. Missing or uncertain required values will not be guessed.</p><button class="btn" type="button" data-health-save ${d.confidence==='low'?'disabled':''}>Save recognized data</button></div>`;
 }
 async function analyzeHealthScreenshot(){
  const file=document.getElementById('healthScreenshot')?.files?.[0],message=document.getElementById('healthImportMessage');
@@ -677,7 +681,7 @@ async function analyzeHealthScreenshot(){
 }
 function saveRecognizedHealth(){
  if(!healthExtracted)return;const x=healthExtracted;
- const d={...x,source:x.source||'Other',date:x.date||'',kind:x.kind,intensity:x.intensity||'moderate'};
+ const d={...x,source:x.source||'Other',date:document.getElementById('healthConfirmedDate')?.value||'',kind:x.kind,intensity:x.intensity||'moderate'};
  for(const k of ['minutes','activeCalories','heartRate','weight','bodyFat','muscle','recovery','sleep','strain','hrv'])d[k]=x[k]===null||x[k]===undefined?'':String(x[k]);
  const error=saveHealthImport(d);if(error){const msg=document.getElementById('healthImportMessage');if(msg)msg.textContent=error;return}
  healthExtracted=null;render();toast('Screenshot measurements saved to tracking');
@@ -686,6 +690,7 @@ function saveHealthImport(d){
  const n=k=>d[k]===''?null:Number(d[k]);
  const date=d.date,kind=d.kind,source=d.source;
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>ymd(today()))return 'Choose a valid date that is not in the future.';
+ const cutoff=new Date(today());cutoff.setFullYear(cutoff.getFullYear()-2);if(date<ymd(cutoff))return 'The date is more than two years old. Please correct the year before saving.';
  if(!['workout','recovery','weight'].includes(kind))return 'Choose a measurement type.';
  const record={id:fusionId(),date,kind,source,values:{}};
  if(kind==='workout'){
@@ -723,7 +728,7 @@ function vHome(){
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
  const bars=wk.map((day,i)=>{const done=dayDef(day).sessions.some(x=>sessOf(day,x.id).done)||fusionActivities(day).length>0;return `<div style="flex:1;text-align:center"><div style="height:7px;border-radius:5px;background:${done?'var(--green)':'var(--line)'}"></div><span class="muted xs">${['S','M','T','W','T','F','S'][i]}</span></div>`}).join('');
- return header('Your day at a glance','Momentum Fusion · Home')+`
+ return header('Your day at a glance','Momentum · Home')+`
  <div class="card hero"><div class="eyebrow">Today · ${esc(fmt(k))}</div><h2 style="margin:8px 0">Your Momentum</h2>
  <div class="stat"><div><b>${pts}</b><span>points today</span></div><div><b>${mins}</b><span>training min</span></div><div><b>${workouts}</b><span>workouts</span></div></div>
  <p class="muted sm" style="margin:14px 0 8px">This week · ${active}/7 active days · ${logged} workouts · ${weekMin} minutes</p><div style="display:flex;gap:5px">${bars}</div></div>
@@ -765,7 +770,7 @@ function vTrack(){
 
   <div class="card"><h3>Health screenshot import</h3><p class="muted sm">Bring Apple Fitness, WHOOP or smart-scale readings into your progress and coaching records.</p><button class="btn small" data-go="import">Import screenshot</button></div>
   <h2>Body composition · RENPHO</h2>
-  <div class="card"><div class="eyebrow">Connected data plan</div><h3>RENPHO → Apple Health → Momentum Fusion</h3>
+  <div class="card"><div class="eyebrow">Connected data plan</div><h3>RENPHO → Apple Health → Momentum</h3>
   <p class="muted sm">Your RENPHO scale now syncs with Apple Health. Automatic HealthKit import requires a future iOS bridge; this browser prototype does not access Apple Health.</p>
   <div class="stat"><div><b>${w[0]&&Number.isFinite(+w[0].wt)?(+w[0].wt).toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${w[0]&&w[0].bf!==''&&Number.isFinite(+w[0].bf)?(+w[0].bf).toFixed(1)+'%':'–'}</b><span>body fat estimate</span></div><div><b>${w[0]&&w[0].mm!==''&&Number.isFinite(+w[0].mm)?(+w[0].mm).toFixed(1):'–'}</b><span>muscle mass · lb</span></div></div>
   ${(()=>{const recent=w.filter(x=>x.d>=shiftDate(ymd(today()),-27));const prior=w.filter(x=>x.d>=shiftDate(ymd(today()),-55)&&x.d<shiftDate(ymd(today()),-27));const mean=(a,k)=>{const v=a.map(x=>Number(x[k])).filter((v,i)=>Number.isFinite(v)&&a[i][k]!==''&&a[i][k]!=null);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};return '<p class="muted xs">Four-week averages: '+[['wt','Weight',' lb'],['bf','Body fat','%'],['mm','Muscle',' lb']].map(([k,n,u])=>{const a=mean(recent,k),b=mean(prior,k);return n+' '+(a==null?'–':a.toFixed(1)+u)+(a!=null&&b!=null?' ('+(a-b>=0?'+':'')+(a-b).toFixed(1)+u+' vs prior 4 weeks)':'')}).join(' · ')+'</p>'})()}
@@ -874,7 +879,7 @@ function exportData(){ const blob=new Blob([JSON.stringify(S,null,1)],{type:"app
 function shrinkImage(file){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const s=Math.min(1,480/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=img.width*s; c.height=img.height*s; c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.7)) }; img.onerror=()=>res(null); img.src=URL.createObjectURL(file) }) }
 
 
-/* Momentum Fusion v9: AI Preview uses deterministic sample responses; no external AI service. */
+/* Momentum v9: AI Preview uses deterministic sample responses; no external AI service. */
 const FKEY="momentumfusion.extra.v1"; // preserves v1 favorites and entries
 let F=(()=>{try{return JSON.parse(localStorage.getItem(FKEY))||{}}catch{return {}}})();
 F.entries=F.entries||[];F.healthImports=F.healthImports||[];F.favorites=F.favorites||[];F.targets=F.targets||{p:160,c:220,f:70};
@@ -884,6 +889,8 @@ function fTotals(){return fToday().filter(x=>x.type==='meal').reduce((a,x)=>{for
 F.entries=F.entries.map(x=>({...x,date:x.date||ymd(today()),fiber:x.fiber||0,calories:x.calories||0}));
 F.substitutions=F.substitutions||{}; F.coachNotes=F.coachNotes||[];
 F.targets.fiber=F.targets.fiber||30;
+F.grocery=F.grocery||{};F.mealRecipes=F.mealRecipes||{};F.mealPlans=F.mealPlans||{};
+F.coachPrefs=F.coachPrefs||{tone:'balanced',instructions:'',quietStart:'22:00',quietEnd:'07:00',reminders:{breakfast:{on:true,time:'09:00'},lunch:{on:true,time:'13:30'},dinner:{on:true,time:'19:30'},workout:{on:true,time:'19:00'},review:{on:true,time:'18:00'},grocery:{on:true,time:'09:00'}}};
 F.workoutTemplates=F.workoutTemplates||[
 {name:'Basketball',description:'Full-court basketball',minutes:75,intensity:'vigorous',components:'Games'},
 {name:'Personal trainer',description:'Personal training',minutes:50,intensity:'moderate',components:'15 min stretching; 15 min cardio; 20 min strength'},
@@ -914,10 +921,52 @@ function fTotals(){return fTotalsFor(nutDay)}
 function fMeters(date){const t=fTotalsFor(date);return [['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,label])=>`<div class="fmeter"><div class="row" style="justify-content:space-between"><b>${label}</b><span>${Math.round(t[k])} / ${F.targets[k]}g</span></div><div class="meter"><i style="width:${Math.min(100,t[k]/Math.max(1,F.targets[k])*100)}%"></i></div></div>`).join('')}
 function fFavoriteRows(type){const fav=F.favorites.map((x,i)=>({...x,i})).filter(x=>x.type===type);return fav.length?fav.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${x.p||0}P · ${x.c||0}C · ${x.f||0}F · ${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])}`:`${x.minutes||0} min · +${customWorkoutPoints(x)} pts`}</small></span><div class="row tight"><button class="btn small" data-favorite="${x.i}">+ Log</button><button class="btn small ghost" data-fremove="${x.i}" aria-label="Remove favorite">×</button></div></div>`).join(''):'<p class="muted xs">Your saved favorites will appear here.</p>'}
 function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat · ${x.qualityChoice==='quality'?'Quality':x.qualityChoice==='off'?'Off plan':'Unclassified'}`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · +${customWorkoutPoints(x)} pts (daily exercise cap applies) · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':''}</small></span><div class="row tight">${type==='meal'?`<button class="btn small ghost" data-fedit="${x.id}" title="Edit meal">Edit</button>`:''}<button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
+
+/* Weekly personal grocery planning; all data stays in this browser during beta. */
+function groceryWeek(){return ymd(startOfWeek(today()))}
+function groceryState(){const k=groceryWeek();return F.grocery[k]||(F.grocery[k]={items:[]})}
+function groceryPlan(){const k=groceryWeek();return F.mealPlans[k]||(F.mealPlans[k]=[])}
+function groceryAdd(name,qty='',category='Other'){
+ name=String(name||'').trim().slice(0,120);qty=String(qty||'').trim().slice(0,80);if(!name)return false;
+ const items=groceryState().items;
+ const existing=items.find(x=>x.name.toLowerCase()===name.toLowerCase()&&x.qty.toLowerCase()===qty.toLowerCase());
+ if(existing){existing.checked=false;return true}
+ items.push({id:String(fusionId()),name,qty,category,checked:false});return true
+}
+function groceryIngredients(text,servings=1){
+ const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ return lines.slice(0,50).map(line=>{
+   const m=line.match(/^([\d.]+)\s+(cups?|tbsp|tsp|oz|lb|g|kg|ml|l|pcs?|pieces?|whole)\s+(.+)$/i);
+   if(m)return {name:m[3],qty:(Number(m[1])*servings)+' '+m[2]};
+   return {name:line,qty:servings>1?'For '+servings+' servings':''};
+ });
+}
+function groceryPanel(){
+ const k=groceryWeek(),state=groceryState(),plan=groceryPlan(),favorites=F.favorites.filter(x=>x.type==='meal');
+ const grouped={};for(const item of state.items){(grouped[item.category||'Other']||(grouped[item.category||'Other']=[])).push(item)}
+ const total=state.items.length,done=state.items.filter(x=>x.checked).length;
+ return `<h2>Sunday Grocery List</h2><div class="card"><h3>Week of ${esc(fmt(k))}</h3><p class="muted sm">A fresh list each Sunday. Build it from planned favorite meals or add anything manually. ${done}/${total} checked off.</p>
+ <form id="groceryQuick"><div class="fgrid"><label>Item<input name="name" required maxlength="120" placeholder="Milk, bananas, paper towels…"></label><label>Quantity (optional)<input name="qty" maxlength="80" placeholder="2 cartons"></label></div><label>Department<select name="category">${['Produce','Meat & Seafood','Dairy & Eggs','Pantry','Frozen','Household','Other'].map(x=>`<option>${x}</option>`).join('')}</select></label><button class="btn small" type="submit">+ Add to list</button></form>
+ <div class="row" style="margin-top:12px"><button type="button" class="btn small ghost" data-grocery-repeat>Repeat last week</button><button type="button" class="btn small ghost" data-grocery-clear>Clear this week</button></div></div>
+ <div class="card"><h3>Plan meals for this week</h3><p class="muted xs">Choose a favorite meal, enter its ingredients once, then add it to this week's plan. Ingredients are not inferred from macros.</p>
+ ${favorites.length?favorites.map((x,i)=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${F.mealRecipes[x.description]?esc(F.mealRecipes[x.description].split('\n').filter(Boolean).length+' ingredients saved'):'Ingredients not yet saved'}</small></span><div class="row tight"><button type="button" class="btn small ghost" data-grocery-recipe="${i}">Ingredients</button><button type="button" class="btn small" data-grocery-plan="${i}">+ Plan</button></div></div>`).join(''):'<p class="muted sm">Save a meal as a favorite to see quick-add meal buttons here.</p>'}
+ <h3 style="margin-top:16px">This week's planned meals</h3>${plan.length?plan.map(x=>`<div class="frow"><span><b>${esc(x.name)}</b><br><small class="muted">${x.servings} serving(s) · ${x.added?'Ingredients added':'Not added to groceries'}</small></span><div class="row tight"><button type="button" class="btn small" data-grocery-ingredients="${esc(x.id)}">+ Ingredients</button><button type="button" class="btn small ghost" data-grocery-unplan="${esc(x.id)}">×</button></div></div>`).join(''):'<p class="muted xs">No meals planned yet.</p>'}</div>
+ <div class="card"><h3>Shopping checklist</h3>${total?Object.entries(grouped).map(([cat,items])=>`<h3 style="margin:14px 0 6px">${esc(cat)}</h3>${items.map(x=>`<div class="frow"><span><label style="display:flex;gap:9px;align-items:center"><input style="width:auto" type="checkbox" data-grocery-check="${esc(x.id)}" ${x.checked?'checked':''}><span style="${x.checked?'text-decoration:line-through;opacity:.65':''}">${esc(x.name)}${x.qty?' · '+esc(x.qty):''}</span></label></span><button type="button" class="btn small ghost" data-grocery-remove="${esc(x.id)}">×</button></div>`).join('')}`).join(''):'<p class="muted sm">Your list is empty. Add an item or plan a favorite meal.</p>'}<p class="muted xs">Lists are stored locally on this device. Cross-device syncing is not yet enabled.</p></div>`;
+}
+function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
+ const labels={breakfast:'Breakfast logging',lunch:'Lunch logging',dinner:'Dinner logging',workout:'Workout logging',review:'Sunday progress review',grocery:'Sunday grocery planning'};
+ return `<div class="card"><h3>Coaching preferences & reminders</h3><p class="muted sm">Choose your preferred coaching style and notification times. Times are suggested defaults and can be changed.</p>
+ <form id="coachPrefs"><label>Coaching style<select name="tone">${[['supportive','Supportive'],['balanced','Balanced — encouragement and accountability'],['direct','Direct and accountable']].map(([v,n])=>`<option value="${v}" ${p.tone===v?'selected':''}>${n}</option>`).join('')}</select></label>
+ <label>Custom coaching instructions<textarea name="instructions" maxlength="500" rows="3" placeholder="Focus on consistency, protein, and recovery…">${esc(p.instructions||'')}</textarea></label>
+ ${Object.entries(labels).map(([k,label])=>`<div class="frow"><label style="flex:1"><input style="width:auto" type="checkbox" name="on_${k}" ${rem[k]?.on?'checked':''}> ${label}</label><input style="max-width:130px" aria-label="${label} time" type="time" name="time_${k}" value="${esc(rem[k]?.time||'09:00')}"></div>`).join('')}
+ <div class="fgrid"><label>Quiet hours start<input type="time" name="quietStart" value="${esc(p.quietStart)}"></label><label>Quiet hours end<input type="time" name="quietEnd" value="${esc(p.quietEnd)}"></label></div><button class="btn" type="submit">Save coaching preferences</button></form>
+ <p class="note"><b>iPhone push setup pending:</b> These settings are saved now, but notifications will not arrive while the app is closed until we deploy secure device subscriptions, scheduled delivery, and per-user data syncing. iPhone web push also requires installing Momentum to the Home Screen and granting notification permission.</p></div>`;
+}
+
 function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
 <div class="card"><h3>Quick breakfast</h3><p class="muted xs">Uses the saved smoothie recipe, logs it as a quality breakfast, and updates both macro and meal-quality tracking.</p><button class="btn" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button></div>
 <div class="card"><h3>Describe your meal</h3><p class="muted xs">AI PREVIEW ONLY: estimates are simulated examples, not live AI. Review and edit all numbers before saving.</p><form id="fMeal"><input type="hidden" name="editId" value=""><div class="fgrid"><label>Meal slot<select name="mealSlot"><option value="b">Breakfast</option><option value="l">Lunch</option><option value="d">Dinner</option><option value="s">Snack</option></select></label><label>Meal quality<select name="qualityChoice"><option value="quality">Quality: protein + fruit/vegetables</option><option value="off">Off plan</option><option value="unknown">Not sure / unclassified</option></select></label></div><textarea name="description" rows="2" required placeholder="Chicken burrito, rice, salad, two IPAs"></textarea><div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn small" type="button" data-fai="meal">✦ AI Preview: Estimate meal</button><span class="muted xs" id="fAiStatus">Or enter macros yourself below.</span></div><div class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber'],['calories','Calories']].map(([k,n])=>`<label>${n}<input name="${k}" type="number" min="0" step="any" value="0"></label>`).join('')}</div><button class="btn" type="submit">Save meal</button></form></div>
-<div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div><div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
+<div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div>${groceryPanel()}<div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
 function fWorkoutPanel(){
 const selected=sel,sub=F.substitutions[selected],future=selected>ymd(today());
 const templates=F.workoutTemplates.map((t,i)=>`<button type="button" class="btn small ghost" data-ftemplate="${i}">${esc(t.name)}</button>`).join(' ');
@@ -1004,6 +1053,7 @@ ${fDailyCoachPanel()}
 <div class="note"><b>Your focus:</b> ${esc(fCoachAdvice(m))}</div>
 <p class="muted xs">Coaching is educational and reflects logging completeness; missing entries are not treated as skipped meals or workouts. Calories burned do not automatically increase food targets.</p>
 <button class="btn small" data-fai="coach">✦ Explain AI coaching preview</button><p id="fAiStatus" class="muted xs"></p></div>
+${coachPrefsPanel()}
 <div class="card"><h3>Beta feedback</h3><p class="muted xs">Your feedback is downloaded as a text file for sharing with the developers; it is not uploaded to a server.</p><form id="fFeedback"><textarea name="feedback" rows="3" required placeholder="What worked? What should change?"></textarea><button class="btn small">Download feedback</button></form></div>`}
 function fAI(kind){
  const form=document.querySelector(kind==='meal'?'#fMeal':kind==='activity'?'#fActivity':null);
@@ -1040,12 +1090,23 @@ function fAI(kind){
   if(status)status.textContent='SIMULATED PREVIEW — Classified as '+intensity+' activity for '+minutes+' minutes. A future backend would estimate energy expenditure from body weight and activity MET ranges; no calorie estimate has been calculated here.';
  }
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-health-login],[data-health-logout],[data-health-config],[data-health-analyze],[data-health-save],[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-health-login],[data-health-logout],[data-health-config],[data-health-analyze],[data-health-save],[data-health-date],[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
  if(b.dataset.healthLogin!==undefined){healthSendLogin();return}
  if(b.dataset.healthLogout!==undefined){healthSignOut();return}
  if(b.dataset.healthConfig!==undefined){const v=document.getElementById('healthEndpoint')?.value?.trim()||'';if(!/^https:\/\//.test(v)){toast('Use a secure HTTPS endpoint');return}localStorage.setItem(HEALTH_API_KEY,v);toast('Connection saved');return}
  if(b.dataset.healthAnalyze!==undefined){analyzeHealthScreenshot();return}
  if(b.dataset.healthSave!==undefined){saveRecognizedHealth();return}
+ if(b.dataset.healthDate!==undefined){
+  const x=F.healthImports.find(x=>String(x.id)===b.dataset.healthDate);if(!x)return;
+  const next=prompt('Correct imported date (YYYY-MM-DD)',x.date);if(next===null)return;
+  const d=new Date(next+'T12:00:00');if(!/^\d{4}-\d{2}-\d{2}$/.test(next)||Number.isNaN(d.getTime())||ymd(d)!==next||next>ymd(today())){toast('Enter a valid date not in the future');return}
+  const duplicate=F.healthImports.some(y=>y!==x&&y.kind===x.kind&&y.date===next&&y.source===x.source&&y.summary===x.summary);
+  if(duplicate){toast('Possible duplicate on that date. No changes made');return}
+  x.date=next;
+  if(x.entryId){const entry=F.entries.find(y=>String(y.id)===String(x.entryId));if(entry)entry.date=next}
+  if(x.weighId){const entry=S.weigh.find(y=>String(y.id)===String(x.weighId));if(entry){entry.d=next;save()}}
+  fsave();render();toast('Import date corrected to '+next);return;
+ }
  if(b.dataset.healthRemove!==undefined){const x=F.healthImports.find(x=>String(x.id)===b.dataset.healthRemove);if(x){if(x.entryId)F.entries=F.entries.filter(y=>y.id!==x.entryId);if(x.weighId){S.weigh=S.weigh.filter(y=>String(y.id)!==String(x.weighId));save()}F.healthImports=F.healthImports.filter(y=>y!==x);fsave();render();toast('Import removed')}return;}
  if(b.dataset.logSmoothie!==undefined){
   const date=nutDay,recipe=S.smoothie||DEFAULT_SMOOTHIE;
@@ -1068,10 +1129,29 @@ document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFee
  if(form.id==='fTargets'){for(const k of ['p','c','f','fiber'])F.targets[k]=Math.max(1,Number(d[k])||1);toast('Targets updated')}
  if(form.id==='fMeal'){const old=F.entries.find(x=>String(x.id)===String(d.editId)&&x.type==='meal');const entry={id:old?old.id:fusionId(),date:old?old.date:nutDay,type:'meal',description:String(d.description||'').trim(),mealSlot:d.mealSlot||'s',qualityChoice:d.qualityChoice||'unknown',p:+d.p||0,c:+d.c||0,f:+d.f||0,fiber:+d.fiber||0,calories:+d.calories||0,source:old?old.source:(form.dataset.ai==='yes'?'demo':'manual')};if(old)Object.assign(old,entry);else F.entries.push(entry);toast(old?'Meal updated':'Meal logged')}
  if(form.id==='fActivity'){const x={id:fusionId(),date:sel,type:'activity',description:String(d.description||'').trim(),minutes:Math.max(1,+d.minutes||1),intensity:d.intensity,components:String(d.components||''),planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:form.dataset.ai==='yes'?'demo':'manual'};F.entries.push(x);if(d.planAction&&d.planAction!=='extra'){for(const prev of fusionActivities(sel))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';clearReschedule(sel);F.substitutions[sel]={description:x.description,minutes:x.minutes,id:x.id};F.planChoices[sel]=d.planAction;if(d.planAction==='move')F.rescheduled[shiftDate(sel,1)]='Original workout moved from '+sel;syncSubstitution(sel);}toast('Activity logged')}
- if(form.id==='fFeedback'){const blob=new Blob([`Momentum Fusion beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
+ if(form.id==='fFeedback'){const blob=new Blob([`Momentum beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
 
 document.addEventListener('change',e=>{if(e.target.id!=='healthScreenshot')return;const holder=document.getElementById('healthPreview');if(!holder)return;holder.replaceChildren();const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith('image/')){holder.textContent='Please choose an image screenshot.';return}if(file.size>12*1024*1024){holder.textContent='Image too large; choose a screenshot under 12 MB.';return}const url=URL.createObjectURL(file),img=document.createElement('img');img.src=url;img.alt='Screenshot ready for automatic analysis';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';img.onload=()=>URL.revokeObjectURL(url);holder.append(img);});
+
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-grocery-repeat],[data-grocery-clear],[data-grocery-recipe],[data-grocery-plan],[data-grocery-ingredients],[data-grocery-unplan],[data-grocery-remove]');if(!b)return;
+ const favorites=F.favorites.filter(x=>x.type==='meal'),plan=groceryPlan(),state=groceryState();
+ if(b.dataset.groceryRecipe!==undefined){const x=favorites[Number(b.dataset.groceryRecipe)];if(!x)return;const result=prompt('Ingredients for '+x.description+' (one per line). Optional format: 1 lb chicken',F.mealRecipes[x.description]||'');if(result!==null){F.mealRecipes[x.description]=result.slice(0,5000);fsave();render();toast('Recipe ingredients saved')}return}
+ if(b.dataset.groceryPlan!==undefined){const x=favorites[Number(b.dataset.groceryPlan)];if(!x)return;const v=prompt('How many servings of '+x.description+'?', '2');if(v===null)return;const servings=Number(v);if(!Number.isInteger(servings)||servings<1||servings>30){toast('Choose 1–30 servings');return}plan.push({id:String(fusionId()),name:x.description,servings,added:false});fsave();render();toast('Meal added to weekly plan');return}
+ if(b.dataset.groceryIngredients!==undefined){const x=plan.find(x=>x.id===b.dataset.groceryIngredients);if(!x)return;const recipe=F.mealRecipes[x.name];if(!recipe?.trim()){toast('Add ingredients to the saved meal first');return}if(x.added){toast('Ingredients already added for this meal');return}for(const item of groceryIngredients(recipe,x.servings))groceryAdd(item.name,item.qty,'Other');x.added=true;fsave();render();toast('Ingredients added to grocery list');return}
+ if(b.dataset.groceryUnplan!==undefined){F.mealPlans[groceryWeek()]=plan.filter(x=>x.id!==b.dataset.groceryUnplan);fsave();render();return}
+ if(b.dataset.groceryRemove!==undefined){state.items=state.items.filter(x=>x.id!==b.dataset.groceryRemove);fsave();render();return}
+ if(b.dataset.groceryRepeat!==undefined){const prev=F.grocery[shiftDate(groceryWeek(),-7)];if(!prev?.items?.length){toast('No list found for last week');return}for(const x of prev.items)groceryAdd(x.name,x.qty,x.category);fsave();render();toast('Last week’s items added');return}
+ if(b.dataset.groceryClear!==undefined){if(!confirm('Clear this week’s grocery checklist?'))return;state.items=[];fsave();render();return}
+});
+document.addEventListener('change',e=>{if(e.target.dataset.groceryCheck===undefined)return;const x=groceryState().items.find(x=>x.id===e.target.dataset.groceryCheck);if(x){x.checked=e.target.checked;fsave();render()}});
+document.addEventListener('submit',e=>{
+ if(!['groceryQuick','coachPrefs'].includes(e.target.id))return;e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+ if(e.target.id==='groceryQuick'){if(groceryAdd(d.name,d.qty,d.category)){fsave();render();toast('Item added')}}
+ else{const p=F.coachPrefs;p.tone=d.tone;p.instructions=String(d.instructions||'').slice(0,500);p.quietStart=d.quietStart;p.quietEnd=d.quietEnd;for(const k of Object.keys(p.reminders)){p.reminders[k]={on:!!d['on_'+k],time:d['time_'+k]||'09:00'}}fsave();render();toast('Coaching preferences saved — push delivery not yet active')}
+});
 
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null;
@@ -1159,6 +1239,11 @@ document.addEventListener("submit",async e=>{
 window.addEventListener("hashchange",()=>{ const h=location.hash.replace("#",""); if(TABS.find(t=>t.id===h)&&h!==tab){ tab=h; render() } });
 render();
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Offline support unavailable:', err)));
+}
 </script>
 </body>
 </html>

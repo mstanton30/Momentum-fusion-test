@@ -7,7 +7,7 @@ const {parseHTML}=require('linkedom');
 test('Beta copies local records, preserves original keys, and renders five tabs and progress ranges',()=>{
  const html=fs.readFileSync('index.html','utf8');
  const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1]
-  .replace('\nrender();\nif(cloudClient&&authCode)void finishCloudAuthCallback(authCode);\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows},setHealthSyncAt(value){healthSyncAt=value}};render();\n})();');
+  .replace('\nrender();\nif(cloudClient&&authCode)void finishCloudAuthCallback(authCode);\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows},setHealthSyncAt(value){healthSyncAt=value},reviewScan(data){healthExtracted=data;renderHealthExtract()}};render();\n})();');
  const today=new Date();
  const date=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const prior=new Date(today);prior.setDate(prior.getDate()-61);
@@ -73,6 +73,23 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  click('[data-tab="home"]');
  click('[data-go="import"]');
  assert.match(document.querySelector('main').textContent,/Import/i);
+ const scale={kind:'weight',source:'RENPHO',date:null,confidence:'high',weight:174.2,bodyFat:20.5,muscle:112};
+ app.reviewScan(scale);
+ click('[data-health-save]');
+ assert.match(document.getElementById('healthImportMessage').textContent,/Choose a valid date/);
+ document.getElementById('healthConfirmedDate').value=date(today);
+ click('[data-health-save]');
+ app.reviewScan({...scale,source:'Renpho',date:date(today),bodyFat:21.9,metrics:{body_water_pct:54.2,protein_pct:17.8}});
+ document.querySelector('[data-health-value="protein_pct"]').value='18';
+ click('[data-health-save]');
+ assert.equal(app.F.healthImports.filter(x=>x.kind==='weight').length,1);
+ const scan=app.S.weigh.find(x=>x.source==='RENPHO image');
+ assert.equal(scan.bf,'20.5');
+ assert.equal(scan.metrics.body_water_pct,54.2);
+ assert.equal(scan.metrics.protein_pct,18);
+ click('[data-tab="progress"]');
+ click('[data-progress-pane="body"]');
+ assert.match(document.querySelector('main').textContent,/Body water/);
  assert.equal(app.F.favorites[0].description,'Fixture oatmeal');
  assert.equal(app.S.extras.length,3);
  assert.equal(values.get('momentumfusion.v1'),JSON.stringify(s));

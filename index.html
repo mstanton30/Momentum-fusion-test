@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.6</title>
+<title>Momentum — Beta v9.10.7</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.6"></script>
+<script src="./beta-config.js?v=9.10.7"></script>
 <script>
 (function(){
 "use strict";
@@ -734,10 +734,10 @@ let healthExtracted=null;
 const HEALTH_API_KEY='momentumfusion.health.api.v1';
 function vHealthImport(){
  const recent=[...F.healthImports].reverse().slice(0,8);
- return header('Import Health Data','AI screenshot recognition')+`
- <div class="card"><h3>Import from screenshot</h3><p class="muted sm">Choose a screenshot from Apple Fitness, WHOOP or RENPHO. The secure image service reads visible measurements automatically. The screenshot is sent to the configured service for analysis and is not stored in this app.</p>
- <p class="muted xs">Test mode: no access code required. Shared limit: 10 screenshot analyses per day.</p>
- <input id="healthScreenshot" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose a screenshot to start automatic analysis.</p><button class="btn" type="button" data-health-analyze>Analyze screenshot</button></div>
+ return header('Import Health Data','Photo and screenshot recognition')+`
+ <div class="card"><h3>Scan a scale photo or health screenshot</h3><p class="muted sm">Take a photo of the scale display or choose a screenshot from RENPHO, Apple Fitness, or WHOOP. For the most scale readings, choose the RENPHO results screen with all metrics visible. Your image is sent for analysis and isn’t saved in Momentum.</p>
+ <p class="muted xs">Beta shares a daily limit of 10 image analyses.</p>
+ <input id="healthScreenshot" type="file" accept="image/*" aria-label="Choose a scale photo or health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose an image, then tap Scan image.</p><button class="btn" type="button" data-health-analyze>Scan image</button></div>
  <div id="healthExtractResult"></div>
  <div class="card"><h3>Recent imports</h3>${recent.length?recent.map(x=>`<div class="frow"><span><b>${esc(x.source)} · ${esc(x.kind)}</b><br><small class="muted">${esc(x.date)} · ${esc(x.summary)}</small></span><button class="btn small ghost" data-health-date="${esc(x.id)}">Correct date</button><button class="btn small ghost" data-health-remove="${esc(x.id)}">Remove</button></div>`).join(''):'<p class="muted xs">No health screenshots imported yet.</p>'}<p class="muted xs">Measurements are stored in this browser. Screenshots are not retained by the app.</p></div>`;
 }
@@ -746,35 +746,48 @@ function renderHealthExtract(){
  if(!healthExtracted){el.innerHTML='';return}
  const d=healthExtracted;
  const fields=d.kind==='workout'?[['activity','Activity'],['minutes','Minutes'],['activeCalories','Active calories'],['heartRate','Average HR']]:d.kind==='weight'?[['weight','Weight (lb)'],['bodyFat','Body fat (%)'],['muscle','Muscle (lb)']]:[['recovery','Recovery (%)'],['sleep','Sleep (hours)'],['strain','Strain'],['hrv','HRV (ms)'],['heartRate','Resting HR']];
- el.innerHTML=`<div class="card"><h3>Recognized ${esc(d.kind)}</h3><p class="muted sm">${esc(d.source)} · ${esc(d.confidence||'unknown')} confidence</p><label>Workout / measurement date (verify before saving)<input id="healthConfirmedDate" type="date" value="${esc(d.date||'')}" max="${ymd(today())}"></label><p class="muted xs">AI can misread years. Please verify the date shown above.</p><div class="fgrid">${fields.map(([k,label])=>`<div><span class="muted xs">${esc(label)}</span><p><b>${esc(d[k]??'Not visible')}</b></p></div>`).join('')}</div>${d.warnings&&d.warnings.length?`<p class="muted sm">${d.warnings.map(esc).join(' · ')}</p>`:''}<p class="muted xs">Values come from the screenshot. Missing or uncertain required values will not be guessed.</p><button class="btn" type="button" data-health-save ${d.confidence==='low'?'disabled':''}>Save recognized data</button></div>`;
+ if(d.kind==='weight')for(const [key,label,unit] of RENPHO_METRICS)if(d.metrics?.[key]!=null)fields.push([key,label+(unit?' ('+unit.trim()+')':'')]);
+ el.innerHTML=`<div class="card"><h3>Recognized ${d.kind==='weight'?'scale readings':esc(d.kind)}</h3><p class="muted sm">${esc(d.source)} · ${esc(d.confidence||'unknown')} confidence</p><label>Measurement date<input id="healthConfirmedDate" type="date" value="${esc(d.date||'')}" max="${ymd(today())}"></label><p class="muted xs">${d.date?'Verify the date and readings before saving.':'Choose the date you weighed in.'}</p><div class="fgrid">${fields.map(([k,label])=>d.kind==='weight'?`<label class="f">${esc(label)}<input data-health-value="${k}" type="number" step="any" min="0" inputmode="decimal" placeholder="Not visible" value="${esc(d[k]??d.metrics?.[k]??'')}"></label>`:`<div><span class="muted xs">${esc(label)}</span><p><b>${esc(d[k]??'Not visible')}</b></p></div>`).join('')}</div>${d.warnings&&d.warnings.length?`<p class="muted sm">${d.warnings.map(esc).join(' · ')}</p>`:''}<p class="muted xs">${d.kind==='weight'?'Leave unreadable readings blank.':'Only visible readings are extracted.'}</p><button class="btn" type="button" data-health-save ${d.kind!=='weight'&&d.confidence==='low'?'disabled':''}>Save recognized data</button></div>`;
 }
 async function analyzeHealthScreenshot(){
  const file=document.getElementById('healthScreenshot')?.files?.[0],message=document.getElementById('healthImportMessage');
  const endpoint=HEALTH_SUPABASE_URL+'/functions/v1/momentum-extract-health';
- if(!file){if(message)message.textContent='Choose a screenshot first.';return}
- if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024){if(message)message.textContent='Choose a PNG, JPG, or WebP screenshot under 5 MB.';return}
+ if(!file){if(message)message.textContent='Choose an image first.';return}
+ if(!file.type.startsWith('image/')||file.size>20*1024*1024){if(message)message.textContent='Choose a photo or screenshot under 20 MB.';return}
 
  const btn=document.querySelector('[data-health-analyze]');if(btn)btn.disabled=true;
- if(message)message.textContent='Analyzing screenshot…';healthExtracted=null;renderHealthExtract();
+ if(message)message.textContent='Scanning image…';healthExtracted=null;renderHealthExtract();
  try{
-  const image=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});
-  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
+  const image=await (/^image\/(png|jpeg|webp)$/.test(file.type)&&file.size<=5*1024*1024
+   ?new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})
+   :shrinkImage(file,2400,.9));
+  if(!image||image.length>7000000)throw Error('Could not open this photo. Try a JPG or screenshot.');
+  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image,includeScaleMetrics:true})});
   const result=await res.json();if(!res.ok)throw Error(result.error||'Image analysis failed');
+  if(document.getElementById('healthScreenshot')?.files?.[0]!==file)return;
   if(!['workout','weight','recovery'].includes(result.kind))throw Error('No supported health measurements found.');
-  healthExtracted=result;renderHealthExtract();if(message)message.textContent='Screenshot analyzed. Save the recognized values below.';
- }catch(e){if(message)message.textContent='Could not analyze screenshot: '+String(e.message||e)}finally{if(btn)btn.disabled=false}
+  healthExtracted=result;renderHealthExtract();if(message)message.textContent='Review the readings below before saving.';
+ }catch(e){if(message)message.textContent='Could not scan image: '+String(e.message||e)}finally{if(btn)btn.disabled=false}
 }
 function saveRecognizedHealth(){
  if(!healthExtracted)return;const x=healthExtracted;
- const d={...x,source:x.source||'Other',date:document.getElementById('healthConfirmedDate')?.value||'',kind:x.kind,intensity:x.intensity||'moderate'};
+ const d={...x,source:String(x.source||'Other'),date:document.getElementById('healthConfirmedDate')?.value||'',kind:x.kind,intensity:x.intensity||'moderate'};
  for(const k of ['minutes','activeCalories','heartRate','weight','bodyFat','muscle','recovery','sleep','strain','hrv'])d[k]=x[k]===null||x[k]===undefined?'':String(x[k]);
+ if(d.kind==='weight'){
+  d.metrics={};
+  for(const input of document.querySelectorAll('[data-health-value]')){
+   const key=input.dataset.healthValue;
+   if(['weight','bodyFat','muscle'].includes(key))d[key]=input.value;
+   else if(input.value!=='')d.metrics[key]=Number(input.value);
+  }
+ }
  const error=saveHealthImport(d);if(error){const msg=document.getElementById('healthImportMessage');if(msg)msg.textContent=error;return}
- healthExtracted=null;render();toast('Screenshot measurements saved to tracking');
+ healthExtracted=null;render();toast('Measurements saved');
 }
 function saveHealthImport(d){
  const n=k=>d[k]===''?null:Number(d[k]);
  const date=d.date,kind=d.kind,source=d.source;
- if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>ymd(today()))return 'Choose a valid date that is not in the future.';
+ if(!validLogDate(date))return 'Choose a valid date that is not in the future.';
  const cutoff=new Date(today());cutoff.setFullYear(cutoff.getFullYear()-2);if(date<ymd(cutoff))return 'The date is more than two years old. Please correct the year before saving.';
  if(!['workout','recovery','weight'].includes(kind))return 'Choose a measurement type.';
  const record={id:fusionId(),date,kind,source,values:{}};
@@ -788,10 +801,29 @@ function saveHealthImport(d){
   F.entries.push({id:record.entryId,date,type:'activity',description:record.values.activity,minutes,intensity:d.intensity||'moderate',planAction:'extra',caloriesBurned:activeCalories,calorieSource:activeCalories===null?null:'wearable-active',source:'screenshot-confirmed'});
  }else if(kind==='weight'){
   const weight=n('weight');if(!(weight>0&&weight<=1400))return 'Enter a valid weight in pounds.';
-  if(F.healthImports.some(x=>x.kind==='weight'&&x.date===date&&x.source===source))return 'A measurement from this source is already logged on that date. Remove it before replacing.';
-  record.values={weight,bodyFat:n('bodyFat'),muscle:n('muscle')};record.summary=`${weight} lb`;
-  record.weighId=Date.now()+Math.floor(Math.random()*1000);
-  S.weigh.push({id:record.weighId,d:date,source:source+' screenshot',wt:String(weight),bf:record.values.bodyFat==null?'':String(record.values.bodyFat),mm:record.values.muscle==null?'':String(record.values.muscle)});
+  const bodyFat=n('bodyFat'),muscle=n('muscle'),metrics={};
+  if(bodyFat!==null&&!(bodyFat>=0&&bodyFat<=100))return 'Check body fat percentage.';
+  if(muscle!==null&&!(muscle>=0&&muscle<=1000))return 'Check muscle mass.';
+  for(const [key,label,,limit] of RENPHO_METRICS){
+   const value=d.metrics?.[key];if(value==null)continue;
+   if(!(typeof value==='number'&&value>=0&&value<=limit))return 'Check '+label.toLowerCase()+'.';
+   metrics[key]=value;
+  }
+  const prior=F.healthImports.find(x=>x.kind==='weight'&&x.date===date&&String(x.source).toLowerCase()===source.toLowerCase());
+  const existing=prior&&S.weigh.find(x=>String(x.id)===String(prior.weighId));
+  if(existing){
+   if(Number(existing.wt)!==weight)return 'A different weight from this source is already logged on that date. Remove it before replacing.';
+   const added=Object.fromEntries(Object.entries(metrics).filter(([key])=>existing.metrics?.[key]==null));
+   const addFat=!existing.bf&&bodyFat!==null,addMuscle=!existing.mm&&muscle!==null;
+   if(!Object.keys(added).length&&!addFat&&!addMuscle)return 'These readings are already saved.';
+   existing.metrics={...existing.metrics,...added};
+   if(addFat){existing.bf=String(bodyFat);prior.values.bodyFat=bodyFat}
+   if(addMuscle){existing.mm=String(muscle);prior.values.muscle=muscle}
+   save();fsave();return null;
+  }
+  record.values={weight,bodyFat,muscle};record.summary=`${weight} lb`;
+  record.weighId=fusionId();
+  S.weigh.push({id:record.weighId,d:date,source:source+' image',wt:String(weight),bf:bodyFat==null?'':String(bodyFat),mm:muscle==null?'':String(muscle),metrics});
   save();
  }else{
   const vals=['recovery','sleep','strain','hrv','heartRate'].map(k=>n(k));if(vals.every(x=>x===null))return 'Enter at least one recovery or sleep measurement.';
@@ -827,7 +859,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.6</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.7</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -902,10 +934,10 @@ function bodyProgress(){
  ${progressChart('Weight',bodyPoints('wt'),' lb')}
  ${progressChart('Body fat estimate',bodyPoints('bf'),'%')}
  ${progressChart('Muscle mass estimate',bodyPoints('mm'),' lb')}
- <details><summary>Additional RENPHO measurements</summary><p class="muted sm">Import available scale estimates from CSV. Hydration can affect these readings.</p>
+ <details><summary>Additional scale measurements</summary><p class="muted sm">See readings saved from a scale image or RENPHO CSV. Hydration can affect these estimates.</p>
  ${RENPHO_METRICS.filter(([key])=>w.some(x=>x.metrics?.[key]!=null)).map(([key,label,unit])=>progressChart(label,w.map(x=>({d:x.d,v:valueOrNull(x.metrics?.[key])})),unit)).join('')||'<p class="muted sm">No additional scale measurements logged.</p>'}</details>
  <details><summary>Import RENPHO CSV</summary><p class="muted sm">Required columns: date, weight_lb. Optional: body_fat_pct, muscle_mass_lb, ${RENPHO_METRICS.map(([key])=>key).join(', ')}.</p><input id="renphoCsv" aria-label="RENPHO CSV" type="file" accept=".csv,text/csv"><p id="renphoImportStatus" class="muted xs"></p></details>
- <div class="card"><h3>Health screenshot import</h3><button class="btn small" data-go="import">Import screenshot</button></div>
+ <div class="card"><h3>Scale photo import</h3><button class="btn small" data-go="import">Scan scale photo</button></div>
    <h2>Log a weigh-in manually</h2>
   <div class="card">
     <form id="fWeigh">
@@ -1065,7 +1097,21 @@ async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=
     if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"Momentum week"}) }catch(e){} }
     else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="momentum-week.png"; a.click(); toast("Card saved") } },"image/png"); }
 function exportData(){ const blob=new Blob([JSON.stringify({...S,fusion:F},null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="get-ripped-"+ymd(today())+".json"; a.click(); toast("Exported") }
-function shrinkImage(file){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const s=Math.min(1,480/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=img.width*s; c.height=img.height*s; c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.7)) }; img.onerror=()=>res(null); img.src=URL.createObjectURL(file) }) }
+function shrinkImage(file,maxSide=480,quality=.7){
+ return new Promise(resolve=>{
+  const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{
+   try{
+    const scale=Math.min(1,maxSide/Math.max(img.width,img.height)),canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    resolve(canvas.toDataURL('image/jpeg',quality));
+   }catch{resolve(null)}finally{URL.revokeObjectURL(url)}
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);resolve(null)};
+  img.src=url;
+ });
+}
 
 
 /* Momentum v9: AI Preview uses deterministic sample responses; no external AI service. */
@@ -1462,7 +1508,19 @@ document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFee
  if(form.id==='fFeedback'){const blob=new Blob([`Momentum beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
 
-document.addEventListener('change',e=>{if(e.target.id!=='healthScreenshot')return;const holder=document.getElementById('healthPreview');if(!holder)return;holder.replaceChildren();const file=e.target.files&&e.target.files[0];if(!file)return;if(!file.type.startsWith('image/')){holder.textContent='Please choose an image screenshot.';return}if(file.size>12*1024*1024){holder.textContent='Image too large; choose a screenshot under 12 MB.';return}const url=URL.createObjectURL(file),img=document.createElement('img');img.src=url;img.alt='Screenshot ready for automatic analysis';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';img.onload=()=>URL.revokeObjectURL(url);holder.append(img);});
+document.addEventListener('change',e=>{
+ if(e.target.id!=='healthScreenshot')return;
+ healthExtracted=null;renderHealthExtract();
+ const holder=document.getElementById('healthPreview'),message=document.getElementById('healthImportMessage');
+ if(message)message.textContent='Choose an image, then tap Scan image.';
+ if(!holder)return;holder.replaceChildren();
+ const file=e.target.files?.[0];if(!file||!file.type.startsWith('image/')||file.size>20*1024*1024)return;
+ const url=URL.createObjectURL(file),img=document.createElement('img');
+ img.alt='Selected image';img.style.cssText='max-width:100%;max-height:440px;object-fit:contain;border-radius:12px';
+ img.onload=()=>URL.revokeObjectURL(url);
+ img.onerror=()=>{URL.revokeObjectURL(url);holder.replaceChildren()};
+ img.src=url;holder.append(img);
+});
 
 
 document.addEventListener('click',e=>{
@@ -2034,7 +2092,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.6';
+ const VERSION='9.10.7';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

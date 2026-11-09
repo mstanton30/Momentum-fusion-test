@@ -1,33 +1,34 @@
-# Apple Health Shortcut — beta setup specification
+# iPhone Shortcut setup for Beta
 
-**Not yet live.** Do not put a Supabase service-role key, shared access code, or permanent login password into a Shortcut.
+These steps require a configured Beta server. Set them up on the iPhone that receives RENPHO measurements. In RENPHO, enable Apple Health sharing for weight and body fat if available. Check Apple Health for a known sample before building the Shortcut.
 
-## Read Apple Health
-1. In Shortcuts, request permission for Health data.
-2. Find Health Samples of type **Weight** from the past 7 days, sorted newest first. Read each sample's value and start date.
-3. Optionally find **Body Fat Percentage** samples; these may be absent if RENPHO is only sharing weight.
-4. Convert weight to pounds before upload. Preserve the actual timestamp and use the Health sample's stable identifier if Shortcuts exposes it; otherwise create a deterministic id from source, sample type, timestamp, and value. Do not combine body-fat from a different time with an unrelated weight sample without an explicit pairing rule.
-5. Upload only after per-user authentication is implemented and verified. A Shortcut personal automation may run on a schedule but is not guaranteed to run at the exact instant of a weigh-in.
+1. In Momentum Beta, sign in under **Progress → Body composition → Apple Health & AI connections**. Select **Create Shortcut credential**. Copy the endpoint and token. The token can upload only to your account and is displayed once. Keep it in a private Shortcut, and revoke it in Momentum if it is exposed.
+2. Create a personal Shortcut called **Sync Momentum Health**. Add **Find Health Samples** for Weight over the past seven days. Repeat for Body Fat Percentage if the action and samples are available on your iPhone. Grant read permission. When other apps also write those types, filter to RENPHO when the source is available.
+3. For each sample, use its **Start Date** as `measured_at`. Format as ISO 8601 with a timezone. Convert weight to pounds. Send body fat as a percentage from 0 to 100. Verify against Apple Health so a 21.5% reading is sent as `21.5`, including conversion if the action returns `0.215`.
+4. Make one Dictionary for each sample and add it to a List. Set `sample_key` to a type prefix such as `weight:` or `fat:` plus the Health sample identifier, if exposed. Otherwise hash the source, type, normalized sample timestamp and value with SHA-256 and use the hex hash after the type prefix. Keep the key the same on every run. Send one metric per sample so readings with different times retain their own timestamps.
+5. Add **Get Contents of URL** with the endpoint from Momentum. Select POST and JSON request body. Add an `Authorization` header with `Bearer <your Shortcut token>`. Set the body key `samples` to your List. For a run without readable samples, send an empty list. The reply reports how many new rows were inserted and the successful upload time.
+6. Run the Shortcut manually twice. In Momentum select **Refresh measurements & activity**. Confirm the sample values and dates, no duplicates, and a recorded successful sync. If body fat is missing, confirm the sample exists in Apple Health and is exposed to Shortcuts. The Shortcut can still upload weight alone.
+7. In Shortcuts, go to **Automation → New Automation → Time of Day**. Set **7:00 a.m.**, **Daily**, and **Run Immediately**. Choose **Sync Momentum Health**. Weigh in on Fridays. If you weigh in after 7 a.m., run the Shortcut manually after RENPHO writes the samples. Device lock and Health permissions can affect unattended runs. Check the first scheduled run on your iPhone.
 
-## Planned JSON format
+Example request body with illustrative measurements:
+
 ```json
 {
   "samples": [
     {
       "source": "apple_health",
-      "sample_key": "weight:example-stable-id",
-      "measured_at": "2026-11-09T10:00:00-05:00",
-      "weight_lb": 180.2,
-      "body_fat_pct": null
+      "sample_key": "weight:example-sample-1",
+      "measured_at": "2026-11-06T07:01:04-05:00",
+      "weight_lb": 180.2
+    },
+    {
+      "source": "apple_health",
+      "sample_key": "fat:example-sample-2",
+      "measured_at": "2026-11-06T07:01:05-05:00",
+      "body_fat_pct": 21.5
     }
   ]
 }
 ```
 
-The example is illustrative, not user data. Backend should derive `user_id` from authenticated identity, never trust it from the JSON payload.
-
-## Current blockers
-- Beta app's weight store is localStorage; no verified account-authenticated read/pull path has been integrated.
-- Need to determine how beta authenticates its current cloud snapshot before connecting the new table.
-- Need an authorized per-user Shortcut credential design and revoke workflow.
-- Need on-device permission and end-to-end testing with actual RENPHO samples.
+The API accepts up to 500 samples per request and derives the account from the token. Send weight and body fat as JSON numbers. A repeated sample key for the same account and source keeps the original row. A revoked token returns HTTP 401. Existing measurements remain visible to the account after revocation.

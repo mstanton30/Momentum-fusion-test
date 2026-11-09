@@ -1,0 +1,66 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {test}=require('node:test');
+const vm=require('node:vm');
+const {parseHTML}=require('linkedom');
+
+test('Beta copies local records, preserves original keys, and renders five tabs and progress ranges',()=>{
+ const html=fs.readFileSync('index.html','utf8');
+ const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1]
+  .replace('\nrender();\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,setHealth(rows){healthReadings=rows}};render();\n})();');
+ const today=new Date();
+ const date=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+ const prior=new Date(today);prior.setDate(prior.getDate()-61);
+ const priorYear=new Date(today);priorYear.setFullYear(priorYear.getFullYear()-2);
+ const s={profile:{name:'Fixture',age:40,sex:'m',heightIn:70,weightLb:180,start:date(prior)},weigh:[{id:1,d:date(prior),wt:'180',bf:'24',mm:'112'}],
+  extras:[{id:2,d:date(priorYear),kind:'DEXA body fat %',v:'25.2',note:'Earlier scan'},{id:3,d:date(today),kind:'DEXA body fat %',v:'23.2'},{id:4,d:date(today),kind:'Vitamin D (ng/mL)',v:'32'}]};
+ const f={favorites:[{id:2,type:'meal',description:'Fixture oatmeal',p:22}],entries:[{id:3,type:'meal',description:'Fixture smoothie',date:date(today),mealSlot:'b',p:22,qualityChoice:'quality'}]};
+ const values=new Map([['momentumfusion.v1',JSON.stringify(s)],['momentumfusion.extra.v1',JSON.stringify(f)]]);
+ const makeStorage=(map=new Map())=>({getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
+ const {document,window}=parseHTML(html);
+ window.scrollTo=()=>{};
+ const location=new URL('https://momentum.example/beta/#progress');
+ const context={window,document,location,localStorage:makeStorage(values),sessionStorage:makeStorage(),navigator:{},structuredClone,
+  Intl,URL,URLSearchParams,Date,setTimeout:()=>0,clearTimeout:()=>{},console,history:{replaceState(){}},confirm:()=>true};
+ vm.runInNewContext(main,context);
+ const app=window.testApp;
+ assert.deepEqual([...document.querySelectorAll('#tabbar button')].map(x=>x.textContent),['Home','Workout','Nutrition','Benefits','Progress']);
+ assert.match(document.querySelector('main h1').textContent,/Progress/);
+ assert.match(document.querySelector('main').textContent,/Earlier scan/);
+ assert.match(document.querySelector('main').textContent,/Vitamin D \(ng\/mL\)/);
+ const weight=()=>[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent==='Weight').textContent;
+ assert.match(weight(),/No entries/);
+ function click(selector){const target=document.querySelector(selector);assert.ok(target,selector);target.dispatchEvent(new window.Event('click',{bubbles:true}))}
+ click('[data-progress-range="90"]');
+ assert.match(weight(),/180 lb latest/);
+ const score=app.healthWeekly().score;
+ app.setHealth([{measured_at:new Date().toISOString(),weight_lb:177.3,body_fat_pct:null}]);
+ app.render();
+ assert.match(weight(),/177.3 lb latest/);
+ assert.equal(app.healthWeekly().score,score);
+ click('[data-progress-pane="fitness"]');
+ assert.match(document.querySelector('main').textContent,/Weekly Activity Score/);
+ assert.match(document.querySelector('main').textContent,/Strength results/);
+ click('[data-progress-pane="nutrition"]');
+ assert.match(document.querySelector('main').textContent,/Daily protein average vs. goal/);
+ click('[data-tab="benefits"]');
+ assert.match(document.querySelector('main').textContent,/Post-workout recovery drink/);
+ click('[data-benefit="perks"]');
+ assert.match(document.querySelector('main').textContent,/Sauna/);
+ assert.equal(app.F.favorites[0].description,'Fixture oatmeal');
+ assert.equal(app.S.extras.length,3);
+ assert.equal(values.get('momentumfusion.v1'),JSON.stringify(s));
+ assert.equal(values.get('momentumfusion.extra.v1'),JSON.stringify(f));
+ assert.ok(values.has('momentumfusion.beta.v1'));
+ assert.ok(values.has('momentumfusion.beta.extra.v1'));
+ const base=app.workspaceData(),local=structuredClone(base),remote=structuredClone(base);
+ local.supplements[date(today)]={creatine:true};remote.supplements[date(today)]={fish:true};
+ remote.entries['new-ai-entry']={id:'new-ai-entry',type:'meal',description:'An AI meal',date:date(today)};
+ const merged=app.mergeWorkspace(base,local,remote);
+ assert.equal(merged.conflict,false);
+ assert.ok(merged.data.supplements[date(today)].fish&&merged.data.supplements[date(today)].creatine);
+ assert.equal(merged.data.entries['new-ai-entry'].description,'An AI meal');
+ local.entries['3'].description='Device edit';remote.entries['3'].description='AI edit';
+ assert.equal(app.mergeWorkspace(base,local,remote).conflict,true);
+ assert.equal(app.mergeWorkspace(base,local,remote,'remote').data.entries['3'].description,'AI edit');
+});

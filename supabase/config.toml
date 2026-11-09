@@ -1,0 +1,4 @@
+project_id = "momentum-fusion-beta"
+
+[functions.momentum-beta]
+verify_jwt = false

@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.9.1</title>
+<title>Momentum — Beta v9.9.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -807,7 +807,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.2</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1438,27 +1438,46 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.9.1';
+ const VERSION='9.9.2';
  let pending=false;
- async function checkUpdate(showResult){
-  const status=document.getElementById('momentum-update-status');
-  try{
-   const r=await fetch('./version.json?check='+Date.now(),{cache:'no-store'});
-   if(!r.ok)throw Error('Version check unavailable');
-   const remote=await r.json();
-   if(remote.version && remote.version!==VERSION){
-    pending=true;
-    const button=document.getElementById('momentum-check-update');
-    if(button){button.textContent='Update to Momentum v'+remote.version;button.onclick=()=>location.reload();}
-    if(status){status.style.display='inline';status.textContent='New version ready';}
-   }else if(showResult&&status){status.style.display='inline';status.textContent='You have the latest version';setTimeout(()=>{if(!pending)status.style.display='none'},3500);}
-  }catch(e){if(showResult&&status){status.style.display='inline';status.textContent='Could not check. Try again.';}}
- }
+  async function activateUpdate(){
+    const status=document.getElementById('momentum-update-status');
+    if(status){status.style.display='inline';status.textContent='Updating app…';}
+    try{
+      if('serviceWorker' in navigator){
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg){await reg.update();if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}
+      }
+      // Force a fresh navigation without deleting locally saved entries.
+      const url=new URL(location.href);url.searchParams.set('momentum-refresh',Date.now().toString());
+      location.replace(url.href);
+    }catch(e){
+      if(status)status.textContent='Update failed. Open this site in Safari and reload.';
+    }
+  }
+  async function checkUpdate(showResult){
+    const status=document.getElementById('momentum-update-status');
+    try{
+      const r=await fetch('./version.json?check='+Date.now(),{cache:'no-store'});
+      if(!r.ok)throw Error('Version check unavailable');
+      const remote=await r.json();
+      const button=document.getElementById('momentum-check-update');
+      if(remote.version && remote.version!==VERSION){
+        // A newer deployed version is required; older metadata is not an update.
+        const newer=(a,b)=>{const aa=a.split('.').map(Number),bb=b.split('.').map(Number);for(let i=0;i<Math.max(aa.length,bb.length);i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)}return false};
+        if(newer(remote.version,VERSION)){
+          pending=true;
+          if(button){button.textContent='Install Momentum v'+remote.version;button.onclick=activateUpdate;}
+          if(status){status.style.display='inline';status.textContent='New version available';}
+        }else if(showResult&&status){status.style.display='inline';status.textContent='Installed version is newer than update metadata.';}
+      }else if(showResult&&status){status.style.display='inline';status.textContent='You have the latest version';setTimeout(()=>{if(!pending)status.style.display='none'},3500);}
+    }catch(e){if(showResult&&status){status.style.display='inline';status.textContent='Could not check. Try again.';}}
+  }
  document.addEventListener('click',e=>{if(e.target?.id==='momentum-check-update'&&!pending)checkUpdate(true)});
  window.addEventListener('pageshow',()=>checkUpdate(false));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate(false)});
  if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(pending)location.reload()});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(pending)activateUpdate()});
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(console.warn));
  }
 })();

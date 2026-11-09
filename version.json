@@ -1,4 +1,4 @@
 {
-  "version": "9.9.0",
-  "notes": "Momentum Health Score: goal-based weekly aerobic and strength scoring, workout-source selection and scoring explanation"
+  "version": "9.9.2",
+  "notes": "Fix update detection and service worker cache; retain v9.9.1 activity and strength scoring."
 }

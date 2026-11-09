@@ -68,12 +68,14 @@ function normalizeSamples(input) {
   return [...unique.values()];
 }
 export function createHandler({store,base,app,signingKey}) {
-  if (!signingKey||signingKey.length<32) throw new Error('Use a random OAuth signing key of at least 32 characters');
+  if (signingKey!==undefined&&signingKey.length<32) throw new Error('Use a random OAuth signing key of at least 32 characters');
   const issuer=base.replace(/\/$/,'');
   const appUrl=new URL(app),siteOrigin=appUrl.origin;
   const resource=issuer+'/mcp', resourceMeta=issuer+'/.well-known/oauth-protected-resource';
   const issuerPath=new URL(issuer).pathname.replace(/\/$/,'');
-  const registeredKey=crypto.subtle.importKey('raw',bytes(signingKey),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
+  const registeredKey=signingKey
+    ? crypto.subtle.importKey('raw',bytes(signingKey),{name:'HMAC',hash:'SHA-256'},false,['sign','verify'])
+    : null;
   const metadata={
     issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',registration_endpoint:issuer+'/register',
     response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],
@@ -201,6 +203,8 @@ export function createHandler({store,base,app,signingKey}) {
     if(origin&&origin!==siteOrigin)return json(req,{error:'Origin not allowed'},403);
     if(method==='OPTIONS')return new Response(null,{status:204,headers:headers(req)});
     try{
+      const healthRoute=path==='/health'||path==='/connections'||path.startsWith('/connections/');
+      if(!registeredKey&&!healthRoute)return json(req,{error:'This Beta service currently supports Apple Health sync'},404);
       if(path==='/mcp')return await mcp(req);
       if(path==='/api/tools'&&method==='POST'){
         const row=await credential(req,'ai');

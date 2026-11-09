@@ -14,15 +14,17 @@ The first Beta launch copies legacy records available in that browser into Beta-
 
 ## Deploy the optional Beta connections
 
-The static dashboard works with the checked-in empty `beta-config.js`. Apple Health upload and AI connections become available after an isolated Supabase project or development branch and its public API URL are configured. The migration preserves the existing health sample schema and can also create it in an empty Beta database. Do not point Beta at the production database.
+The published Beta connects to a separate Supabase project for Apple Health uploads. AI connections need additional OAuth configuration. The migration preserves the existing health sample schema and can also create it in an empty Beta database. Do not point Beta at the production database.
 
 1. Apply the migration in `supabase/migrations/` to the isolated project. Enable email/password sign-in and set the Beta Pages URL as the site URL and an allowed confirmation redirect in Supabase Auth.
-2. Deploy the `momentum-beta` Edge Function. Set `MOMENTUM_BETA_APP_URL` to the Beta Pages URL, `MOMENTUM_BETA_API_URL` to the public HTTPS API base, and `MOMENTUM_BETA_OAUTH_KEY` to a random secret of at least 32 characters. Supabase supplies its URL, anon key and service-role key to the function. The function validates account JWTs against Supabase Auth and verifies Shortcut and OAuth tokens itself.
+2. Deploy the `momentum-beta` Edge Function. The function defaults to the Beta Pages URL and its own HTTPS URL for Apple Health. For OAuth, set `MOMENTUM_BETA_APP_URL` to the Beta Pages URL, `MOMENTUM_BETA_API_URL` to the public HTTPS API base, and `MOMENTUM_BETA_OAUTH_KEY` to a random secret of at least 32 characters. Supabase supplies its URL, anon key and service-role key to the function. The function validates account JWTs against Supabase Auth and verifies Shortcut and OAuth tokens itself.
 3. For Apple Health-only testing, the Edge Function URL can serve as the API base. For MCP, route a dedicated HTTPS API origin to the Edge Function. The proxy must forward the original method, query, body, Authorization header and response status and headers. For example, route public `/mcp` and `/.well-known/oauth-authorization-server` to `/functions/v1/momentum-beta/mcp` and `/functions/v1/momentum-beta/.well-known/oauth-authorization-server` on the isolated Supabase host. Apply the same prefix to all paths. Do not add a frontend fallback to the OAuth discovery paths. Configure HTTPS and rate limiting at the public ingress before enrolling real users.
-4. Set `supabaseUrl`, `publishableKey`, and `apiUrl` in Beta’s `beta-config.js` and publish that update to Beta Pages. Keep the service-role key and OAuth signing key on the server.
+4. Set `supabaseUrl`, `publishableKey`, and `apiUrl` in Beta’s `beta-config.js` and publish that update to Beta Pages. Set `aiEnabled` to true only after OAuth is configured. Keep the service-role key and OAuth signing key on the server.
 5. Use two test accounts. In **Progress → Body composition → Apple Health & AI connections**, sign in and create a Shortcut credential for account A. Test a manual run, a repeat, a run with no new samples, and revocation. Confirm account B sees zero of A’s measurements. Check that the original Health sample timestamp is displayed and the last successful upload advances on every successful run.
 
 ## Try external AI
+
+Requires the OAuth configuration above.
 
 1. Sign in to your Beta account in **Progress → Body composition → Apple Health & AI connections**. Choose **Set up AI sharing**. This creates an account workspace and, for a new workspace, copies the current device’s supported records after approval.
 2. In ChatGPT or Claude, add a custom remote MCP connection with the displayed server URL. Use OAuth with automatic client registration if that option is offered. This build allows the exact stable ChatGPT callback and the Claude callback. A client that uses a different callback needs a reviewed allowlist change. Connector availability and write prompts depend on the platform and workspace.

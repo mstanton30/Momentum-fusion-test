@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.1</title>
+<title>Momentum — Beta v9.10.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -827,7 +827,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.2</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1492,6 +1492,7 @@ document.addEventListener('submit',e=>{
 document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.target.closest('#fActivity')){const el=document.getElementById('customStrengthAssessment');if(el)el.hidden=!['strength','mixed'].includes(e.target.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 const connectionConfig=window.MOMENTUM_BETA_CONFIG||{};
+const aiConnectionsEnabled=connectionConfig.aiEnabled===true;
 const cloudClient=connectionConfig.supabaseUrl&&connectionConfig.publishableKey&&connectionConfig.apiUrl&&window.supabase
  ? window.supabase.createClient(connectionConfig.supabaseUrl,connectionConfig.publishableKey,{
   auth:{storageKey:'momentumfusion.beta.auth',flowType:'pkce'}
@@ -1501,11 +1502,11 @@ let cloudBase=null,cloudBusy=false,cloudTimer,cloudConflict=false,shortcutSetup=
 let consentRequest=null;
 try{
  const url=new URL(location.href),request=url.searchParams.get('momentum_consent');
- if(request){sessionStorage.setItem('momentumfusion.beta.consent',request);url.searchParams.delete('momentum_consent');history.replaceState(null,'',url)}
- consentRequest=JSON.parse(sessionStorage.getItem('momentumfusion.beta.consent')||'null');
+ if(request&&aiConnectionsEnabled){sessionStorage.setItem('momentumfusion.beta.consent',request);url.searchParams.delete('momentum_consent');history.replaceState(null,'',url)}
+ if(aiConnectionsEnabled)consentRequest=JSON.parse(sessionStorage.getItem('momentumfusion.beta.consent')||'null');
 }catch{}
 function connectedHtml(){
- const signin=`<form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
+ const signin=`<p class="muted sm">Sign in to your separate Momentum Beta account to connect Apple Health.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
  <label class="f">Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
  <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div></form>`;
  const approvalCards=cloudAudit.pending.map(x=>`<div class="frow"><span><b>${esc(x.assistant)} · ${esc(x.name.replaceAll('_',' '))}</b><br>${esc(x.summary)}
@@ -1515,18 +1516,19 @@ function connectedHtml(){
  if(!cloudClient)return `<p class="muted sm">Apple Health and AI connections need a configured Beta server. Manual entries, screenshots and CSV imports are available.</p>`;
  if(!cloudSession)return signin+status;
  return `<p class="muted sm">Signed in as ${esc(cloudSession.user.email||'Momentum account')}. <button class="btn small ghost" data-cloud="signout">Sign out</button></p>
- <h3>Apple Health sync</h3><p class="muted sm">Last successful Shortcut upload: ${healthSyncAt?esc(new Date(healthSyncAt).toLocaleString()):'none recorded'}. Set the Shortcut to run daily at 7 a.m. Run it from Shortcuts whenever you want to upload manually.</p>
- <div class="row"><button class="btn small" data-cloud="shortcut">Create Shortcut credential</button><button class="btn small ghost" data-cloud="refresh">Refresh measurements & activity</button></div>
+ <h3>Apple Health sync</h3><p class="muted sm">Last successful Shortcut upload: ${healthSyncAt?esc(new Date(healthSyncAt).toLocaleString()):'none recorded'}. After installing your Shortcut, tap Sync now and return to Momentum.</p>
+ <div class="row"><a class="btn small" href="shortcuts://run-shortcut?name=Sync%20Momentum%20Health">Sync now</a><button class="btn small ghost" data-cloud="refresh">Refresh measurements</button><button class="btn small ghost" data-cloud="shortcut">Create Shortcut credential</button></div>
+ <p class="muted xs"><a href="https://github.com/mstanton30/Momentum-fusion-test/blob/main/health-sync/SHORTCUT_SPEC.md" target="_blank" rel="noopener noreferrer">Set up the iPhone Shortcut</a></p>
  ${shortcutSetup?`<div class="note"><p>Copy this write-only token into your Shortcut. It is displayed once and expires ${esc(new Date(shortcutSetup.expires_at).toLocaleDateString())}.</p>
  <label class="f">Shortcut endpoint<input readonly value="${esc(shortcutSetup.endpoint)}"></label><label class="f">Shortcut token<input readonly value="${esc(shortcutSetup.token)}"></label>
  <button class="btn small ghost" data-cloud="clear-token">Hide token</button></div>`:''}
- <h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
+ ${aiConnectionsEnabled?`<h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
  ${activeWorkspace?`<p class="muted sm">AI sharing enabled. MCP server <code>${esc(connectionConfig.apiUrl.replace(/\/$/,'')+'/mcp')}</code></p>`:
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
  ${cloudConflict?`<div class="note">The same record was changed here and in the cloud. Choose which version to keep for the conflicting records.
  <div class="row"><button class="btn small" data-cloud="local">Keep this device’s changes</button><button class="btn small ghost" data-cloud="remote">Keep the cloud changes</button></div></div>`:''}
  ${consentRequest?`<div class="note"><p>${consentRequest.redirect_uri==='https://claude.ai/api/mcp/auth_callback'?'Claude':'ChatGPT'} is requesting permission to read shared Momentum data and log or edit entries.</p>
- <div class="row"><button class="btn small" data-cloud="consent" ${activeWorkspace?'':'disabled'}>Allow connection</button><button class="btn small ghost" data-cloud="deny">Decline</button></div></div>`:''}
+ <div class="row"><button class="btn small" data-cloud="consent" ${activeWorkspace?'':'disabled'}>Allow connection</button><button class="btn small ghost" data-cloud="deny">Decline</button></div></div>`:''}`:'<p class="muted xs">External AI connections are pending setup.</p>'}
  ${cloudDevices.length?`<h3>Connected apps and devices</h3>${cloudDevices.map(x=>`<div class="frow"><span>${esc(x.label)} · expires ${esc(new Date(x.refresh_expires_at||x.expires_at).toLocaleDateString())}</span>
  <button class="btn small ghost" data-cloud="revoke" data-id="${esc(x.id)}">Revoke</button></div>`).join('')}`:''}
  ${approvalCards?`<h3>Changes awaiting approval</h3>${approvalCards}`:''}
@@ -1721,10 +1723,10 @@ function queueWorkspaceSync(){
 }
 async function refreshConnections(show=false){
  if(!cloudSession)return;
- await syncWorkspace();
- const [devices,workspace]=await Promise.all([cloudRequest('/connections'),cloudRequest('/workspace')]);
+ if(aiConnectionsEnabled)await syncWorkspace();
+ const [devices,workspace]=await Promise.all([cloudRequest('/connections'),aiConnectionsEnabled?cloudRequest('/workspace'):null]);
  cloudDevices=devices;
- cloudAudit={history:workspace.history,pending:workspace.pending};
+ if(workspace)cloudAudit={history:workspace.history,pending:workspace.pending};
  const samples=[];
  let offset=0,last=null;
  do{
@@ -1733,7 +1735,7 @@ async function refreshConnections(show=false){
  }while(offset!==null);
  const previous=stable(healthReadings),oldSync=healthSyncAt;
  healthReadings=[...new Map(samples.map(x=>[x.id,x])).values()];healthSyncAt=last;
- if(show)showCloudStatus('Beta account refreshed.',true);
+ if(show)showCloudStatus('Measurements refreshed.',true);
  else if((previous!==stable(healthReadings)||oldSync!==last)&&!document.activeElement?.matches('input,textarea,select'))render();
 }
 function changeCloudSession(session){
@@ -1743,7 +1745,7 @@ function changeCloudSession(session){
  if(session){
   try{
    const cached=JSON.parse(localStorage.getItem(accountKey(session.user.id))||'null');
-   if(cached?.S&&cached?.F)activateWorkspace(session.user.id,cached);
+   if(aiConnectionsEnabled&&cached?.S&&cached?.F)activateWorkspace(session.user.id,cached);
   }catch{}
   void refreshConnections(true).catch(error=>showCloudStatus(error.message,true));
  }
@@ -1765,7 +1767,7 @@ document.addEventListener('submit',async e=>{
   if(button?.value==='signup'){
    const {data,error}=await cloudClient.auth.signUp({email,password,options:{emailRedirectTo:new URL('./#progress',location.href).href}});
    if(error)throw error;
-   showCloudStatus(data.session?'Account created.':'Check your email to confirm your Beta account, then return to sign in.');
+   showCloudStatus(data.session?'Account created.':'Open the confirmation email, then return to Momentum Beta and sign in.');
   }else{
    const {error}=await cloudClient.auth.signInWithPassword({email,password});
    if(error)throw error;
@@ -1925,7 +1927,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.1';
+ const VERSION='9.10.2';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

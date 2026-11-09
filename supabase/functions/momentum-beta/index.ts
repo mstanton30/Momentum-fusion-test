@@ -7,9 +7,13 @@ function required(name: string): string {
   return value;
 }
 
+const url = required('SUPABASE_URL');
+const app = Deno.env.get('MOMENTUM_BETA_APP_URL') || 'https://mstanton30.github.io/Momentum-fusion-test/';
+const base = Deno.env.get('MOMENTUM_BETA_API_URL') || url + '/functions/v1/momentum-beta';
+
 Deno.serve(createHandler({
-  store: supabaseStore(required('SUPABASE_URL'), required('SUPABASE_ANON_KEY'), required('SUPABASE_SERVICE_ROLE_KEY')),
-  base: required('MOMENTUM_BETA_API_URL'),
-  app: required('MOMENTUM_BETA_APP_URL'),
-  signingKey: required('MOMENTUM_BETA_OAUTH_KEY')
+  store: supabaseStore(url, required('SUPABASE_ANON_KEY'), required('SUPABASE_SERVICE_ROLE_KEY')),
+  base,
+  app,
+  signingKey: Deno.env.get('MOMENTUM_BETA_OAUTH_KEY')
 }));

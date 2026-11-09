@@ -17,7 +17,7 @@ const empty=()=>({entries:{},supplements:{},savedMeals:[],savedWorkouts:[],timez
     weigh:{},strength:{},dexa:{},tests:{},sessions:{},mealSlots:{},rewards:{},sleep:{},assessments:{},daySources:{},activityGoal:'health',targets:{}
   }});
 
-function fixture(){
+function fixture({enableAi=true}={}){
   const workspaces=new Map(),credentials=new Map(),readings=new Map(),sync=new Map();
   const store={
     user:async token=>[first,second].includes(token)?{id:token}:null,
@@ -51,7 +51,7 @@ function fixture(){
       return {inserted:values.size-size,synced_at};
     }
   };
-  const handler=createHandler({store,base,app,signingKey:'test-key-only-'.repeat(4)});
+  const handler=createHandler({store,base,app,signingKey:enableAi?'test-key-only-'.repeat(4):undefined});
   async function request(path,{token,method='GET',body,origin,form=false}={}){
     const res=await handler(new Request(base+path,{method,
       headers:{...(token?{Authorization:'Bearer '+token}:{}),...(origin?{Origin:origin}:{}),
@@ -181,4 +181,13 @@ test('Shortcut authorization, account ownership, sample replay, empty sync and r
   await request('/connections/'+id,{token:first,method:'DELETE'});
   assert.equal((await send(body)).status,401);
   assert.ok((await request('/health',{token:first})).data.last_sync);
+});
+
+test('Apple Health can run before AI OAuth is configured',async()=>{
+  const {request}=fixture({enableAi:false});
+  assert.equal((await request('/mcp')).status,404);
+  assert.equal((await request('/workspace',{token:first})).status,404);
+  assert.equal((await request('/health')).status,401);
+  assert.deepEqual((await request('/health',{token:first})).data.samples,[]);
+  assert.equal((await request('/connections/health',{token:first,method:'POST'})).status,201);
 });

@@ -7,7 +7,7 @@ const {parseHTML}=require('linkedom');
 test('Beta copies local records, preserves original keys, and renders five tabs and progress ranges',()=>{
  const html=fs.readFileSync('index.html','utf8');
  const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1]
-  .replace('\nrender();\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,setHealth(rows){healthReadings=rows}};render();\n})();');
+  .replace('\nrender();\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows}};render();\n})();');
  const today=new Date();
  const date=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const prior=new Date(today);prior.setDate(prior.getDate()-61);
@@ -20,13 +20,22 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  const {document,window}=parseHTML(html);
  window.scrollTo=()=>{};
  window.matchMedia=()=>({matches:false});
+ window.MOMENTUM_BETA_CONFIG={supabaseUrl:'https://beta.invalid',publishableKey:'fixture',apiUrl:'https://beta.invalid/api',aiEnabled:false};
+ window.supabase={createClient:()=>({auth:{onAuthStateChange(){}}})};
  const location=new URL('https://momentum.example/beta/#progress');
  const context={window,document,location,localStorage:makeStorage(values),sessionStorage:makeStorage(),navigator:{},structuredClone,
-  Intl,URL,URLSearchParams,Date,setTimeout:()=>0,clearTimeout:()=>{},console,history:{replaceState(){}},confirm:()=>true};
+  Intl,URL,URLSearchParams,Date,setTimeout:()=>0,setInterval:()=>0,clearTimeout:()=>{},console,history:{replaceState(){}},confirm:()=>true};
  vm.runInNewContext(main,context);
  const app=window.testApp;
  assert.deepEqual([...document.querySelectorAll('#tabbar button')].map(x=>x.textContent),['Home','Workout','Nutrition','Benefits','Progress']);
  assert.match(document.querySelector('main h1').textContent,/Progress/);
+ assert.match(app.connectedHtml(),/Create account/);
+ app.setCloudSession({user:{email:'fixture@example.com'}});
+ const connections=app.connectedHtml();
+ assert.match(connections,/href="shortcuts:\/\/run-shortcut\?name=Sync%20Momentum%20Health">Sync now/);
+ assert.match(connections,/Refresh measurements/);
+ assert.doesNotMatch(connections,/Set up AI sharing/);
+ app.setCloudSession(null);
  assert.match(document.querySelector('main').textContent,/Earlier scan/);
  assert.match(document.querySelector('main').textContent,/Vitamin D \(ng\/mL\)/);
  const weight=()=>[...document.querySelectorAll('.card')].find(x=>x.querySelector('h3')?.textContent==='Weight').textContent;

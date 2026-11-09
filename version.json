@@ -1,4 +1,4 @@
 {
-  "version": "9.9.2",
-  "notes": "Fix update detection and service worker cache; retain v9.9.1 activity and strength scoring."
+  "version": "9.9.3",
+  "notes": "Weekly Activity Score: aerobic goals, strength coverage and rubric fixes, mixed-workout safeguards, saved assessments, and corrected reading links. Existing user data preserved."
 }

@@ -9,14 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="Momentum">
 <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1113" media="(prefers-color-scheme: dark)">
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" type="image/png" href="icon.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.9.2</title>
+<title>Momentum — Beta v9.9.3</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -401,48 +400,54 @@ function vo2FromTest(t,kg){
 function testValueLabel(t){ return t.mod==="bike"?t.v+" W":fmtTime(t.v) }
 function vo2Band(v,age,sex){ if(v==null) return ""; const a=age||40; let base=sex==="f"?36:44; base-=Math.max(0,(a-30))*0.3; if(v>=base+10) return "excellent"; if(v>=base+4) return "good"; if(v>=base-3) return "average"; return "below average" }
 
-/* =========================== MOMENTUM HEALTH SCORE v10 =========================== */
+/* =========================== WEEKLY ACTIVITY SCORE (separate from habit and nutrition points) =========================== */
 const HEALTH_GOALS={health:{name:'General health',minutes:150},enhanced:{name:'Additional health benefits',minutes:300},weight:{name:'Weight management',minutes:225}};
 function healthGoal(){return HEALTH_GOALS[F.healthGoal]||HEALTH_GOALS.health}
-function healthClassify(text){const t=String(text||'').toLowerCase();if(/bootcamp|circuit|hiit|cardio.*strength|strength.*cardio/.test(t))return 'mixed';if(/stretch|yoga|pilates|mobility|foam roll/.test(t))return 'mobility';if(/strength|weight|lift|resistance|deadlift|squat|bench|trainer/.test(t))return 'strength';return 'aerobic'}
+function healthClassify(text){const t=String(text||'').toLowerCase();if(/bootcamp|cardio.*strength|strength.*cardio/.test(t))return 'mixed';if(/stretch|yoga|pilates|mobility|foam roll/.test(t))return 'mobility';if(/strength|weight|lift|resistance|deadlift|squat|bench|trainer/.test(t))return 'strength';return 'aerobic'}
 function strengthPoints(r){
- if(!r)return 5; // Unassessed logged strength receives provisional minimum credit.
+ if(!r||!['full','upper','lower','partial','limited'].includes(r.coverage)||!['light','challenging'].includes(r.effort)||!['single','multiple'].includes(r.volume))return 5; // Unassessed logged strength receives provisional minimum credit.
  if(r.effort==='light'||r.coverage==='limited')return 5;
  if(r.effort==='challenging'&&r.volume==='multiple'&&['full','upper','lower'].includes(r.coverage))return 15;
  return 10;
 }
 function strengthAssessmentFields(r={}){
+ r={coverage:'partial',effort:'light',volume:'single',...r};
  const opt=(value,label,current)=>`<option value="${value}" ${current===value?'selected':''}>${label}</option>`;
  return `<div class="fgrid"><label>Muscle groups<select name="strengthCoverage">${opt('full','Full body',r.coverage)}${opt('upper','Upper-body split',r.coverage)}${opt('lower','Lower-body split',r.coverage)}${opt('partial','Several groups / partial',r.coverage)}${opt('limited','One or two groups',r.coverage)}</select></label><label>Training effort<select name="strengthEffort">${opt('challenging','Challenging reps',r.effort)}${opt('light','Light / easy',r.effort)}</select></label><label>Working sets<select name="strengthVolume">${opt('multiple','Multiple sets per exercise',r.volume)}${opt('single','Mostly one set',r.volume)}</select></label></div>`;
 }
 function strengthAssessmentFrom(d){return {coverage:d.strengthCoverage||'partial',effort:d.strengthEffort||'light',volume:d.strengthVolume||'single'}}
+function activityMinutes(value){const n=Number(value);return Number.isFinite(n)?Math.max(0,n):0}
 function healthWeekly(ref=today()){
  const wk=weekKeys(ref),goal=healthGoal();let aerobic=0;const dailyStrength=[];const coverage=new Set();
  for(const k of wk){
   const day=dayDef(k),source=F.daySources?.[k]||'dan',replaced=fusionReplacements(k).length>0;
-  let best=0,bestCoverage=null;
+  let best=0;
+  const addStrength=assessment=>{
+   best=Math.max(best,strengthPoints(assessment));
+   // Coverage is a weekly union, independent of session order and daily score ties.
+   if(assessment?.coverage==='full'){coverage.add('upper');coverage.add('lower')}
+   else if(['upper','lower'].includes(assessment?.coverage))coverage.add(assessment.coverage);
+  };
   if(source==='dan')for(const x of day.sessions){
    const st=sessOf(k,x.id);if(!st.done||replaced&&x.id==='main')continue;
-   const min=Math.max(0,Number(st.min)||x.range[1]);
+   const min=activityMinutes(st.min??x.range[1]);if(!min)continue;
    if(x.kind==='cardio')aerobic+=min*(day.intense?2:1);
    if(x.kind==='boot')aerobic+=min; // half vigorous cardio, half resistance: no double counting
    if(x.kind==='lift'||x.kind==='boot'){
-    const assessment=(F.strengthAssessments||{})[k];const pts=strengthPoints(assessment);
-    if(pts>best){best=pts;bestCoverage=assessment?.coverage||null}
+    addStrength((F.strengthAssessments||{})[k]);
    }
   }
   for(const x of fusionActivities(k)){
-   const min=Math.max(0,Number(x.minutes)||0);
+   const min=activityMinutes(x.minutes);if(!min)continue;
    const cat=x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''));
    const effort=x.intensity==='vigorous'?2:x.intensity==='light'?0:1;
    if(cat==='aerobic')aerobic+=min*effort;
    if(cat==='mixed')aerobic+=min*.5*effort;
    if(cat==='strength'||cat==='mixed'){
-    const pts=strengthPoints(x.strengthAssessment);
-    if(pts>best){best=pts;bestCoverage=x.strengthAssessment?.coverage||null}
+    addStrength(x.strengthAssessment);
    }
   }
-  if(best){dailyStrength.push(best);if(bestCoverage==='full'){coverage.add('upper');coverage.add('lower')}else if(bestCoverage==='upper'||bestCoverage==='lower')coverage.add(bestCoverage)}
+  if(best)dailyStrength.push(best);
  }
  const cardio=Math.min(70,Math.round(70*aerobic/goal.minutes));
  // Max two scored strength days; complete 30 requires upper AND lower coverage.
@@ -451,7 +456,7 @@ function healthWeekly(ref=today()){
  return {cardio,strength,score:cardio+strength,aerobic:Math.round(aerobic),strengthDays:dailyStrength.length,goal,coverageComplete:coverage.has('upper')&&coverage.has('lower')};
 }
 function healthCard(ref=today()){const h=healthWeekly(ref);return `<div class="card" style="border:2px solid var(--green)"><div class="eyebrow">Weekly Activity Score</div><h2 style="margin:5px 0">${h.score}<span class="muted sm"> / 100 · activity goal</span></h2><div class="meter"><i style="width:${h.score}%"></i></div><div class="stat two"><div><b>${h.cardio}/70</b><span>Aerobic · ${h.aerobic}/${h.goal.minutes} equivalent min</span></div><div><b>${h.strength}/30</b><span>Strength · ${h.strengthDays} day(s)</span></div></div><p class="muted xs" style="margin-top:10px">${esc(h.goal.name)} · ${h.coverageComplete?'Upper and lower body covered':'Full strength credit needs upper- and lower-body coverage'} · 100 means weekly activity prescription completed, not perfect health.</p><button class="btn small ghost" data-go="workout">View workouts & scoring</button></div>`}
-function healthReading(){return `<details><summary>The science behind your Activity Score</summary><div class="sm"><p><b>Aerobic:</b> 70 points × logged moderate-equivalent minutes ÷ your selected weekly target (capped at 70). Vigorous aerobic minutes count double; light activity does not count toward moderate-equivalent minutes.</p><p><b>Strength:</b> Up to 30 points from your two highest-scoring resistance-training days. Each day earns 5 for limited/light work, 10 for meaningful partial work, or 15 for challenging, multiple-set full-body or upper/lower split training. Unassessed logged resistance work gets provisional 5 points. Full 30 points also requires both upper and lower body to be covered over the week. Several workouts on the same day count as one strength day.</p><p><b>Mixed workouts:</b> A bootcamp is split approximately half aerobic and half resistance, rather than counting all minutes twice. Custom mixed workouts use the same approximation. Review the category and assessment before saving.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes moderate aerobic activity weekly (or 75–150 vigorous) plus major-muscle-group strengthening on at least two days. The 70/30 weighting, 5/10/15 rubric, and 225-minute weight-management option are Momentum design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/adults/index.html" target="_blank" rel="noopener">CDC adult recommendations</a></p><p class="muted xs">This is an activity-adherence score. Nutrition, sleep, and perks remain separate while an overall health score is developed.</p></div></details>`}
+function healthReading(){return `<details><summary>The science behind your Activity Score</summary><div class="sm"><p><b>Aerobic:</b> 70 points × logged moderate-equivalent minutes ÷ your selected weekly target (capped at 70). Vigorous aerobic minutes count double; light activity does not count toward moderate-equivalent minutes.</p><p><b>Strength:</b> Up to 30 points from your two highest-scoring resistance-training days. Each day earns 5 for limited/light work, 10 for meaningful partial work, or 15 for challenging, multiple-set full-body or upper/lower split training. Unassessed logged resistance work gets provisional 5 points. Full 30 points also requires both upper and lower body to be covered over the week. Several workouts on the same day count as one strength day; their muscle-group coverage is combined across the week. Without upper and lower coverage, strength is capped at 25.</p><p><b>Mixed workouts:</b> A bootcamp is split approximately half aerobic and half resistance, rather than counting all minutes twice. Custom mixed workouts use the same approximation. Review the category and assessment before saving.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes moderate aerobic activity weekly (or 75–150 vigorous) plus major-muscle-group strengthening on at least two days. The 70/30 weighting, 5/10/15 rubric, and 225-minute weight-management option are Momentum design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html" target="_blank" rel="noopener">CDC adult recommendations</a></p><p class="muted xs">This is an activity-adherence score. Nutrition, sleep, and perks remain separate while an overall health score is developed.</p></div></details>`}
 
 /* =========================== CHARTS =========================== */
 function chart(points,{color="var(--accent)",fmtV=v=>v,baseline=null,height=90}={}){
@@ -807,7 +812,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.2</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.3</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1296,7 +1301,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-health-log
  }
  if(b.dataset.festimate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const weight=latestWeight();if(!weight){toast('Set your weight in your profile first');return}const min=Number(form.elements.minutes.value)||0;if(!min){toast('Enter workout minutes first');return}form.elements.caloriesBurned.value=activityKcal(min,form.elements.intensity.value,weight);form.elements.calorieSource.value='estimated';const n=document.getElementById('fKcalNote');if(n)n.textContent='Approximate total expenditure (including resting energy), not active calories. Adjust using your wearable if available.';return}
  if(b.dataset.fai){fAI(b.dataset.fai);return}
- if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));const assess=document.getElementById('customStrengthAssessment');if(assess)assess.hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);toast('Workout loaded')}return}
+ if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));for(const [field,key] of [['strengthCoverage','coverage'],['strengthEffort','effort'],['strengthVolume','volume']])form.elements[field].value=t.strengthAssessment?.[key]||({coverage:'partial',effort:'light',volume:'single'})[key];const assess=document.getElementById('customStrengthAssessment');if(assess)assess.hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);toast('Workout loaded')}return}
  if(b.dataset.fsavetemplate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const d=Object.fromEntries(new FormData(form));if(!String(d.description||'').trim()){toast('Enter workout details first');return}const name=prompt('Name this workout',d.description);if(!name)return;F.workoutTemplates.push({name:name.slice(0,60),description:d.description,minutes:Math.max(1,+d.minutes||50),intensity:d.intensity,components:d.components||'',healthCategory:d.healthCategory,strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null});fsave();render();toast('Workout button saved');return}
 
  if(b.dataset.favorite!==undefined){const x=F.favorites[+b.dataset.favorite];if(x){const entry={...x,id:fusionId(),date:x.type==='meal'?nutDay:sel,...(x.type==='activity'?{planAction:'extra',healthCategory:x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''))}:{})};F.entries.push(entry);if(entry.type==='activity'&&entry.planAction&&entry.planAction!=='extra')syncSubstitution(entry.date)}toast('Favorite logged')}
@@ -1438,7 +1443,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.9.2';
+ const VERSION='9.9.3';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

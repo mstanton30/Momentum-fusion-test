@@ -1,9 +1,9 @@
 import {auditView,callTool,definitions,HttpError,publicWorkspace,resolveApproval,validateWorkspace} from './tools.mjs';
 
 const scope='momentum:log';
-const redirects=new Map([
-  ['https://chatgpt.com/connector_platform_oauth_redirect','ChatGPT'],
-  ['https://claude.ai/api/mcp/auth_callback','Claude']
+const clients=new Map([
+  ['https://chatgpt.com/connector_platform_oauth_redirect',{id:'momentum-beta-chatgpt',name:'ChatGPT'}],
+  ['https://claude.ai/api/mcp/auth_callback',{id:'momentum-beta-claude',name:'Claude'}]
 ]);
 const versions=['2025-11-25','2025-06-18','2025-03-26'];
 const textEncoder=new TextEncoder();
@@ -67,17 +67,11 @@ function normalizeSamples(input) {
   }
   return [...unique.values()];
 }
-export function createHandler({store,base,app,signingKey,oauthIssuer}) {
-  if (signingKey!==undefined&&signingKey.length<32) throw new Error('Use a random OAuth signing key of at least 32 characters');
-  const apiBase=base.replace(/\/$/,'');
-  const issuer=oauthIssuer?.replace(/\/$/,'')||apiBase;
-  if(oauthIssuer&&(!issuer.startsWith('https://')||new URL(issuer).origin!==issuer))throw new Error('Use an HTTPS origin for the OAuth issuer');
+export function createHandler({store,base,app,aiEnabled=false}) {
+  const issuer=base.replace(/\/$/,'');
   const appUrl=new URL(app),siteOrigin=appUrl.origin;
   const resource=issuer+'/mcp', resourceMeta=issuer+'/.well-known/oauth-protected-resource/mcp';
-  const apiPath=new URL(apiBase).pathname;
-  const registeredKey=signingKey
-    ? crypto.subtle.importKey('raw',bytes(signingKey),{name:'HMAC',hash:'SHA-256'},false,['sign','verify'])
-    : null;
+  const apiPath=new URL(issuer).pathname;
   const metadata={
     issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',registration_endpoint:issuer+'/register',
     response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],
@@ -109,25 +103,19 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
   async function registration(req){
     const body=await readJson(req,16_000);
     const redirect=body?.redirect_uris?.[0];
-    if (!Array.isArray(body?.redirect_uris)||body.redirect_uris.length!==1||!redirects.has(redirect)||
+    const client=clients.get(redirect);
+    if (!Array.isArray(body?.redirect_uris)||body.redirect_uris.length!==1||!client||
         ![undefined,'none'].includes(body.token_endpoint_auth_method))throw bad('Unsupported OAuth client registration');
-    const payload=b64(bytes(redirect));
-    const signature=b64(await crypto.subtle.sign('HMAC',await registeredKey,bytes(payload)));
-    return json(req,{client_id:payload+'.'+signature,redirect_uris:[redirect],client_name:redirects.get(redirect),
+    return json(req,{client_id:client.id,redirect_uris:[redirect],client_name:client.name,
       token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code'],scope},201);
   }
-  async function registeredClient(clientId,redirect){
-    if(typeof clientId!=='string'||clientId.length>300||!redirects.has(redirect))return false;
-    const [payload,signature,rest]=clientId.split('.');
-    if (rest!==undefined||payload!==b64(bytes(redirect))||!/^[a-zA-Z0-9_-]{43}$/.test(signature||''))return false;
-    const binary=atob(signature.replace(/-/g,'+').replace(/_/g,'/')+'=');
-    return crypto.subtle.verify('HMAC',await registeredKey,Uint8Array.from(binary,c=>c.charCodeAt(0)),bytes(payload));
-  }
-  async function validateAuth(p){
-    if(!p||!await registeredClient(p.client_id,p.redirect_uri)||
+  function validateAuth(p){
+    const client=clients.get(p?.redirect_uri);
+    if(!client||client.id!==p.client_id||
         p.response_type!=='code'||p.code_challenge_method!=='S256'||!/^[a-zA-Z0-9_-]{43}$/.test(p.code_challenge||'')||
         typeof p.state!=='string'||!p.state||p.state.length>2048||
         (p.scope!==undefined&&p.scope!==scope)||(p.resource!==undefined&&p.resource!==resource))throw bad('Unsupported OAuth authorization request');
+    return client;
   }
   async function exchange(req){
     const p=await readForm(req);
@@ -154,7 +142,7 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
   }
   async function consent(req,user){
     const {request:p,allow}=await readJson(req,16_000)||{};
-    await validateAuth(p);
+    const client=validateAuth(p);
     if(typeof allow!=='boolean')throw bad('Choose whether to allow access');
     const target=new URL(p.redirect_uri);
     target.searchParams.set('state',p.state);
@@ -163,7 +151,7 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
       const workspace=await store.getWorkspace(user);
       if(!workspace.state.entries)throw new HttpError(409,'Enable AI sharing in Momentum first');
       const code=token();
-      await store.createCredential({kind:'code',secret_hash:await sha(code),user_id:user,label:redirects.get(p.redirect_uri),expires_at:expiry(300),
+      await store.createCredential({kind:'code',secret_hash:await sha(code),user_id:user,label:client.name,expires_at:expiry(300),
         meta:{client_id:p.client_id,redirect_uri:p.redirect_uri,code_challenge:p.code_challenge,resource,scope}});
       target.searchParams.set('code',code);
     }else target.searchParams.set('error','access_denied');
@@ -204,7 +192,7 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
     if(method==='OPTIONS')return new Response(null,{status:204,headers:headers(req)});
     try{
       const healthRoute=path==='/health'||path==='/connections'||path.startsWith('/connections/');
-      if(!registeredKey&&!healthRoute)return json(req,{error:'This Beta service currently supports Apple Health sync'},404);
+      if(!aiEnabled&&!healthRoute)return json(req,{error:'This Beta service currently supports Apple Health sync'},404);
       if(path==='/mcp')return await mcp(req);
       if(path==='/api/tools'&&method==='POST'){
         const row=await credential(req,'ai');
@@ -213,11 +201,15 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
       }
       if(['/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp'].includes(path)&&method==='GET')return json(req,{resource,authorization_servers:[issuer],scopes_supported:[scope],bearer_methods_supported:['header']});
       if(path==='/.well-known/oauth-authorization-server'&&method==='GET')return json(req,metadata);
+      // The project gateway reserves origin-level discovery paths. MCP clients also try this issuer-relative path.
+      if(path==='/.well-known/openid-configuration'&&method==='GET')return json(req,{...metadata,
+        jwks_uri:issuer+'/.well-known/jwks.json',subject_types_supported:[],id_token_signing_alg_values_supported:[]});
+      if(path==='/.well-known/jwks.json'&&method==='GET')return json(req,{keys:[]});
       if(path==='/register'&&method==='POST')return await registration(req);
       if(path==='/token'&&method==='POST')return await exchange(req);
       if(path==='/authorize'&&method==='GET'){
         const p=Object.fromEntries(url.searchParams);
-        await validateAuth(p);
+        validateAuth(p);
         const target=new URL(app);
         target.searchParams.set('momentum_consent',JSON.stringify(p));
         target.hash='progress';
@@ -245,7 +237,7 @@ export function createHandler({store,base,app,signingKey,oauthIssuer}) {
         const secret=token();
         const expires_at=expiry(365*86400);
         await store.createCredential({kind:'health',secret_hash:await sha(secret),user_id:user,label:'Apple Health Shortcut',expires_at});
-        return json(req,{token:secret,endpoint:apiBase+'/health',expires_at},201);
+        return json(req,{token:secret,endpoint:issuer+'/health',expires_at},201);
       }
       if(path.startsWith('/connections/')&&method==='DELETE'){
         const id=path.slice('/connections/'.length);

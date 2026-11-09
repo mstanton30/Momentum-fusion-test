@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.4</title>
+<title>Momentum — Beta v9.10.5</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.4"></script>
+<script src="./beta-config.js?v=9.10.5"></script>
 <script>
 (function(){
 "use strict";
@@ -827,7 +827,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.4</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.5</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1492,8 +1492,7 @@ document.addEventListener('submit',e=>{
 document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.target.closest('#fActivity')){const el=document.getElementById('customStrengthAssessment');if(el)el.hidden=!['strength','mixed'].includes(e.target.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 const connectionConfig=window.MOMENTUM_BETA_CONFIG||{};
-const externalMcpUrl=connectionConfig.mcpUrl;
-const aiConnectionsEnabled=connectionConfig.aiEnabled===true&&!!externalMcpUrl;
+const aiConnectionsEnabled=connectionConfig.aiEnabled===true;
 const betaAccountUrl=new URL('./',location.href).href;
 const authLocation=new URL(location.href);
 const authFragment=new URLSearchParams(authLocation.hash.slice(1));
@@ -1537,7 +1536,7 @@ function connectedHtml(){
  <label class="f">Shortcut endpoint<input readonly value="${esc(shortcutSetup.endpoint)}"></label><label class="f">Shortcut token<input readonly value="${esc(shortcutSetup.token)}"></label>
  <button class="btn small ghost" data-cloud="clear-token">Hide token</button></div>`:''}
  ${aiConnectionsEnabled?`<h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
- ${activeWorkspace?`<label class="f">ChatGPT and Claude connector URL<input readonly value="${esc(externalMcpUrl)}"></label>`:
+ ${activeWorkspace?`<label class="f">ChatGPT and Claude connector URL<input readonly value="${esc(connectionConfig.apiUrl.replace(/\/$/,'')+'/mcp')}"></label>`:
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
  ${cloudConflict?`<div class="note">The same record was changed here and in the cloud. Choose which version to keep for the conflicting records.
  <div class="row"><button class="btn small" data-cloud="local">Keep this device’s changes</button><button class="btn small ghost" data-cloud="remote">Keep the cloud changes</button></div></div>`:''}
@@ -2032,7 +2031,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.4';
+ const VERSION='9.10.5';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

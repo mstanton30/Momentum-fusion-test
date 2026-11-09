@@ -17,7 +17,7 @@ const empty=()=>({entries:{},supplements:{},savedMeals:[],savedWorkouts:[],timez
     weigh:{},strength:{},dexa:{},tests:{},sessions:{},mealSlots:{},rewards:{},sleep:{},assessments:{},daySources:{},activityGoal:'health',targets:{}
   }});
 
-function fixture({enableAi=true,apiBase=base,oauthIssuer}={}){
+function fixture({enableAi=true,apiBase=base}={}){
   const workspaces=new Map(),credentials=new Map(),readings=new Map(),sync=new Map();
   const store={
     user:async token=>[first,second].includes(token)?{id:token}:null,
@@ -51,7 +51,7 @@ function fixture({enableAi=true,apiBase=base,oauthIssuer}={}){
       return {inserted:values.size-size,synced_at};
     }
   };
-  const handler=createHandler({store,base:apiBase,app,oauthIssuer,signingKey:enableAi?'test-key-only-'.repeat(4):undefined});
+  const handler=createHandler({store,base:apiBase,app,aiEnabled:enableAi});
   async function request(path,{token,method='GET',body,origin,form=false}={}){
     const res=await handler(new Request(apiBase+path,{method,
       headers:{...(token?{Authorization:'Bearer '+token}:{}),...(origin?{Origin:origin}:{}),
@@ -67,7 +67,8 @@ function fixture({enableAi=true,apiBase=base,oauthIssuer}={}){
     const register=await request('/register',{method:'POST',body:{redirect_uris:[redirect_uri],token_endpoint_auth_method:'none'}});
     assert.equal(register.status,201);
     const {client_id}=register.data;
-    const auth={client_id,redirect_uri,response_type:'code',code_challenge_method:'S256',code_challenge:digest(verifier),state:'state-for-tests',resource:base+'/mcp'};
+    const auth={client_id,redirect_uri,response_type:'code',code_challenge_method:'S256',code_challenge:digest(verifier),state:'state-for-tests',resource:apiBase+'/mcp'};
+    assert.equal((await request('/authorize?'+new URLSearchParams({...auth,client_id:'other-client'}))).status,400);
     const launch=await request('/authorize?'+new URLSearchParams(auth));
     assert.equal(launch.status,302);
     assert.equal(new URL(launch.headers.get('Location')).origin,new URL(app).origin);
@@ -75,8 +76,8 @@ function fixture({enableAi=true,apiBase=base,oauthIssuer}={}){
     assert.equal(consent.status,200);
     const redirect=new URL(consent.data.redirect);
     assert.equal(redirect.searchParams.get('state'),auth.state);
-    assert.equal(redirect.searchParams.get('iss'),base);
-    const payload={client_id,redirect_uri,grant_type:'authorization_code',code:redirect.searchParams.get('code'),code_verifier:verifier,resource:base+'/mcp'};
+    assert.equal(redirect.searchParams.get('iss'),apiBase);
+    const payload={client_id,redirect_uri,grant_type:'authorization_code',code:redirect.searchParams.get('code'),code_verifier:verifier,resource:apiBase+'/mcp'};
     const exchange=overrides=>request('/token',{method:'POST',form:true,body:{...payload,...overrides}});
     assert.equal((await exchange({code_verifier:'w'.repeat(64)})).status,400);
     assert.equal((await exchange({resource:'https://other.example'})).status,400);
@@ -192,15 +193,16 @@ test('Apple Health can run before AI OAuth is configured',async()=>{
   assert.equal((await request('/connections/health',{token:first,method:'POST'})).status,201);
 });
 
-test('public MCP issuer is independent from the Apple Health upload URL',async()=>{
+test('hosted Edge Function path serves discovery, both clients, and the existing Apple Health URL',async()=>{
   const apiBase='https://edge.example/functions/v1/momentum-beta';
-  const {request,enroll,oauth}=fixture({apiBase,oauthIssuer:base});
-  const discovery=await request('/.well-known/oauth-authorization-server');
-  assert.equal(discovery.data.issuer,base);
-  assert.equal(discovery.data.registration_endpoint,base+'/register');
-  assert.deepEqual((await request('/.well-known/oauth-protected-resource/mcp')).data.authorization_servers,[base]);
+  const {request,enroll,oauth}=fixture({apiBase});
+  const discovery=await request('/.well-known/openid-configuration');
+  assert.equal(discovery.data.issuer,apiBase);
+  assert.equal(discovery.data.registration_endpoint,apiBase+'/register');
+  assert.deepEqual((await request('/.well-known/oauth-protected-resource/mcp')).data.authorization_servers,[apiBase]);
+  assert.deepEqual((await request('/.well-known/jwks.json')).data,{keys:[]});
   assert.equal((await request('/mcp')).headers.get('WWW-Authenticate'),
-    `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/mcp", scope="momentum:log"`);
+    `Bearer resource_metadata="${apiBase}/.well-known/oauth-protected-resource/mcp", scope="momentum:log"`);
   assert.equal((await request('/connections/health',{token:first,method:'POST'})).data.endpoint,apiBase+'/health');
   assert.equal((await enroll(first)).status,200);
   for(const provider of ['chatgpt','claude']){

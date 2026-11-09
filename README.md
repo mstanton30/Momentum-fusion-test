@@ -12,6 +12,12 @@
 
 The first Beta launch copies legacy records available in that browser into Beta-specific storage. The original storage keys stay intact. A browser or Home Screen installation with its own storage container can only copy records visible in that container.
 
+## Recover a Beta account
+
+From the Apple Health panel, open **Forgot password?** in Safari. Request the reset using the Beta account email. Open the newest reset email on the same iPhone in the same Safari browser, set a new password, then use it in the Home Screen app. This keeps the PKCE verification state in one browser.
+
+The hosted Supabase project's **Authentication → URL Configuration → Site URL** must be the exact Beta app root, `https://mstanton30.github.io/Momentum-fusion-test/`, including the trailing slash. New confirmation and password-reset emails use this URL. Previously sent links can still contain the previous address.
+
 ## Deploy the optional Beta connections
 
 The published Beta connects to a separate Supabase project for Apple Health uploads. AI connections need additional OAuth configuration. The migration preserves the existing health sample schema and can also create it in an empty Beta database. Do not point Beta at the production database.

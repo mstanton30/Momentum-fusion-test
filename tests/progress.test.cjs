@@ -7,7 +7,7 @@ const {parseHTML}=require('linkedom');
 test('Beta copies local records, preserves original keys, and renders five tabs and progress ranges',()=>{
  const html=fs.readFileSync('index.html','utf8');
  const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1]
-  .replace('\nrender();\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows}};render();\n})();');
+  .replace('\nrender();\nif(cloudClient&&authCode)void finishCloudAuthCallback(authCode);\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows}};render();\n})();');
  const today=new Date();
  const date=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const prior=new Date(today);prior.setDate(prior.getDate()-61);
@@ -30,6 +30,7 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  assert.deepEqual([...document.querySelectorAll('#tabbar button')].map(x=>x.textContent),['Home','Workout','Nutrition','Benefits','Progress']);
  assert.match(document.querySelector('main h1').textContent,/Progress/);
  assert.match(app.connectedHtml(),/Create account/);
+ assert.match(app.connectedHtml(),/Forgot password/);
  app.setCloudSession({user:{email:'fixture@example.com'}});
  const connections=app.connectedHtml();
  assert.match(connections,/href="shortcuts:\/\/run-shortcut\?name=Sync%20Momentum%20Health">Sync now/);
@@ -82,4 +83,46 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  local.entries['3'].description='Device edit';remote.entries['3'].description='AI edit';
  assert.equal(app.mergeWorkspace(base,local,remote).conflict,true);
  assert.equal(app.mergeWorkspace(base,local,remote,'remote').data.entries['3'].description,'AI edit');
+});
+
+
+test('a recovery callback opens a password form without a local Momentum profile',async()=>{
+ const html=fs.readFileSync('index.html','utf8');
+ const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1];
+ const {document,window}=parseHTML(html);
+ const location=new URL('https://momentum.example/beta/?code=recovery-code');
+ const values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)};
+ const session={user:{id:'recovery-user',email:'fixture@example.com'}};
+ let optionsSeen,codeSeen,passwordSeen;
+ window.scrollTo=()=>{};
+ window.MOMENTUM_BETA_CONFIG={supabaseUrl:'https://beta.invalid',publishableKey:'fixture',apiUrl:'https://beta.invalid/api'};
+ window.supabase={createClient:(_url,_key,options)=>{
+  optionsSeen=options;
+  return {auth:{onAuthStateChange(){},async exchangeCodeForSession(code){codeSeen=code;return {data:{session,redirectType:'PASSWORD_RECOVERY'}}},
+    async updateUser({password}){passwordSeen=password;return {data:{user:session.user}}}}};
+ }};
+ const context={window,document,location,localStorage:storage,sessionStorage:storage,navigator:{},structuredClone,Intl,URL,URLSearchParams,Date,
+  setTimeout:()=>0,setInterval:()=>0,clearTimeout:()=>{},console,history:{replaceState(_state,_unused,url){location.href=url}},
+  FormData:class {constructor(form){this.form=form}get(name){return this.form.querySelector('[name="'+name+'"]').value}}};
+ vm.runInNewContext(main,context);
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(optionsSeen.auth.detectSessionInUrl,false);
+ assert.equal(codeSeen,'recovery-code');
+ assert.equal(location.searchParams.has('code'),false);
+ assert.match(document.querySelector('main h1').textContent,/Set a new password/);
+ assert.equal(storage.getItem('momentumfusion.beta.recovery'),session.user.id);
+ const form=document.getElementById('fCloudResetUpdate');
+ form.querySelector('[name=password]').value='example-password';
+ form.querySelector('[name=confirmation]').value='mismatch';
+ form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(passwordSeen,undefined);
+ assert.equal(document.getElementById('fCloudResetUpdate'),form);
+ assert.match(document.getElementById('cloudStatus').textContent,/same new password twice/);
+ form.querySelector('[name=confirmation]').value='example-password';
+ form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(passwordSeen,'example-password');
+ assert.match(document.querySelector('main h1').textContent,/Password updated/);
+ assert.equal(storage.getItem('momentumfusion.beta.recovery'),null);
 });

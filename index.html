@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.3</title>
+<title>Momentum — Beta v9.10.4</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.3"></script>
+<script src="./beta-config.js?v=9.10.4"></script>
 <script>
 (function(){
 "use strict";
@@ -827,7 +827,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.3</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.4</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1493,10 +1493,22 @@ document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.ta
 document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 const connectionConfig=window.MOMENTUM_BETA_CONFIG||{};
 const aiConnectionsEnabled=connectionConfig.aiEnabled===true;
-const cloudClient=connectionConfig.supabaseUrl&&connectionConfig.publishableKey&&connectionConfig.apiUrl&&window.supabase
- ? window.supabase.createClient(connectionConfig.supabaseUrl,connectionConfig.publishableKey,{
-  auth:{storageKey:'momentumfusion.beta.auth',flowType:'pkce'}
- }) : null;
+const betaAccountUrl=new URL('./',location.href).href;
+const authLocation=new URL(location.href);
+const authFragment=new URLSearchParams(authLocation.hash.slice(1));
+const authCode=authLocation.searchParams.get('code');
+const hasAuthCallback=authCode||authLocation.searchParams.has('error_code')||authFragment.has('error_code');
+const recoveryStorageKey='momentumfusion.beta.recovery';
+let accountScreen=authLocation.searchParams.get('beta-account')==='reset'?'reset':hasAuthCallback?'callback':'';
+let authExchangePending=!!authCode;
+let cloudClient=null;
+if(connectionConfig.supabaseUrl&&connectionConfig.publishableKey&&connectionConfig.apiUrl&&window.supabase){
+ try{
+  cloudClient=window.supabase.createClient(connectionConfig.supabaseUrl,connectionConfig.publishableKey,{
+   auth:{storageKey:'momentumfusion.beta.auth',flowType:'pkce',detectSessionInUrl:false}
+  });
+ }catch{ /* Local app features remain usable if Auth initialization fails. */ }
+}
 let cloudSession=null,cloudStatus='',cloudDevices=[],cloudAudit={history:[],pending:[]};
 let cloudBase=null,cloudBusy=false,cloudTimer,cloudConflict=false,shortcutSetup=null,connectionOpen=false;
 let consentRequest=null;
@@ -1508,7 +1520,8 @@ try{
 function connectedHtml(){
  const signin=`<p class="muted sm">Sign in to your separate Momentum Beta account to connect Apple Health.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
  <label class="f">Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
- <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div></form>`;
+ <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div>
+ <p class="muted sm"><a href="./?beta-account=reset" target="_blank" rel="noopener">Forgot password?</a></p></form>`;
  const approvalCards=cloudAudit.pending.map(x=>`<div class="frow"><span><b>${esc(x.assistant)} · ${esc(x.name.replaceAll('_',' '))}</b><br>${esc(x.summary)}
  ${x.after?`<details><summary>Review before and after</summary><pre class="cloud-json">${esc(JSON.stringify({before:x.before,after:x.after},null,2))}</pre></details>`:''}</span>
  <div class="row tight"><button class="btn small" data-cloud="approve" data-id="${esc(x.id)}">Approve</button><button class="btn small ghost" data-cloud="decline" data-id="${esc(x.id)}">Decline</button></div></div>`).join('');
@@ -1533,6 +1546,31 @@ function connectedHtml(){
  <button class="btn small ghost" data-cloud="revoke" data-id="${esc(x.id)}">Revoke</button></div>`).join('')}`:''}
  ${approvalCards?`<h3>Changes awaiting approval</h3>${approvalCards}`:''}
  ${cloudAudit.history.length?`<details><summary>AI activity history</summary>${cloudAudit.history.map(x=>`<p class="sm">${esc(new Date(x.at).toLocaleString())} · ${esc(x.assistant)} · ${esc(x.action.replaceAll('_',' '))} · ${esc(x.entry)} · ${esc(x.status)}</p>`).join('')}</details>`:''}${status}`;
+}
+function recoveryAccount(value){
+ try{
+  if(value===undefined)return sessionStorage.getItem(recoveryStorageKey);
+  if(value)sessionStorage.setItem(recoveryStorageKey,value);
+  else sessionStorage.removeItem(recoveryStorageKey);
+ }catch{}
+ return null;
+}
+function accountScreenHtml(){
+ const back='<a href="./#progress">Return to Momentum Beta</a>';
+ const reset='<a href="./?beta-account=reset">Request a new password reset link</a>';
+ const status=`<p class="muted sm" id="cloudStatus" role="status">${esc(cloudStatus)}</p>`;
+ if(!cloudClient)return `<h1>Momentum Beta account</h1><p>Account sign-in is temporarily unavailable.</p>${back}`;
+ if(accountScreen==='done')return `<h1>Password updated</h1><p>Use your new password the next time you sign in to the Home Screen app.</p>${back}`;
+ if(accountScreen==='update'&&cloudSession)return `<h1>Set a new password</h1><div class="card"><form id="fCloudResetUpdate">
+ <label class="f">New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+ <label class="f">Confirm new password<input name="confirmation" type="password" autocomplete="new-password" minlength="8" required></label>
+ <button class="btn small" type="submit">Save new password</button></form>${status}</div>`;
+ if(accountScreen==='reset')return `<h1>Reset your Beta password</h1><div class="card">
+ <p class="muted sm">Request the reset in Safari and open the newest email link in Safari on the same iPhone.</p>
+ <form id="fCloudResetRequest"><label class="f">Beta account email<input name="email" type="email" autocomplete="email" required></label>
+ <button class="btn small" type="submit">Send reset email</button></form>${status}</div>${back}`;
+ return `<h1>Momentum Beta account</h1><p>If you confirmed your email, return to Beta and sign in with the password from your original signup.</p>
+ <p>If this was a password reset, open the newest link in the same Safari browser where you requested it.</p><p>${reset}</p>${back}`;
 }
 function accountConnections(){
  return `<details class="card" id="momentumConnections" ${connectionOpen||consentRequest?'open':''}>
@@ -1742,7 +1780,7 @@ function changeCloudSession(session){
  if(session?.user.id===cloudSession?.user.id){cloudSession=session;return}
  leaveWorkspace();
  cloudSession=session;healthReadings=[];healthSyncAt=null;shortcutSetup=null;cloudDevices=[];cloudAudit={history:[],pending:[]};
- if(session){
+ if(session&&accountScreen!=='update'){
   try{
    const cached=JSON.parse(localStorage.getItem(accountKey(session.user.id))||'null');
    if(aiConnectionsEnabled&&cached?.S&&cached?.F)activateWorkspace(session.user.id,cached);
@@ -1751,28 +1789,91 @@ function changeCloudSession(session){
  }
  render();
 }
+function handleCloudAuth(event,session){
+ const before=accountScreen;
+ if(event==='PASSWORD_RECOVERY'&&session){
+  recoveryAccount(session.user.id);
+  accountScreen='update';
+  cloudStatus='';
+ }else if(event==='INITIAL_SESSION'&&session&&recoveryAccount()===session.user.id){
+  accountScreen='update';
+ }else if(event==='SIGNED_OUT'){
+  recoveryAccount(null);
+  if(accountScreen==='update')accountScreen='reset';
+ }else if(session&&accountScreen==='callback'&&!authExchangePending){
+  accountScreen='';
+  tab='progress';
+  connectionOpen=true;
+ }
+ const previousSession=cloudSession;
+ changeCloudSession(session);
+ if(before!==accountScreen&&previousSession?.user.id===session?.user.id)render();
+}
+async function finishCloudAuthCallback(code){
+ try{
+  const {data,error}=await cloudClient.auth.exchangeCodeForSession(code);
+  if(error||!data.session)return;
+  authExchangePending=false;
+  handleCloudAuth(data.redirectType==='PASSWORD_RECOVERY'?'PASSWORD_RECOVERY':'SIGNED_IN',data.session);
+ }catch{ /* The account page explains how to retry a failed link. */ }
+ finally{
+  const url=new URL(location.href);
+  url.searchParams.delete('code');
+  history.replaceState(null,'',url);
+  authExchangePending=false;
+ }
+}
 if(cloudClient){
- cloudClient.auth.onAuthStateChange((_,session)=>setTimeout(()=>changeCloudSession(session),0));
- window.addEventListener('focus',()=>refreshConnections().catch(()=>{}));
- setInterval(()=>{if(!document.hidden)refreshConnections().catch(()=>{})},30000);
+ cloudClient.auth.onAuthStateChange((event,session)=>setTimeout(()=>{
+  if(!authExchangePending)handleCloudAuth(event,session);
+ },0));
+ window.addEventListener('focus',()=>{if(accountScreen!=='update')refreshConnections().catch(()=>{})});
+ setInterval(()=>{if(!document.hidden&&accountScreen!=='update')refreshConnections().catch(()=>{})},30000);
 }
 document.addEventListener('toggle',e=>{if(e.target.id==='momentumConnections')connectionOpen=e.target.open},true);
 document.addEventListener('submit',async e=>{
  if(e.target.id!=='fCloudSignIn'||!cloudClient)return;
  e.preventDefault();
- const {email,password}=Object.fromEntries(new FormData(e.target));
+ const fields=new FormData(e.target),email=String(fields.get('email')||'').trim(),password=fields.get('password');
  const button=e.submitter;
  if(button)button.disabled=true;
  try{
   if(button?.value==='signup'){
-   const {data,error}=await cloudClient.auth.signUp({email,password,options:{emailRedirectTo:new URL('./#progress',location.href).href}});
+   const {data,error}=await cloudClient.auth.signUp({email,password,options:{emailRedirectTo:betaAccountUrl}});
    if(error)throw error;
-   showCloudStatus(data.session?'Account created.':'Open the confirmation email, then return to Momentum Beta and sign in.');
+   showCloudStatus(data.session?'Account created.':'If you still need to confirm your email, check your inbox. If you already confirmed, sign in or use Forgot password.');
   }else{
    const {error}=await cloudClient.auth.signInWithPassword({email,password});
    if(error)throw error;
   }
- }catch(error){showCloudStatus(error.message)}finally{if(button)button.disabled=false}
+ }catch(error){
+  showCloudStatus(error.code==='invalid_credentials'?'The email or password did not match. Try the original Beta password or tap Forgot password.':error.message);
+ }finally{if(button)button.disabled=false}
+});
+document.addEventListener('submit',async e=>{
+ const form=e.target;
+ if(!cloudClient||!['fCloudResetRequest','fCloudResetUpdate'].includes(form.id))return;
+ e.preventDefault();
+ const fields=new FormData(form),button=form.querySelector('button');
+ button.disabled=true;
+ try{
+  if(form.id==='fCloudResetRequest'){
+   const email=String(fields.get('email')||'').trim();
+   const {error}=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo:betaAccountUrl});
+   if(error)throw error;
+   showCloudStatus('If this email is registered, a reset link will arrive shortly. Open it in this same Safari browser.');
+  }else{
+   if(accountScreen!=='update'||!cloudSession)throw Error('Request a new reset link and open it in Safari.');
+   const password=fields.get('password');
+   if(typeof password!=='string'||password.length<8||password!==fields.get('confirmation'))throw Error('Enter the same new password twice. Use at least 8 characters.');
+   const {error}=await cloudClient.auth.updateUser({password});
+   if(error)throw error;
+   recoveryAccount(null);
+   accountScreen='done';
+   cloudStatus='';
+   render();
+  }
+ }catch(error){showCloudStatus(error.message)}finally{button.disabled=false}
 });
 document.addEventListener('click',async e=>{
  const button=e.target.closest('[data-cloud]');
@@ -1817,6 +1918,7 @@ document.addEventListener('click',async e=>{
 let lastTab=null;
 function render(){
   const keep=lastTab===tab?window.scrollY:0; lastTab=tab;
+  if(accountScreen){$("#main").innerHTML=accountScreenHtml();$("#tabbar").hidden=true;return}
   if(consentRequest&&!S.profile&&tab==="progress"){
    $("#main").innerHTML=`<h1>Connect Momentum Beta</h1>${accountConnections()}`;
    $("#tabbar").hidden=true;return;
@@ -1887,6 +1989,7 @@ document.addEventListener('change',async e=>{
  }catch(err){if(status)status.textContent=err.message||'Import failed'}
 });
 document.addEventListener("submit",async e=>{
+  if(e.defaultPrevented)return;
   e.preventDefault(); const f=e.target, fd=new FormData(f), d=Object.fromEntries(fd);
   if(f.id==="fOnboard"){ const prev=S.profile||{}; S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,goal:d.goal,why:d.why.trim(),start:prev.start||ymd(today())};
     if(!S.weigh.length) S.weigh.push({id:Date.now(),d:S.profile.start,wt:d.weightLb,bf:d.bf,mm:d.mm});
@@ -1916,6 +2019,7 @@ document.addEventListener("submit",async e=>{
 });
 window.addEventListener("hashchange",()=>{ const previous=benefitPane,h=resolveTab(location.hash.slice(1)); if(TABS.find(t=>t.id===h)&&(h!==tab||previous!==benefitPane)){ tab=h; render() } });
 render();
+if(cloudClient&&authCode)void finishCloudAuthCallback(authCode);
 })();
 </script>
 <script>
@@ -1927,7 +2031,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.3';
+ const VERSION='9.10.4';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

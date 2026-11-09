@@ -44,3 +44,11 @@ The REST surface accepts `POST /api/tools` with an authorized OAuth bearer token
 Run `node --test tests/connections.test.mjs` for the isolated HTTP, OAuth, MCP and workflow checks. Install `@electric-sql/pglite@0.5.15` and `linkedom@0.18.15` in a temporary Node directory and point `NODE_PATH` to its `node_modules`. Then run `node --test tests/schema.test.cjs tests/progress.test.cjs` for the PostgreSQL and browser DOM checks. See [activity regression instructions](tests/README.md) for the existing Playwright suite.
 
 Hosted Auth, real iPhone Health permissions and 7 a.m. automation, and live ChatGPT and Claude connections are separate acceptance checks.
+
+## Test the Momentum Meals plugin
+
+The draft ChatGPT package is in `plugins/momentum-meals/`. Zip its contents with `plugin.json` and `mcp.json` at the archive root. The package's endpoint is the Beta Edge Function's `/chatgpt/mcp` route. It exposes only `log_meal` and `log_saved_meal`, with its own `momentum:meals` OAuth scope. Momentum uses the exact ChatGPT callback from the connection settings. If the portal provides a callback-specific URL, set `MOMENTUM_CHATGPT_PLUGIN_REDIRECT_URI` to that URL before deploying. Keep OAuth discovery and the package URL in sync if using a dedicated MCP hostname for public review.
+
+After deploying the Beta frontend and function, enroll a dedicated test account in AI sharing. Log and favorite a sample breakfast smoothie in Nutrition. Connect that test account to Momentum Meals, say “Log my saved breakfast smoothie in Momentum for today,” and verify the entry and its saved nutrition values in Nutrition. Retry and verify that only one entry appears. Check the same prompt in ChatGPT Live on an iPhone using a personal account while parked, and record whether ChatGPT requests on-screen approval.
+
+Public review requires a hostname that can serve the portal's domain verification challenge, a published privacy policy, a separate reviewer account with sample data, review cases and a walkthrough. The draft package uses the current Beta Supabase hostname for development.

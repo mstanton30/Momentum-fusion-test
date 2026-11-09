@@ -40,6 +40,12 @@ export const definitions = [
   definition('activity_history','Read the recent AI activity history and pending approval status.',object({}),true)
 ];
 
+export const mealPluginDefinitions = [
+  definitions[0],
+  definition('log_saved_meal','Add a meal from the user’s Momentum favorites. Supply the saved meal name or a distinctive part of it, such as smoothie. If multiple favorites match, ask the user to choose. Use the same request ID when retrying.',
+    object({...mutation,date,mealName:{...string,minLength:1,maxLength:300},mealSlot:mealFields.mealSlot},['request_id','date','mealName','mealSlot']),false)
+];
+
 export class HttpError extends Error {
   constructor(status, message) {super(message);this.status=status}
 }
@@ -173,8 +179,8 @@ export async function resolveApproval(store,user,id,approve) {
     return {body:{status}};
   });
 }
-export async function callTool(store, credential, name, args = {}) {
-  const def=definitions.find(item=>item.name===name);
+export async function callTool(store, credential, name, args = {}, availableTools = definitions) {
+  const def=availableTools.find(item=>item.name===name);
   if (!def) throw new HttpError(404,'Unknown tool');
   check(args,def.inputSchema,'arguments');
   const user=credential.user_id;
@@ -212,10 +218,22 @@ export async function callTool(store, credential, name, args = {}) {
     const now=localDay(state.timezone);
     if (args.date!==undefined) validDate(args.date,now);
     let result;
-    if (name==='log_meal'||name==='log_activity') {
-      const type=name==='log_meal'?'meal':'activity',fields=type==='meal'?mealFields:activityFields;
+    if (['log_meal','log_saved_meal','log_activity'].includes(name)) {
+      const type=name==='log_activity'?'activity':'meal',fields=type==='meal'?mealFields:activityFields;
+      let values=args;
+      if (name==='log_saved_meal') {
+        const normalize=value=>value.toLowerCase().trim().replace(/\s+/g,' ');
+        const query=normalize(args.mealName);
+        if (!query) bad('Enter a saved meal name');
+        const favorites=state.savedMeals.filter(x=>x?.type==='meal'&&typeof x.description==='string');
+        const exact=favorites.filter(x=>normalize(x.description)===query);
+        const matches=exact.length?exact:favorites.filter(x=>normalize(x.description).includes(query));
+        if (!matches.length) throw new HttpError(404,'No matching Momentum favorite. Ask for the saved name or the meal details.');
+        if (matches.length>1) throw new HttpError(409,'Multiple favorites match. Ask for the exact saved meal name, or use the meal details if their names are identical.');
+        values={...matches[0],mealSlot:args.mealSlot};
+      }
       const id=crypto.randomUUID();
-      const entry={...entryFields(args,fields),id,date:args.date,type,source:'external-ai',assistant:credential.label};
+      const entry={...entryFields(values,fields),id,date:args.date,type,source:'external-ai',assistant:credential.label};
       if(type==='meal') entry.qualityChoice ||= 'unknown';
       else entry.planAction='extra';
       const existing=Object.values(state.entries).find(x=>x.type===type&&x.date===entry.date&&entryKey(x)===entryKey(entry));

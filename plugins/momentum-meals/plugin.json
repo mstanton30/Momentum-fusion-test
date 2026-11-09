@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "momentum-meals",
+  "version": "0.1.0",
+  "description": "Add meals and saved favorites to a connected Momentum Beta account.",
+  "homepage": "https://mstanton30.github.io/Momentum-fusion-test/",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Momentum Meals",
+        "shortDescription": "Log meals in Momentum Beta",
+        "longDescription": "Log a meal you ate or add a favorite already saved in your connected Momentum Beta account.",
+        "developerName": "Momentum",
+        "capabilities": ["Write"],
+        "websiteURL": "https://mstanton30.github.io/Momentum-fusion-test/",
+        "defaultPrompt": ["Log my saved breakfast smoothie in Momentum for today."]
+      }
+    }
+  }
+}

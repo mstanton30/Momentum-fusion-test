@@ -15,5 +15,6 @@ Deno.serve(createHandler({
   store: supabaseStore(url, required('SUPABASE_ANON_KEY'), required('SUPABASE_SERVICE_ROLE_KEY')),
   base,
   app,
+  oauthIssuer: Deno.env.get('MOMENTUM_BETA_OAUTH_ISSUER'),
   signingKey: Deno.env.get('MOMENTUM_BETA_OAUTH_KEY')
 }));

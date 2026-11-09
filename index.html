@@ -1492,7 +1492,8 @@ document.addEventListener('submit',e=>{
 document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.target.closest('#fActivity')){const el=document.getElementById('customStrengthAssessment');if(el)el.hidden=!['strength','mixed'].includes(e.target.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 const connectionConfig=window.MOMENTUM_BETA_CONFIG||{};
-const aiConnectionsEnabled=connectionConfig.aiEnabled===true;
+const externalMcpUrl=connectionConfig.mcpUrl;
+const aiConnectionsEnabled=connectionConfig.aiEnabled===true&&!!externalMcpUrl;
 const betaAccountUrl=new URL('./',location.href).href;
 const authLocation=new URL(location.href);
 const authFragment=new URLSearchParams(authLocation.hash.slice(1));
@@ -1518,7 +1519,7 @@ try{
  if(aiConnectionsEnabled)consentRequest=JSON.parse(sessionStorage.getItem('momentumfusion.beta.consent')||'null');
 }catch{}
 function connectedHtml(){
- const signin=`<p class="muted sm">Sign in to your separate Momentum Beta account to connect Apple Health.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
+ const signin=`<p class="muted sm">Sign in to your Momentum Beta account to ${consentRequest?'review this assistant’s request':aiConnectionsEnabled?'connect Apple Health or an AI assistant':'connect Apple Health'}.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
  <label class="f">Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
  <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div>
  <p class="muted sm"><a href="./?beta-account=reset" target="_blank" rel="noopener">Forgot password?</a></p></form>`;
@@ -1536,7 +1537,7 @@ function connectedHtml(){
  <label class="f">Shortcut endpoint<input readonly value="${esc(shortcutSetup.endpoint)}"></label><label class="f">Shortcut token<input readonly value="${esc(shortcutSetup.token)}"></label>
  <button class="btn small ghost" data-cloud="clear-token">Hide token</button></div>`:''}
  ${aiConnectionsEnabled?`<h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
- ${activeWorkspace?`<p class="muted sm">AI sharing enabled. MCP server <code>${esc(connectionConfig.apiUrl.replace(/\/$/,'')+'/mcp')}</code></p>`:
+ ${activeWorkspace?`<label class="f">ChatGPT and Claude connector URL<input readonly value="${esc(externalMcpUrl)}"></label>`:
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
  ${cloudConflict?`<div class="note">The same record was changed here and in the cloud. Choose which version to keep for the conflicting records.
  <div class="row"><button class="btn small" data-cloud="local">Keep this device’s changes</button><button class="btn small ghost" data-cloud="remote">Keep the cloud changes</button></div></div>`:''}

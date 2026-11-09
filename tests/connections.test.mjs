@@ -17,7 +17,7 @@ const empty=()=>({entries:{},supplements:{},savedMeals:[],savedWorkouts:[],timez
     weigh:{},strength:{},dexa:{},tests:{},sessions:{},mealSlots:{},rewards:{},sleep:{},assessments:{},daySources:{},activityGoal:'health',targets:{}
   }});
 
-function fixture({enableAi=true}={}){
+function fixture({enableAi=true,apiBase=base,oauthIssuer}={}){
   const workspaces=new Map(),credentials=new Map(),readings=new Map(),sync=new Map();
   const store={
     user:async token=>[first,second].includes(token)?{id:token}:null,
@@ -51,9 +51,9 @@ function fixture({enableAi=true}={}){
       return {inserted:values.size-size,synced_at};
     }
   };
-  const handler=createHandler({store,base,app,signingKey:enableAi?'test-key-only-'.repeat(4):undefined});
+  const handler=createHandler({store,base:apiBase,app,oauthIssuer,signingKey:enableAi?'test-key-only-'.repeat(4):undefined});
   async function request(path,{token,method='GET',body,origin,form=false}={}){
-    const res=await handler(new Request(base+path,{method,
+    const res=await handler(new Request(apiBase+path,{method,
       headers:{...(token?{Authorization:'Bearer '+token}:{}),...(origin?{Origin:origin}:{}),
         ...(body?{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'}:{})},
       body:body?(form?new URLSearchParams(body):JSON.stringify(body)):undefined}));
@@ -190,4 +190,23 @@ test('Apple Health can run before AI OAuth is configured',async()=>{
   assert.equal((await request('/health')).status,401);
   assert.deepEqual((await request('/health',{token:first})).data.samples,[]);
   assert.equal((await request('/connections/health',{token:first,method:'POST'})).status,201);
+});
+
+test('public MCP issuer is independent from the Apple Health upload URL',async()=>{
+  const apiBase='https://edge.example/functions/v1/momentum-beta';
+  const {request,enroll,oauth}=fixture({apiBase,oauthIssuer:base});
+  const discovery=await request('/.well-known/oauth-authorization-server');
+  assert.equal(discovery.data.issuer,base);
+  assert.equal(discovery.data.registration_endpoint,base+'/register');
+  assert.deepEqual((await request('/.well-known/oauth-protected-resource/mcp')).data.authorization_servers,[base]);
+  assert.equal((await request('/mcp')).headers.get('WWW-Authenticate'),
+    `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/mcp", scope="momentum:log"`);
+  assert.equal((await request('/connections/health',{token:first,method:'POST'})).data.endpoint,apiBase+'/health');
+  assert.equal((await enroll(first)).status,200);
+  for(const provider of ['chatgpt','claude']){
+    const {access_token}=await oauth(first,provider);
+    const result=await request('/mcp',{token:access_token,method:'POST',body:{jsonrpc:'2.0',id:1,method:'tools/list'}});
+    assert.equal(result.status,200);
+    assert.ok(result.data.result.tools.some(x=>x.name==='log_meal'));
+  }
 });

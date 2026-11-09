@@ -67,12 +67,14 @@ function normalizeSamples(input) {
   }
   return [...unique.values()];
 }
-export function createHandler({store,base,app,signingKey}) {
+export function createHandler({store,base,app,signingKey,oauthIssuer}) {
   if (signingKey!==undefined&&signingKey.length<32) throw new Error('Use a random OAuth signing key of at least 32 characters');
-  const issuer=base.replace(/\/$/,'');
+  const apiBase=base.replace(/\/$/,'');
+  const issuer=oauthIssuer?.replace(/\/$/,'')||apiBase;
+  if(oauthIssuer&&(!issuer.startsWith('https://')||new URL(issuer).origin!==issuer))throw new Error('Use an HTTPS origin for the OAuth issuer');
   const appUrl=new URL(app),siteOrigin=appUrl.origin;
-  const resource=issuer+'/mcp', resourceMeta=issuer+'/.well-known/oauth-protected-resource';
-  const issuerPath=new URL(issuer).pathname.replace(/\/$/,'');
+  const resource=issuer+'/mcp', resourceMeta=issuer+'/.well-known/oauth-protected-resource/mcp';
+  const apiPath=new URL(apiBase).pathname;
   const registeredKey=signingKey
     ? crypto.subtle.importKey('raw',bytes(signingKey),{name:'HMAC',hash:'SHA-256'},false,['sign','verify'])
     : null;
@@ -195,10 +197,8 @@ export function createHandler({store,base,app,signingKey}) {
   return async req=>{
     const url=new URL(req.url);
     let path=url.pathname;
-    if(path.startsWith('/.well-known/oauth-authorization-server'))path='/.well-known/oauth-authorization-server';
-    else if(path.startsWith('/.well-known/oauth-protected-resource'))path='/.well-known/oauth-protected-resource';
-    else path=path.replace(/^.*?\/momentum-beta(?=\/|$)/,'');
-    if(issuerPath && path.startsWith(issuerPath+'/'))path=path.slice(issuerPath.length);
+    if(apiPath!=='/'&&path.startsWith(apiPath+'/'))path=path.slice(apiPath.length);
+    path=path.replace(/^(?:\/functions\/v1)?\/momentum-beta(?=\/|$)/,'');
     const method=req.method,origin=req.headers.get('Origin');
     if(origin&&origin!==siteOrigin)return json(req,{error:'Origin not allowed'},403);
     if(method==='OPTIONS')return new Response(null,{status:204,headers:headers(req)});
@@ -211,7 +211,7 @@ export function createHandler({store,base,app,signingKey}) {
         const input=await readJson(req);
         return json(req,await callTool(store,row,input?.name,input?.arguments));
       }
-      if(path==='/.well-known/oauth-protected-resource'&&method==='GET')return json(req,{resource,authorization_servers:[issuer],scopes_supported:[scope],bearer_methods_supported:['header']});
+      if(['/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp'].includes(path)&&method==='GET')return json(req,{resource,authorization_servers:[issuer],scopes_supported:[scope],bearer_methods_supported:['header']});
       if(path==='/.well-known/oauth-authorization-server'&&method==='GET')return json(req,metadata);
       if(path==='/register'&&method==='POST')return await registration(req);
       if(path==='/token'&&method==='POST')return await exchange(req);
@@ -245,7 +245,7 @@ export function createHandler({store,base,app,signingKey}) {
         const secret=token();
         const expires_at=expiry(365*86400);
         await store.createCredential({kind:'health',secret_hash:await sha(secret),user_id:user,label:'Apple Health Shortcut',expires_at});
-        return json(req,{token:secret,endpoint:issuer+'/health',expires_at},201);
+        return json(req,{token:secret,endpoint:apiBase+'/health',expires_at},201);
       }
       if(path.startsWith('/connections/')&&method==='DELETE'){
         const id=path.slice('/connections/'.length);

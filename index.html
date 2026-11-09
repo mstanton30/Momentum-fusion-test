@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.0</title>
+<title>Momentum — Beta v9.10.1</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -309,6 +309,10 @@ function bmi(){ const w=latestWeight(), h=S.profile&&S.profile.heightIn; if(!w||
 function bmiLabel(b){ if(b==null) return ""; return b<18.5?"underweight":b<25?"normal":b<30?"overweight":"obese" }
 function proteinRange(){ const w=latestWeight(); return w?[Math.round(w*0.75),Math.round(w)]:null }
 function avg(a){ const v=a.filter(n=>n!=null&&!isNaN(n)); return v.length?v.reduce((x,y)=>x+y,0)/v.length:null }
+function rolling(key,n=4,skip=0){
+ const recent=bodyRows().map(x=>valueOrNull(x[key])).filter(x=>x!=null).reverse();
+ return avg(recent.slice(skip,skip+n));
+}
 function weekKeys(d=today()){ const s=startOfWeek(d); return [...Array(7)].map((_,i)=>{ const x=new Date(s); x.setDate(s.getDate()+i); return ymd(x) }) }
 function weekMinutes(list,d=today()){ const ks=weekKeys(d); return list.filter(x=>ks.includes(x.d)).reduce((a,x)=>a+(parseFloat(x.min)||0),0) }
 function parseTime(s){ if(!s) return null; const p=String(s).split(":").map(Number); if(p.length===1) return p[0]; if(p.some(isNaN)) return null; return p[0]*60+p[1] }
@@ -823,7 +827,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.1</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1921,7 +1925,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.0';
+ const VERSION='9.10.1';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

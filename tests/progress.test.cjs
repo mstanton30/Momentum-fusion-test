@@ -19,6 +19,7 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  const makeStorage=(map=new Map())=>({getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
  const {document,window}=parseHTML(html);
  window.scrollTo=()=>{};
+ window.matchMedia=()=>({matches:false});
  const location=new URL('https://momentum.example/beta/#progress');
  const context={window,document,location,localStorage:makeStorage(values),sessionStorage:makeStorage(),navigator:{},structuredClone,
   Intl,URL,URLSearchParams,Date,setTimeout:()=>0,clearTimeout:()=>{},console,history:{replaceState(){}},confirm:()=>true};
@@ -47,6 +48,15 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  assert.match(document.querySelector('main').textContent,/Post-workout recovery drink/);
  click('[data-benefit="perks"]');
  assert.match(document.querySelector('main').textContent,/Sauna/);
+ for(const [tab,heading] of [['home','Your day at a glance'],['workout','Momentum'],['nutrition','Nutrition'],['progress','Progress']]){
+  click(`[data-tab="${tab}"]`);
+  assert.match(document.querySelector('main h1').textContent,new RegExp(heading,'i'));
+ }
+ click('[data-go="coach"]');
+ assert.match(document.querySelector('main').textContent,/Coach/i);
+ click('[data-tab="home"]');
+ click('[data-go="import"]');
+ assert.match(document.querySelector('main').textContent,/Import/i);
  assert.equal(app.F.favorites[0].description,'Fixture oatmeal');
  assert.equal(app.S.extras.length,3);
  assert.equal(values.get('momentumfusion.v1'),JSON.stringify(s));

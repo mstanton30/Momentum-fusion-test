@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.9.0</title>
+<title>Momentum — Beta v9.9.1</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -116,6 +116,7 @@ td.r,th.r{text-align:right}
 .del{background:none;border:0;color:var(--muted);font-size:1rem;padding:0 4px}
 .meter{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:6px}
 .meter i{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .3s}
+[hidden]{display:none!important}
 .home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.home-grid .card{min-width:0}.home-progress{height:7px;border-radius:6px;background:var(--line);overflow:hidden;margin:10px 0}.home-progress>div{height:100%;background:var(--green);border-radius:6px}@media(max-width:350px){.home-grid{grid-template-columns:1fr}}
 .tabbar{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:100%;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabbar button{min-width:0;width:100%;background:none;border:0;padding:9px 2px 7px;color:var(--muted);font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-family:var(--display);display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -404,17 +405,53 @@ function vo2Band(v,age,sex){ if(v==null) return ""; const a=age||40; let base=se
 const HEALTH_GOALS={health:{name:'General health',minutes:150},enhanced:{name:'Additional health benefits',minutes:300},weight:{name:'Weight management',minutes:225}};
 function healthGoal(){return HEALTH_GOALS[F.healthGoal]||HEALTH_GOALS.health}
 function healthClassify(text){const t=String(text||'').toLowerCase();if(/bootcamp|circuit|hiit|cardio.*strength|strength.*cardio/.test(t))return 'mixed';if(/stretch|yoga|pilates|mobility|foam roll/.test(t))return 'mobility';if(/strength|weight|lift|resistance|deadlift|squat|bench|trainer/.test(t))return 'strength';return 'aerobic'}
-function healthWeekly(ref=today()){
- const wk=weekKeys(ref),goal=healthGoal();let aerobic=0;const strengthDays=new Set();
- for(const k of wk){const day=dayDef(k),replaced=fusionReplacements(k).length>0;const sessions=day.sessions.filter(x=>sessOf(k,x.id).done&&!(replaced&&x.id==='main')&&((F.daySources?.[k]||'dan')==='dan'||x.id!=='main'));
- for(const x of sessions){const min=Number(sessOf(k,x.id).min)||x.range[1];const category=x.kind==='lift'?'strength':x.kind==='boot'?'mixed':x.kind==='cardio'?'aerobic':'mobility';if(category==='strength'&&min>=20)strengthDays.add(k);if(category==='aerobic')aerobic+=min*(day.intense?2:1);if(category==='mixed'){aerobic+=min*.5*2;if(min>=40)strengthDays.add(k)}}
- for(const x of fusionActivities(k)){const min=Math.max(0,Number(x.minutes)||0);const cat=x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''));const effort=x.intensity==='vigorous'?2:x.intensity==='light'?0:1;if(cat==='aerobic')aerobic+=min*effort;else if(cat==='strength'&&min>=20)strengthDays.add(k);else if(cat==='mixed'){aerobic+=min*.5*effort;if(min>=40)strengthDays.add(k)} }
- }
- const cardio=Math.min(70,Math.round(70*aerobic/goal.minutes)),strength=Math.min(30,strengthDays.size*15);
- return {cardio,strength,score:cardio+strength,aerobic:Math.round(aerobic),strengthDays:strengthDays.size,goal};
+function strengthPoints(r){
+ if(!r)return 5; // Unassessed logged strength receives provisional minimum credit.
+ if(r.effort==='light'||r.coverage==='limited')return 5;
+ if(r.effort==='challenging'&&r.volume==='multiple'&&['full','upper','lower'].includes(r.coverage))return 15;
+ return 10;
 }
-function healthCard(ref=today()){const h=healthWeekly(ref);return `<div class="card" style="border:2px solid var(--green)"><div class="eyebrow">Weekly Momentum Health Score</div><h2 style="margin:5px 0">${h.score}% <span class="muted sm">of activity goal</span></h2><div class="meter"><i style="width:${h.score}%"></i></div><div class="stat two"><div><b>${h.cardio}/70</b><span>Aerobic · ${h.aerobic}/${h.goal.minutes} min equivalent</span></div><div><b>${h.strength}/30</b><span>Strength · ${h.strengthDays}/2 days</span></div></div><p class="muted xs" style="margin-top:10px">${esc(h.goal.name)} · 100% means meeting your selected weekly activity target, not perfect health. Only logged activity counts.</p><button class="btn small ghost" data-go="workout">View workouts & scoring</button></div>`}
-function healthReading(){return `<details><summary>The science behind your Health Score</summary><div class="sm"><p><b>How points work:</b> 70 aerobic points × (logged moderate-equivalent minutes ÷ selected weekly target), capped at 70. Vigorous aerobic minutes count double; light activity is tracked but does not earn moderate-equivalent minutes. Strength earns 15 points per qualifying day (20+ minutes), capped at two days / 30 points.</p><p><b>Mixed sessions:</b> for a bootcamp, this initial model allocates half of the session to aerobic work and considers strength qualified only at 40+ minutes. Review classifications before saving. A day with multiple strength workouts counts once. Mobility is logged separately without additional Health Score points.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes of moderate aerobic activity weekly, or 75–150 vigorous minutes, plus muscle strengthening on at least two days for adults. The 70/30 weighting and weight-management target of 225 minutes are Momentum design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/adults/index.html" target="_blank" rel="noopener">CDC adult activity recommendations</a></p><p class="muted xs">This is an activity-adherence score, not a measure of disease risk, calories burned, or weight loss. The classification of historical workouts is approximate and can be refined.</p></div></details>`}
+function strengthAssessmentFields(r={}){
+ const opt=(value,label,current)=>`<option value="${value}" ${current===value?'selected':''}>${label}</option>`;
+ return `<div class="fgrid"><label>Muscle groups<select name="strengthCoverage">${opt('full','Full body',r.coverage)}${opt('upper','Upper-body split',r.coverage)}${opt('lower','Lower-body split',r.coverage)}${opt('partial','Several groups / partial',r.coverage)}${opt('limited','One or two groups',r.coverage)}</select></label><label>Training effort<select name="strengthEffort">${opt('challenging','Challenging reps',r.effort)}${opt('light','Light / easy',r.effort)}</select></label><label>Working sets<select name="strengthVolume">${opt('multiple','Multiple sets per exercise',r.volume)}${opt('single','Mostly one set',r.volume)}</select></label></div>`;
+}
+function strengthAssessmentFrom(d){return {coverage:d.strengthCoverage||'partial',effort:d.strengthEffort||'light',volume:d.strengthVolume||'single'}}
+function healthWeekly(ref=today()){
+ const wk=weekKeys(ref),goal=healthGoal();let aerobic=0;const dailyStrength=[];const coverage=new Set();
+ for(const k of wk){
+  const day=dayDef(k),source=F.daySources?.[k]||'dan',replaced=fusionReplacements(k).length>0;
+  let best=0,bestCoverage=null;
+  if(source==='dan')for(const x of day.sessions){
+   const st=sessOf(k,x.id);if(!st.done||replaced&&x.id==='main')continue;
+   const min=Math.max(0,Number(st.min)||x.range[1]);
+   if(x.kind==='cardio')aerobic+=min*(day.intense?2:1);
+   if(x.kind==='boot')aerobic+=min; // half vigorous cardio, half resistance: no double counting
+   if(x.kind==='lift'||x.kind==='boot'){
+    const assessment=(F.strengthAssessments||{})[k];const pts=strengthPoints(assessment);
+    if(pts>best){best=pts;bestCoverage=assessment?.coverage||null}
+   }
+  }
+  for(const x of fusionActivities(k)){
+   const min=Math.max(0,Number(x.minutes)||0);
+   const cat=x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''));
+   const effort=x.intensity==='vigorous'?2:x.intensity==='light'?0:1;
+   if(cat==='aerobic')aerobic+=min*effort;
+   if(cat==='mixed')aerobic+=min*.5*effort;
+   if(cat==='strength'||cat==='mixed'){
+    const pts=strengthPoints(x.strengthAssessment);
+    if(pts>best){best=pts;bestCoverage=x.strengthAssessment?.coverage||null}
+   }
+  }
+  if(best){dailyStrength.push(best);if(bestCoverage==='full'){coverage.add('upper');coverage.add('lower')}else if(bestCoverage==='upper'||bestCoverage==='lower')coverage.add(bestCoverage)}
+ }
+ const cardio=Math.min(70,Math.round(70*aerobic/goal.minutes));
+ // Max two scored strength days; complete 30 requires upper AND lower coverage.
+ const top=dailyStrength.sort((a,b)=>b-a).slice(0,2).reduce((a,b)=>a+b,0);
+ const strength=Math.min(top,coverage.has('upper')&&coverage.has('lower')?30:25);
+ return {cardio,strength,score:cardio+strength,aerobic:Math.round(aerobic),strengthDays:dailyStrength.length,goal,coverageComplete:coverage.has('upper')&&coverage.has('lower')};
+}
+function healthCard(ref=today()){const h=healthWeekly(ref);return `<div class="card" style="border:2px solid var(--green)"><div class="eyebrow">Weekly Activity Score</div><h2 style="margin:5px 0">${h.score}<span class="muted sm"> / 100 · activity goal</span></h2><div class="meter"><i style="width:${h.score}%"></i></div><div class="stat two"><div><b>${h.cardio}/70</b><span>Aerobic · ${h.aerobic}/${h.goal.minutes} equivalent min</span></div><div><b>${h.strength}/30</b><span>Strength · ${h.strengthDays} day(s)</span></div></div><p class="muted xs" style="margin-top:10px">${esc(h.goal.name)} · ${h.coverageComplete?'Upper and lower body covered':'Full strength credit needs upper- and lower-body coverage'} · 100 means weekly activity prescription completed, not perfect health.</p><button class="btn small ghost" data-go="workout">View workouts & scoring</button></div>`}
+function healthReading(){return `<details><summary>The science behind your Activity Score</summary><div class="sm"><p><b>Aerobic:</b> 70 points × logged moderate-equivalent minutes ÷ your selected weekly target (capped at 70). Vigorous aerobic minutes count double; light activity does not count toward moderate-equivalent minutes.</p><p><b>Strength:</b> Up to 30 points from your two highest-scoring resistance-training days. Each day earns 5 for limited/light work, 10 for meaningful partial work, or 15 for challenging, multiple-set full-body or upper/lower split training. Unassessed logged resistance work gets provisional 5 points. Full 30 points also requires both upper and lower body to be covered over the week. Several workouts on the same day count as one strength day.</p><p><b>Mixed workouts:</b> A bootcamp is split approximately half aerobic and half resistance, rather than counting all minutes twice. Custom mixed workouts use the same approximation. Review the category and assessment before saving.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes moderate aerobic activity weekly (or 75–150 vigorous) plus major-muscle-group strengthening on at least two days. The 70/30 weighting, 5/10/15 rubric, and 225-minute weight-management option are Momentum design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/adults/index.html" target="_blank" rel="noopener">CDC adult recommendations</a></p><p class="muted xs">This is an activity-adherence score. Nutrition, sleep, and perks remain separate while an overall health score is developed.</p></div></details>`}
 
 /* =========================== CHARTS =========================== */
 function chart(points,{color="var(--accent)",fmtV=v=>v,baseline=null,height=90}={}){
@@ -496,7 +533,7 @@ function vOnboard(){
     <div class="row"><div class="field"><label class="f">Body fat % (if known)</label><input name="bf" type="number" step="0.1" inputmode="decimal" value="${esc(p.bf||"")}"></div><div class="field"><label class="f">Muscle mass lb (if known)</label><input name="mm" type="number" step="0.1" inputmode="decimal" value="${esc(p.mm||"")}"></div></div>
     <div class="field"><label class="f">Cardio you'll test on</label><select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select></div>
     <div class="field"><label class="f">Goal for the year</label><select name="goal">${Object.entries(GOALS).map(([k,g])=>`<option value="${k}" ${p.goal===k?"selected":""}>${g}</option>`).join("")}</select></div>
-    <div class="field"><label class="f">What does "ripped" mean to you this year? (optional)</label><input name="why" value="${esc(p.why||"")}" placeholder="e.g. 15% body fat, 3 W/kg, no shoulder pain"></div>
+    <div class="field"><label class="f">What does better health mean to you this year? (optional)</label><input name="why" value="${esc(p.why||"")}" placeholder="e.g. 15% body fat, 3 W/kg, no shoulder pain"></div>
     <div class="row tight"><button class="btn" type="submit">${S.profile?"Save":"Start the year →"}</button>${S.profile?`<button class="btn ghost" type="button" data-go="workout">Cancel</button>`:""}</div>
   </form></div>`;
 }
@@ -510,6 +547,10 @@ function vWorkout(){
   h+=healthCard(d);
    h+=`<div class="row" style="margin:6px 0 12px"><span class="pill">${wp} legacy habit pts</span><span class="pill ${streak>=7?"ok":""}">${streak}-day mobility streak</span>${test?'<span class="pill hot">Test week</span>':""}</div>`;
   h+=`<div class="card"><label class="f">Workout source for ${fmt(key)}</label><select id="healthDaySource" data-date="${key}"><option value="dan" ${daySource==="dan"?"selected":""}>Dan's 52-week program</option><option value="custom" ${daySource==="custom"?"selected":""}>My custom workout</option><option value="rest" ${daySource==="rest"?"selected":""}>Rest / recovery</option></select></div>`;
+   if(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind))){
+    const a=(F.strengthAssessments||{})[key]||{};
+    h+=`<div class="card"><h3>Assess planned strength workout</h3><p class="muted sm">After completing the scheduled lift or bootcamp, record its quality. Only completed sessions earn points.</p><form id="fStrengthAssess" data-date="${key}">${strengthAssessmentFields(a)}<button class="btn small" type="submit">Save assessment</button></form></div>`;
+   }
    h+=`<div class="card hero">
     <div class="eyebrow">${label}${S.profile&&isToday?", "+esc(S.profile.name):""}</div>
     <h2 style="margin:4px 0 2px;font-size:1.5rem">${daySource==="dan"?esc(day.title):daySource==="custom"?"Custom workout day":"Recovery day"}</h2>
@@ -530,7 +571,7 @@ function vWorkout(){
   h+=`<div class="navrow"><button data-week="-1">‹ Prev</button><h2 style="margin:0">Week of ${fmt(wk[0])}</h2><button data-week="1">Next ›</button></div><div class="week">`+DAYS.map((x,i)=>{ const k=wk[i]; const p=dayPoints(k); const replacement=fusionReplacements(k).length>0; const done=!!sessOf(k,"main").done||replacement;
     return `<div class="d ${k===tk?"today":""} ${k===sel?"sel":""} ${done?"done":""} ${x.intense?"intense":""}" data-sel="${k}"><b>${x.name.slice(0,3)}</b>${replacement?"↔ ":""}${esc(x.title.split(" ")[0])}<span class="dot"></span><span class="muted xs">${p?p+"p":(k>tk?"":"–")}</span></div>` }).join("")+`</div>
   <p class="muted xs" style="margin-top:8px">Tap a day to see what's coming or what you did. Orange dot = intense day. Green = completed; ↔ = replacement activity.${sel!==tk?' <button class="del" data-sel="'+tk+'" style="text-decoration:underline">Back to today</button>':""}</p>`;
-     h+=`<h2>Weekly health target</h2><div class="card"><label class="f">Your activity goal</label><select id="healthGoalSelect">${Object.entries(HEALTH_GOALS).map(([k,g])=>`<option value="${k}" ${F.healthGoal===k?'selected':''}>${esc(g.name)} · ${g.minutes} aerobic min</option>`).join('')}</select><p class="muted xs" style="margin-top:8px">Aerobic 70 points + strength 30 points. The previous all-habits points remain in historical records but are not the new Health Score.</p></div>`+healthReading();
+     h+=`<h2>Weekly activity target</h2><div class="card"><label class="f">Your activity goal</label><select id="healthGoalSelect">${Object.entries(HEALTH_GOALS).map(([k,g])=>`<option value="${k}" ${F.healthGoal===k?'selected':''}>${esc(g.name)} · ${g.minutes} aerobic min</option>`).join('')}</select><p class="muted xs" style="margin-top:8px">Aerobic 70 points + strength 30 points. Legacy habit points remain separate; a future Overall Health Score may combine activity, nutrition and recovery.</p></div>`+healthReading();
 const m2=d.getMonth()%2===1;
   h+=`<h2>Block ${blk.n} · ${esc(blk.months)}</h2><div class="card"><span class="pill">Cardio: ${esc(blk.cardio)}</span><p style="margin:10px 0 6px">${esc(blk.guide)}</p><p class="sm"><b>${esc(monthName(d))}:</b> ${esc(m2?blk.m2:blk.m1)}</p><p class="sm"><b>Peloton picks:</b> ${esc(blk.picks.join(" · "))}</p><p style="margin:10px 0 6px"><b>Lifts:</b> ${esc(blk.lift)}. Same five patterns every block, new variations each time.</p><p class="muted sm">Focus muscles: ${esc(MONTH_MUSCLE[(blk.n-1)*2])}, then ${esc(MONTH_MUSCLE[(blk.n-1)*2+1])}.</p>${test?`<div class="note">Test week: do your ${esc(MODALITIES[(S.profile||{}).modality||"bike"].test)}, log it in Track, and your 4-week body comp average rolls into this block's outcomes.</div>`:""}</div>
   <h2>The year</h2>`+BLOCKS.map(b=>`<details ${b.n===blk.n?"open":""}><summary>Block ${b.n} · ${esc(b.months)}</summary><div><p><b>Cardio:</b> ${esc(b.cardio)}. ${esc(b.guide)}</p><p class="sm"><b>Month 1:</b> ${esc(b.m1)}<br><b>Month 2:</b> ${esc(b.m2)}<br><b>Peloton picks:</b> ${esc(b.picks.join(" · "))}</p><p><b>Lifts:</b> ${esc(b.lift)}</p><div class="plan"><b>A</b>\n${esc(b.A)}</div><div class="plan"><b>B</b>\n${esc(b.B)}</div></div></details>`).join("");
@@ -766,7 +807,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.9.1</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -943,7 +984,7 @@ F.workoutTemplates=F.workoutTemplates||[
 {name:'Personal trainer',description:'Personal training',minutes:50,intensity:'moderate',components:'15 min stretching; 15 min cardio; 20 min strength'},
 {name:'Pickleball',description:'Pickleball doubles',minutes:75,intensity:'moderate',components:'Recreational match'},
 {name:'Custom strength',description:'Strength training',minutes:45,intensity:'moderate',components:'Sets, reps and weights'}];
-F.planChoices=F.planChoices||{};F.rescheduled=F.rescheduled||{};F.healthGoal=F.healthGoal||'health';F.daySources=F.daySources||{};
+F.planChoices=F.planChoices||{};F.rescheduled=F.rescheduled||{};F.healthGoal=F.healthGoal||'health';F.daySources=F.daySources||{};F.strengthAssessments=F.strengthAssessments||{};
 // Remove a rescheduling note only when it belongs to the given source day.
 function clearReschedule(sourceDay){
  const target=shiftDate(sourceDay,1);
@@ -967,7 +1008,7 @@ function fTotalsFor(date){return F.entries.filter(x=>x.date===date&&x.type==='me
 function fTotals(){return fTotalsFor(nutDay)}
 function fMeters(date){const t=fTotalsFor(date);return [['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,label])=>`<div class="fmeter"><div class="row" style="justify-content:space-between"><b>${label}</b><span>${Math.round(t[k])} / ${F.targets[k]}g</span></div><div class="meter"><i style="width:${Math.min(100,t[k]/Math.max(1,F.targets[k])*100)}%"></i></div></div>`).join('')}
 function fFavoriteRows(type){const fav=F.favorites.map((x,i)=>({...x,i})).filter(x=>x.type===type);return fav.length?fav.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${x.p||0}P · ${x.c||0}C · ${x.f||0}F · ${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])}`:`${x.minutes||0} min · saved activity`}</small></span><div class="row tight"><button class="btn small" data-favorite="${x.i}">+ Log</button><button class="btn small ghost" data-fremove="${x.i}" aria-label="Remove favorite">×</button></div></div>`).join(''):'<p class="muted xs">Your saved favorites will appear here.</p>'}
-function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat · ${x.qualityChoice==='quality'?'Quality':x.qualityChoice==='off'?'Off plan':'Unclassified'}`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · Health Score included · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':''}</small></span><div class="row tight">${type==='meal'?`<button class="btn small ghost" data-fedit="${x.id}" title="Edit meal">Edit</button>`:''}<button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
+function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat · ${x.qualityChoice==='quality'?'Quality':x.qualityChoice==='off'?'Off plan':'Unclassified'}`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · Activity Score included · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':''}</small></span><div class="row tight">${type==='meal'?`<button class="btn small ghost" data-fedit="${x.id}" title="Edit meal">Edit</button>`:''}<button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
 
 /* Weekly personal grocery planning; all data stays in this browser during beta. */
 function groceryWeek(){return ymd(startOfWeek(today()))}
@@ -1067,11 +1108,12 @@ return `<h2>Log an activity</h2><div class="card"><h3>Log a workout</h3>
 <p class="muted sm">Keep Momentum's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
 ${F.rescheduled[selected]?`<p class="note">${esc(F.rescheduled[selected])}</p>`:''}
 ${sub?`<div class="note"><b>Substituted:</b> ${esc(sub.description)} · ${sub.minutes} min · ${esc(F.planChoices[selected]||'')} · +${customWorkoutPoints(fusionActivities(selected).find(x=>x.id===sub.id)||sub)} points <button class="btn small ghost" data-fclear="${selected}">Undo</button></div>`:''}
-<p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Health Score based on activity type, duration, and intensity. Review category before logging.</p><div class="row" style="gap:6px;flex-wrap:wrap">${templates}</div>
+<p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Activity Score based on activity type, duration, and intensity. Review category before logging.</p><div class="row" style="gap:6px;flex-wrap:wrap">${templates}</div>
 ${!future?`<form id="fActivity"><label>Workout or activity<textarea name="description" rows="2" required placeholder="Basketball, trainer session, lifting…"></textarea></label>
 <div class="fgrid"><label>Minutes<input type="number" name="minutes" min="1" max="600" value="50" required></label><label>Intensity<select name="intensity"><option value="moderate">Moderate</option><option value="light">Light</option><option value="vigorous">Vigorous</option></select></label></div>
 <label>Workout details<textarea name="components" rows="2" placeholder="Exercises, sets, reps, cardio, notes"></textarea></label>
-<label>Health Score category<select name="healthCategory"><option value="aerobic">Aerobic activity</option><option value="strength">Strength training</option><option value="mixed">Mixed cardio + strength</option><option value="mobility">Mobility / recovery</option></select></label><div class="fgrid"><label>Calories burned (optional)<input name="caloriesBurned" type="number" min="0" max="5000" step="1" placeholder="Enter measured or estimated kcal"></label><label>Calorie source<select name="calorieSource"><option value="manual">Manual / known</option><option value="watch">Apple Watch</option><option value="whoop">WHOOP</option><option value="estimated">App estimate</option></select></label></div>
+<label>Activity Score category<select name="healthCategory"><option value="aerobic">Aerobic activity</option><option value="strength">Strength training</option><option value="mixed">Mixed cardio + strength</option><option value="mobility">Mobility / recovery</option></select></label><div id="customStrengthAssessment" hidden><p class="muted xs" style="margin-top:10px">For strength or mixed workouts: assess the resistance portion. Not used for aerobic-only activities.</p>${strengthAssessmentFields()}</div>
+ <div class="fgrid"><label>Calories burned (optional)<input name="caloriesBurned" type="number" min="0" max="5000" step="1" placeholder="Enter measured or estimated kcal"></label><label>Calorie source<select name="calorieSource"><option value="manual">Manual / known</option><option value="watch">Apple Watch</option><option value="whoop">WHOOP</option><option value="estimated">App estimate</option></select></label></div>
 <button type="button" class="btn small ghost" data-festimate="1">Estimate calories from activity</button><p class="muted xs" id="fKcalNote">Optional: estimated calories are approximate, not added automatically to food targets.</p>
 <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" type="button" data-fai="activity">✦ Suggest category from description</button><span id="fAiStatus" class="muted xs">Rule-based suggestion · review before saving</span></div>
 <label>Effect on today's planned workout<select name="planAction"><option value="extra">Additional activity — keep plan</option><option value="keep">Replace — keep original available</option><option value="move">Replace — move original to tomorrow</option><option value="skip">Replace — skip original</option></select></label>
@@ -1254,8 +1296,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-health-log
  }
  if(b.dataset.festimate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const weight=latestWeight();if(!weight){toast('Set your weight in your profile first');return}const min=Number(form.elements.minutes.value)||0;if(!min){toast('Enter workout minutes first');return}form.elements.caloriesBurned.value=activityKcal(min,form.elements.intensity.value,weight);form.elements.calorieSource.value='estimated';const n=document.getElementById('fKcalNote');if(n)n.textContent='Approximate total expenditure (including resting energy), not active calories. Adjust using your wearable if available.';return}
  if(b.dataset.fai){fAI(b.dataset.fai);return}
- if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));toast('Workout loaded')}return}
- if(b.dataset.fsavetemplate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const d=Object.fromEntries(new FormData(form));if(!String(d.description||'').trim()){toast('Enter workout details first');return}const name=prompt('Name this workout',d.description);if(!name)return;F.workoutTemplates.push({name:name.slice(0,60),description:d.description,minutes:Math.max(1,+d.minutes||50),intensity:d.intensity,components:d.components||'',healthCategory:d.healthCategory});fsave();render();toast('Workout button saved');return}
+ if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));const assess=document.getElementById('customStrengthAssessment');if(assess)assess.hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);toast('Workout loaded')}return}
+ if(b.dataset.fsavetemplate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const d=Object.fromEntries(new FormData(form));if(!String(d.description||'').trim()){toast('Enter workout details first');return}const name=prompt('Name this workout',d.description);if(!name)return;F.workoutTemplates.push({name:name.slice(0,60),description:d.description,minutes:Math.max(1,+d.minutes||50),intensity:d.intensity,components:d.components||'',healthCategory:d.healthCategory,strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null});fsave();render();toast('Workout button saved');return}
 
  if(b.dataset.favorite!==undefined){const x=F.favorites[+b.dataset.favorite];if(x){const entry={...x,id:fusionId(),date:x.type==='meal'?nutDay:sel,...(x.type==='activity'?{planAction:'extra',healthCategory:x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''))}:{})};F.entries.push(entry);if(entry.type==='activity'&&entry.planAction&&entry.planAction!=='extra')syncSubstitution(entry.date)}toast('Favorite logged')}
  if(b.dataset.fedit!==undefined){const x=F.entries.find(x=>String(x.id)===b.dataset.fedit&&x.type==='meal');if(x){const form=document.getElementById('fMeal');if(form){for(const k of ['description','mealSlot','qualityChoice','p','c','f','fiber','calories'])if(form.elements[k])form.elements[k].value=x[k]??(k==='qualityChoice'?'unknown':'');form.elements.editId.value=x.id;form.querySelector('[type=submit]').textContent='Update meal';form.scrollIntoView({behavior:'smooth',block:'start'});toast('Editing meal')}}return}
@@ -1267,7 +1309,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-health-log
 document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFeedback'].includes(e.target.id))return;e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form));
  if(form.id==='fTargets'){for(const k of ['p','c','f','fiber'])F.targets[k]=Math.max(1,Number(d[k])||1);toast('Targets updated')}
  if(form.id==='fMeal'){const old=F.entries.find(x=>String(x.id)===String(d.editId)&&x.type==='meal');const entry={id:old?old.id:fusionId(),date:old?old.date:nutDay,type:'meal',description:String(d.description||'').trim(),mealSlot:d.mealSlot||'s',qualityChoice:d.qualityChoice||'unknown',p:+d.p||0,c:+d.c||0,f:+d.f||0,fiber:+d.fiber||0,calories:+d.calories||0,source:old?old.source:(form.dataset.ai==='yes'?'demo':'manual')};if(old)Object.assign(old,entry);else F.entries.push(entry);toast(old?'Meal updated':'Meal logged')}
- if(form.id==='fActivity'){const x={id:fusionId(),date:sel,type:'activity',description:String(d.description||'').trim(),minutes:Math.max(1,+d.minutes||1),intensity:d.intensity,components:String(d.components||''),healthCategory:d.healthCategory||healthClassify(d.description),planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:form.dataset.ai==='yes'?'demo':'manual'};F.entries.push(x);if(d.planAction&&d.planAction!=='extra'){for(const prev of fusionActivities(sel))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';clearReschedule(sel);F.substitutions[sel]={description:x.description,minutes:x.minutes,id:x.id};F.planChoices[sel]=d.planAction;if(d.planAction==='move')F.rescheduled[shiftDate(sel,1)]='Original workout moved from '+sel;syncSubstitution(sel);}toast('Activity logged')}
+ if(form.id==='fActivity'){const x={id:fusionId(),date:sel,type:'activity',description:String(d.description||'').trim(),minutes:Math.max(1,+d.minutes||1),intensity:d.intensity,components:String(d.components||''),healthCategory:d.healthCategory||healthClassify(d.description),strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null,planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:form.dataset.ai==='yes'?'demo':'manual'};F.entries.push(x);if(d.planAction&&d.planAction!=='extra'){for(const prev of fusionActivities(sel))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';clearReschedule(sel);F.substitutions[sel]={description:x.description,minutes:x.minutes,id:x.id};F.planChoices[sel]=d.planAction;if(d.planAction==='move')F.rescheduled[shiftDate(sel,1)]='Original workout moved from '+sel;syncSubstitution(sel);}toast('Activity logged')}
  if(form.id==='fFeedback'){const blob=new Blob([`Momentum beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
 
@@ -1292,6 +1334,13 @@ document.addEventListener('submit',e=>{
  else{const p=F.coachPrefs;p.tone=d.tone;p.instructions=String(d.instructions||'').slice(0,500);p.quietStart=d.quietStart;p.quietEnd=d.quietEnd;for(const k of Object.keys(p.reminders)){p.reminders[k]={on:!!d['on_'+k],time:d['time_'+k]||'09:00'}}fsave();render();toast('Coaching preferences saved — push delivery not yet active')}
 });
 
+document.addEventListener('submit',e=>{
+ if(e.target.id!=='fStrengthAssess')return;
+ e.preventDefault();const k=e.target.dataset.date,d=Object.fromEntries(new FormData(e.target));
+ F.strengthAssessments=F.strengthAssessments||{};F.strengthAssessments[k]=strengthAssessmentFrom(d);
+ fsave();render();toast('Strength assessment saved');
+});
+document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.target.closest('#fActivity')){const el=document.getElementById('customStrengthAssessment');if(el)el.hidden=!['strength','mixed'].includes(e.target.value)}});
 document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null;
@@ -1389,7 +1438,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.9.0';
+ const VERSION='9.9.1';
  let pending=false;
  async function checkUpdate(showResult){
   const status=document.getElementById('momentum-update-status');

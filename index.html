@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.7</title>
+<title>Momentum — Beta v9.10.8</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.7"></script>
+<script src="./beta-config.js?v=9.10.8"></script>
 <script>
 (function(){
 "use strict";
@@ -859,7 +859,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.7</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.8</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -879,7 +879,7 @@ const DEXA_METRICS=[
  ['DEXA T-score','T-score','',20],['DEXA Z-score','Z-score','',20]
 ];
 const PROGRESS_RANGES=[['30','30 days'],['90','90 days'],['6m','6 months'],['1y','1 year']];
-let progressPane='body',progressRange='30',strengthSeriesKey='',healthReadings=[],healthSyncAt=null;
+let progressPane='body',progressRange='30',strengthSeriesKey='',healthReadings=[];
 function validLogDate(date){return /^\d{4}-\d{2}-\d{2}$/.test(date)&&ymd(parseD(date))===date&&date<=ymd(today())}
 function progressStart(){
  const now=today();
@@ -1568,7 +1568,7 @@ if(connectionConfig.supabaseUrl&&connectionConfig.publishableKey&&connectionConf
  }catch{ /* Local app features remain usable if Auth initialization fails. */ }
 }
 let cloudSession=null,cloudStatus='',cloudDevices=[],cloudAudit={history:[],pending:[]};
-let cloudBase=null,cloudBusy=false,cloudTimer,cloudConflict=false,shortcutSetup=null,connectionOpen=false;
+let cloudBase=null,cloudBusy=false,cloudTimer,cloudConflict=false,connectionOpen=false;
 let consentRequest=null;
 try{
  const url=new URL(location.href),request=url.searchParams.get('momentum_consent');
@@ -1576,7 +1576,7 @@ try{
  if(aiConnectionsEnabled)consentRequest=JSON.parse(sessionStorage.getItem('momentumfusion.beta.consent')||'null');
 }catch{}
 function connectedHtml(){
- const signin=`<p class="muted sm">Sign in to your Momentum Beta account to ${consentRequest?'review this assistant’s request':aiConnectionsEnabled?'connect Apple Health or an AI assistant':'connect Apple Health'}.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
+ const signin=`<p class="muted sm">Sign in to your Momentum Beta account${consentRequest?' to review this assistant’s request':aiConnectionsEnabled?' to connect ChatGPT or Claude':''}.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
  <label class="f">Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
  <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div>
  <p class="muted sm"><a href="./?beta-account=reset" target="_blank" rel="noopener">Forgot password?</a></p></form>`;
@@ -1584,18 +1584,9 @@ function connectedHtml(){
  ${x.after?`<details><summary>Review before and after</summary><pre class="cloud-json">${esc(JSON.stringify({before:x.before,after:x.after},null,2))}</pre></details>`:''}</span>
  <div class="row tight"><button class="btn small" data-cloud="approve" data-id="${esc(x.id)}">Approve</button><button class="btn small ghost" data-cloud="decline" data-id="${esc(x.id)}">Decline</button></div></div>`).join('');
  const status=`<p class="muted sm" id="cloudStatus" role="status">${esc(cloudStatus)}</p>`;
- if(!cloudClient)return `<p class="muted sm">Apple Health and AI connections need a configured Beta server. Manual entries, screenshots and CSV imports are available.</p>`;
+ if(!cloudClient)return `<p class="muted sm">AI connections need a configured Beta server. Scale photo uploads, manual entries, and CSV imports are available.</p>`;
  if(!cloudSession)return signin+status;
  return `<p class="muted sm">Signed in as ${esc(cloudSession.user.email||'Momentum account')}. <button class="btn small ghost" data-cloud="signout">Sign out</button></p>
- <h3>Apple Health sync</h3>
- ${healthSyncAt?`<p class="muted sm">Last successful Shortcut upload: ${esc(new Date(healthSyncAt).toLocaleString())}.</p>`:
- '<p class="muted sm">Set up <b>Sync Momentum Health</b> on this iPhone to import weight and body fat. Run it once in Shortcuts, then return here and tap Refresh measurements.</p>'}
- <div class="row">${healthSyncAt?'<a class="btn small" href="shortcuts://run-shortcut?name=Sync%20Momentum%20Health">Sync now</a>':''}
- <a class="btn small ${healthSyncAt?'ghost':''}" href="https://github.com/mstanton30/Momentum-fusion-test/blob/main/health-sync/SHORTCUT_SPEC.md" target="_blank" rel="noopener noreferrer">Set up iPhone Shortcut</a>
- <button class="btn small ghost" data-cloud="shortcut">Create Shortcut credential</button><button class="btn small ghost" data-cloud="refresh">Refresh measurements</button></div>
- ${shortcutSetup?`<div class="note"><p>Copy this write-only token into your Shortcut. It is displayed once and expires ${esc(new Date(shortcutSetup.expires_at).toLocaleDateString())}.</p>
- <label class="f">Shortcut endpoint<input readonly value="${esc(shortcutSetup.endpoint)}"></label><label class="f">Shortcut token<input readonly value="${esc(shortcutSetup.token)}"></label>
- <button class="btn small ghost" data-cloud="clear-token">Hide token</button></div>`:''}
  ${aiConnectionsEnabled?`<h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
  ${activeWorkspace?`<label class="f">ChatGPT and Claude connector URL<input readonly value="${esc(connectionConfig.apiUrl.replace(/\/$/,'')+'/mcp')}"></label>`:
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
@@ -1635,7 +1626,7 @@ function accountScreenHtml(){
 }
 function accountConnections(){
  return `<details class="card" id="momentumConnections" ${connectionOpen||consentRequest?'open':''}>
- <summary>Apple Health & AI connections</summary>${connectedHtml()}</details>`;
+ <summary>AI connections</summary>${connectedHtml()}</details>`;
 }
 function showCloudStatus(message,refresh=false){
  cloudStatus=message;
@@ -1827,20 +1818,20 @@ async function refreshConnections(show=false){
  cloudDevices=devices;
  if(workspace)cloudAudit={history:workspace.history,pending:workspace.pending};
  const samples=[];
- let offset=0,last=null;
+ let offset=0;
  do{
   const page=await cloudRequest('/health?offset='+offset);
-  samples.push(...page.samples);last=page.last_sync;offset=page.next_offset;
+  samples.push(...page.samples);offset=page.next_offset;
  }while(offset!==null);
- const previous=stable(healthReadings),oldSync=healthSyncAt;
- healthReadings=[...new Map(samples.map(x=>[x.id,x])).values()];healthSyncAt=last;
- if(show)showCloudStatus('Measurements refreshed.',true);
- else if((previous!==stable(healthReadings)||oldSync!==last)&&!document.activeElement?.matches('input,textarea,select'))render();
+ const previous=stable(healthReadings);
+ healthReadings=[...new Map(samples.map(x=>[x.id,x])).values()];
+ if(show)render();
+ else if(previous!==stable(healthReadings)&&!document.activeElement?.matches('input,textarea,select'))render();
 }
 function changeCloudSession(session){
  if(session?.user.id===cloudSession?.user.id){cloudSession=session;return}
  leaveWorkspace();
- cloudSession=session;healthReadings=[];healthSyncAt=null;shortcutSetup=null;cloudDevices=[];cloudAudit={history:[],pending:[]};
+ cloudSession=session;healthReadings=[];cloudDevices=[];cloudAudit={history:[],pending:[]};
  if(session&&accountScreen!=='update'){
   try{
    const cached=JSON.parse(localStorage.getItem(accountKey(session.user.id))||'null');
@@ -1954,11 +1945,9 @@ document.addEventListener('click',async e=>{
    activateWorkspace(cloudSession.user.id,workspace.revision?emptyAccountWorkspace():null);
    await syncWorkspace();
   }
-  if(action==='shortcut')shortcutSetup=await cloudRequest('/connections/health','POST');
-  if(action==='clear-token')shortcutSetup=null;
   if(action==='revoke'){
    if(!confirm('Revoke this connection?'))return;
-   await cloudRequest('/connections/'+id,'DELETE');shortcutSetup=null;
+   await cloudRequest('/connections/'+id,'DELETE');
   }
   if(action==='approve'||action==='decline'){
    if(action==='approve'&&!confirm('Apply the requested change to your account?'))return;
@@ -1970,7 +1959,6 @@ document.addEventListener('click',async e=>{
    sessionStorage.removeItem('momentumfusion.beta.consent');consentRequest=null;
    location.assign(response.redirect);return;
   }
-  if(action==='clear-token'){render();return}
   await refreshConnections(true);
  }catch(error){showCloudStatus(error.message,true)}finally{button.disabled=false}
 });
@@ -2092,7 +2080,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.7';
+ const VERSION='9.10.8';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

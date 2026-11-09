@@ -1,4 +1,6 @@
-# iPhone Shortcut setup for Beta
+# Legacy iPhone Shortcut upload specification
+
+For new weigh-ins, use **Progress → Body composition → Scan scale photo**. The instructions below document the previous Beta setup and its upload format.
 
 Set these up on the iPhone that receives RENPHO measurements. In RENPHO, enable Apple Health sharing for weight and body fat if available. Check Apple Health for a known sample before building the Shortcut.
 

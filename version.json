@@ -1,4 +1,4 @@
 {
-  "version": "9.8.3",
-  "notes": "Explicit app bridge, bounded sync and visible diagnostics"
+  "version": "9.9.0",
+  "notes": "Momentum Health Score: goal-based weekly aerobic and strength scoring, workout-source selection and scoring explanation"
 }

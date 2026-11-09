@@ -1,5 +1,5 @@
-const CACHE='momentum-beta-shell-9.10.2';
-const ASSETS=['./index.html','./beta-config.js','./manifest.json','./version.json','./icon-180.png','./icon-192.png','./icon-512.png'];
+const CACHE='momentum-beta-shell-9.10.3';
+const ASSETS=['./index.html','./beta-config.js?v=9.10.3','./vendor/supabase-2.49.10.js','./manifest.json','./version.json','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith('momentum-beta-shell-')&&k!==CACHE)await caches.delete(k);await self.clients.claim()})())});
 self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting()});

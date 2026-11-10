@@ -177,7 +177,7 @@ details>div{padding-top:8px}
 .momentum-reminder-fields label{display:block;min-width:0;font-size:.78rem;color:var(--muted)}
 .momentum-reminder-fields input,.momentum-reminder-fields select{box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;margin-top:3px}
 @media(max-width:430px){.momentum-reminder-fields{grid-template-columns:minmax(0,1fr);gap:8px}}
-</style>
+ .workout-tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.workout-tile{position:relative;min-width:0;border:1px solid var(--line,#aaa);border-radius:14px;overflow:hidden}.workout-tile-main{width:100%;min-height:102px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 34px 12px 12px;font:inherit;font-weight:650;overflow-wrap:anywhere;text-align:center}.workout-tile-icon{font-size:26px}.workout-tile-edit{position:absolute;right:4px;top:4px;min-width:34px;min-height:34px;border:0;background:transparent;color:inherit;font-size:20px} </style>
 </head>
 <body>
 <main id="main"></main>
@@ -453,7 +453,7 @@ function healthWeekly(ref=today()){
    const cat=x.healthCategory||healthClassify((x.description||'')+' '+(x.components||''));
    const effort=x.intensity==='vigorous'?2:x.intensity==='light'?0:1;
    if(cat==='aerobic')aerobic+=min*effort;
-   if(cat==='mixed')aerobic+=min*.5*effort;
+   if(cat==='mixed'){const cardioPart=String(x.components||'').match(/(?:^|;)\s*(\d+(?:\.\d+)?)\s*min(?:utes)?\s*(?:dedicated\s*)?cardio/i);aerobic+=(cardioPart?Math.min(min,Number(cardioPart[1])):min*.5)*effort;}
    if(cat==='strength'||cat==='mixed'){
     addStrength(x.strengthAssessment);
    }
@@ -1147,7 +1147,7 @@ F.customReminders=F.customReminders||[];
 F.coachPrefs=F.coachPrefs||{tone:'balanced',instructions:'',quietStart:'22:00',quietEnd:'07:00',reminders:{breakfast:{on:true,time:'09:00'},lunch:{on:true,time:'13:30'},dinner:{on:true,time:'19:30'},workout:{on:true,time:'19:00'},review:{on:true,time:'18:00'},grocery:{on:true,time:'09:00'}}};
 F.workoutTemplates=F.workoutTemplates||[
 {name:'Basketball',description:'Full-court basketball',minutes:75,intensity:'vigorous',components:'Games'},
-{name:'Personal trainer',description:'Personal training',minutes:50,intensity:'moderate',components:'15 min stretching; 15 min cardio; 20 min strength'},
+{name:'Personal trainer',description:'Personal training',minutes:50,intensity:'moderate',components:'15 min stretching and foam rolling; 5 min dedicated cardio; 30 min strength',healthCategory:'mixed',strengthAssessment:{coverage:'full',effort:'challenging',volume:'multiple'}},
 {name:'Pickleball',description:'Pickleball doubles',minutes:75,intensity:'moderate',components:'Recreational match'},
 {name:'Custom strength',description:'Strength training',minutes:45,intensity:'moderate',components:'Sets, reps and weights'}];
 F.planChoices=F.planChoices||{};F.rescheduled=F.rescheduled||{};F.healthGoal=F.healthGoal||'health';F.daySources=F.daySources||{};F.strengthAssessments=F.strengthAssessments||{};
@@ -1270,12 +1270,12 @@ function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div cla
 <div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div>${groceryPanel()}<div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
 function fWorkoutPanel(){
 const selected=sel,sub=F.substitutions[selected],future=selected>ymd(today());
-const templates=F.workoutTemplates.map((t,i)=>`<button type="button" class="btn small ghost" data-ftemplate="${i}">${esc(t.name)}</button>`).join(' ');
+const templates=F.workoutTemplates.map((t,i)=>`<div class="workout-tile"><button type="button" class="workout-tile-main" data-ftemplate="${i}"><span class="workout-tile-icon">${/basketball/i.test(t.name)?'🏀':/pickleball/i.test(t.name)?'🏓':/trainer/i.test(t.name)?'🏋️':/strength|lift/i.test(t.name)?'💪':'🏃'}</span><span>${esc(t.name)}</span></button><button type="button" class="workout-tile-edit" data-ftemplate-edit="${i}" aria-label="Edit ${esc(t.name)}">✎</button></div>`).join(' ');
 return `<h2>Log an activity</h2><div class="card"><h3>Log a workout</h3>
 <p class="muted sm">Keep Momentum's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
 ${F.rescheduled[selected]?`<p class="note">${esc(F.rescheduled[selected])}</p>`:''}
 ${sub?`<div class="note"><b>Substituted:</b> ${esc(sub.description)} · ${sub.minutes} min · ${esc(F.planChoices[selected]||'')} · +${customWorkoutPoints(fusionActivities(selected).find(x=>x.id===sub.id)||sub)} points <button class="btn small ghost" data-fclear="${selected}">Undo</button></div>`:''}
-<p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Activity Score based on activity type, duration, and intensity. Review category before logging.</p><div class="row" style="gap:6px;flex-wrap:wrap">${templates}</div>
+<p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Activity Score based on activity type, duration, and intensity. Review category before logging.</p><div class="workout-tile-grid">${templates}</div>
 ${!future?`<form id="fActivity"><input type="hidden" name="editId"><label>Workout or activity<textarea name="description" rows="2" required placeholder="Basketball, trainer session, lifting…"></textarea></label>
 <div class="fgrid"><label>Minutes<input type="number" name="minutes" min="1" max="1440" value="50" required></label><label>Intensity<select name="intensity"><option value="moderate">Moderate</option><option value="light">Light</option><option value="vigorous">Vigorous</option></select></label></div>
 <label>Workout details<textarea name="components" rows="2" placeholder="Exercises, sets, reps, cardio, notes"></textarea></label>
@@ -1438,7 +1438,7 @@ function fAI(kind){
   if(status)status.textContent='RULE-BASED SUGGESTION — '+form.elements.healthCategory.value+' · '+intensity+' · '+minutes+' minutes. Review and correct the category and duration. This is not a live AI response.';
  }
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-health-login],[data-health-logout],[data-health-config],[data-health-analyze],[data-health-save],[data-health-date],[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ftemplate-edit],[data-health-login],[data-health-logout],[data-health-config],[data-health-analyze],[data-health-save],[data-health-date],[data-health-remove],[data-favorite],[data-fedit],[data-fsave],[data-fdelete],[data-fremove],[data-fclear],[data-fai],[data-ftemplate],[data-fsavetemplate],[data-festimate],[data-log-smoothie]');if(!b)return;
  if(b.dataset.healthLogin!==undefined){healthSendLogin();return}
  if(b.dataset.healthLogout!==undefined){healthSignOut();return}
  if(b.dataset.healthConfig!==undefined){const v=document.getElementById('healthEndpoint')?.value?.trim()||'';if(!/^https:\/\//.test(v)){toast('Use a secure HTTPS endpoint');return}localStorage.setItem(HEALTH_API_KEY,v);toast('Connection saved');return}
@@ -1463,6 +1463,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-health-log
  }
  if(b.dataset.festimate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const weight=latestWeight();if(!weight){toast('Set your weight in your profile first');return}const min=Number(form.elements.minutes.value)||0;if(!min){toast('Enter workout minutes first');return}form.elements.caloriesBurned.value=activityKcal(min,form.elements.intensity.value,weight);form.elements.calorieSource.value='estimated';const n=document.getElementById('fKcalNote');if(n)n.textContent='Approximate total expenditure (including resting energy), not active calories. Adjust using your wearable if available.';return}
  if(b.dataset.fai){fAI(b.dataset.fai);return}
+ if(b.dataset.ftemplateEdit!==undefined){const i=Number(b.dataset.ftemplateEdit),t=F.workoutTemplates[i];if(!t)return;const choice=prompt('Edit workout: enter R to rename, E to edit details, or D to delete', 'E');if(!choice)return;const action=choice.trim().toLowerCase();if(action==='d'){if(!confirm('Delete saved workout button '+t.name+'? Past logged workouts are preserved.'))return;F.workoutTemplates.splice(i,1);fsave();render();toast('Workout button deleted');return;}if(action==='r'){const name=prompt('Workout button name',t.name);if(!name?.trim())return;t.name=name.trim().slice(0,60);fsave();render();toast('Workout renamed');return;}if(action==='e'){const form=document.getElementById('fActivity');if(!form)return;for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));for(const [field,key] of [['strengthCoverage','coverage'],['strengthEffort','effort'],['strengthVolume','volume']])form.elements[field].value=t.strengthAssessment?.[key]||({coverage:'partial',effort:'light',volume:'single'})[key];document.getElementById('customStrengthAssessment').hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);const save=confirm('Workout loaded for editing. Press OK to save your current form values to this preset, or Cancel to edit the form first.');if(save){const d=Object.fromEntries(new FormData(form));Object.assign(t,{description:d.description,minutes:Math.max(1,+d.minutes||50),intensity:d.intensity,components:d.components,healthCategory:d.healthCategory,strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null});fsave();render();toast('Preset updated')}return;}toast('Choose R, E or D');return;}
  if(b.dataset.ftemplate!==undefined){const t=F.workoutTemplates[+b.dataset.ftemplate],form=document.getElementById('fActivity');if(t&&form){for(const k of ['description','minutes','intensity','components'])form.elements[k].value=t[k]||'';form.elements.healthCategory.value=t.healthCategory||healthClassify(t.description+' '+(t.components||''));for(const [field,key] of [['strengthCoverage','coverage'],['strengthEffort','effort'],['strengthVolume','volume']])form.elements[field].value=t.strengthAssessment?.[key]||({coverage:'partial',effort:'light',volume:'single'})[key];const assess=document.getElementById('customStrengthAssessment');if(assess)assess.hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);toast('Workout loaded')}return}
  if(b.dataset.fsavetemplate!==undefined){const form=document.getElementById('fActivity');if(!form)return;const d=Object.fromEntries(new FormData(form));if(!String(d.description||'').trim()){toast('Enter workout details first');return}const name=prompt('Name this workout',d.description);if(!name)return;F.workoutTemplates.push({name:name.slice(0,60),description:d.description,minutes:Math.max(1,+d.minutes||50),intensity:d.intensity,components:d.components||'',healthCategory:d.healthCategory,strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null});fsave();render();toast('Workout button saved');return}
 

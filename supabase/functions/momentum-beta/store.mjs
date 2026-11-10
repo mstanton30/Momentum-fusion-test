@@ -1,6 +1,7 @@
 const workspace = 'momentum_beta_workspace';
 const credentials = 'momentum_beta_credentials';
 const health = 'momentum_health_samples';
+const mealInbox = 'momentum_beta_meal_inbox';
 const eq = value => 'eq.' + value;
 
 export function supabaseStore(url, publicKey, serviceKey, request = fetch) {
@@ -30,6 +31,17 @@ export function supabaseStore(url, publicKey, serviceKey, request = fetch) {
     async getWorkspace(user) {
       return (await query(workspace, {user_id:eq(user), select:'state,revision'}))[0] ||
         {state:{}, revision:0};
+    },
+    async pendingMeals(user) {
+      return query(mealInbox, {
+        user_id:eq(user), status:'eq.pending', select:'id,payload',
+        order:'created_at.asc,id.asc', limit:'20'
+      });
+    },
+    async finishInboxMeal(user, id, status) {
+      await query(mealInbox, {user_id:eq(user),id:eq(id),status:'eq.pending'}, {
+        method:'PATCH',body:{status,processed_at:new Date().toISOString()},prefer:'return=minimal'
+      });
     },
     async saveWorkspace(user, revision, state) {
       const row = {revision:revision + 1, state, updated_at:new Date().toISOString()};

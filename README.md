@@ -39,6 +39,21 @@ Requires the OAuth configuration above.
 
 The REST surface accepts `POST /api/tools` with an authorized OAuth bearer token and JSON `{"name":"saved_items","arguments":{}}`. Use `tools/list` over MCP for schemas. The API returns measurements and summaries for assistants to explain. Weekly Momentum scores update after the browser syncs. Newly logged counts are read directly from the account. Sync covers entries, saved buttons, supplements and selected progress data. Profile details, photos, DEXA notes, meal recipe notes, and unrelated settings stay on the device. Sign out to switch back to the original local workspace.
 
+## Pilot the ChatGPT meal inbox
+
+This pilot uses a project-authorized Supabase connection to queue meals and the
+signed-in Beta app's existing workspace sync to import them. Apply the inbox
+migration before deploying the Edge Function. The inbox has no public client
+access. It is intended for a trusted operator who already has access to the Beta
+project, so installing a custom ChatGPT connector is not part of this pilot.
+
+1. Sign in to the Beta app and open the cloud workspace under **Progress → Body composition → AI connections**. Set up AI sharing if the workspace has not been enabled.
+2. Using the authorized Beta project connection, resolve the recipient's verified Beta sign-in to its workspace owner. Use that owner only after verifying the recipient. Insert a row in `public.momentum_beta_meal_inbox` with `user_id` and a `payload` such as `{"date":"YYYY-MM-DD","description":"Breakfast smoothie","mealSlot":"b"}`, substituting the user's local date. Optional fields are `p`, `c`, `f`, `fiber`, `calories`, and `qualityChoice`. Include nutrition only when known.
+3. Use a fresh UUID for a distinct write, and reuse that UUID with `ON CONFLICT (id) DO NOTHING` when retrying the insert. Report the meal as queued until the inbox row is marked `logged` or `duplicate`. A `rejected` row needs correction and a new request ID.
+4. Reopen Beta to trigger the usual workspace sync and confirm the entry under **Nutrition**. Only the signed-in workspace owner can trigger its import through the app. Use an isolated test account for synthetic entries.
+
+Availability of the Supabase connection in ordinary ChatGPT Voice on iPhone is a separate acceptance test.
+
 ## Developer checks
 
 Run `node --test tests/connections.test.mjs` for the isolated HTTP, OAuth, MCP and workflow checks. Install `@electric-sql/pglite@0.5.15` and `linkedom@0.18.15` in a temporary Node directory and point `NODE_PATH` to its `node_modules`. Then run `node --test tests/schema.test.cjs tests/progress.test.cjs` for the PostgreSQL and browser DOM checks. See [activity regression instructions](tests/README.md) for the existing Playwright suite.

@@ -17,7 +17,7 @@ const empty=()=>({entries:{},supplements:{},savedMeals:[],savedWorkouts:[],timez
     weigh:{},strength:{},dexa:{},tests:{},sessions:{},mealSlots:{},rewards:{},sleep:{},assessments:{},daySources:{},activityGoal:'health',targets:{}
   }});
 
-function fixture({enableAi=true,apiBase=base}={}){
+function fixture({enableAi=true,apiBase=base,pluginRedirect}={}){
   const workspaces=new Map(),credentials=new Map(),readings=new Map(),sync=new Map();
   const store={
     user:async token=>[first,second].includes(token)?{id:token}:null,
@@ -52,33 +52,37 @@ function fixture({enableAi=true,apiBase=base}={}){
     }
   };
   const handler=createHandler({store,base:apiBase,app,aiEnabled:enableAi});
+  const pluginHandler=createHandler({store,base:apiBase+'/chatgpt',app,aiEnabled:enableAi,mealPlugin:true,pluginRedirect});
   async function request(path,{token,method='GET',body,origin,form=false}={}){
-    const res=await handler(new Request(apiBase+path,{method,
+    const handle=path.startsWith('/chatgpt/')?pluginHandler:handler;
+    const res=await handle(new Request(apiBase+path,{method,
       headers:{...(token?{Authorization:'Bearer '+token}:{}),...(origin?{Origin:origin}:{}),
         ...(body?{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'}:{})},
       body:body?(form?new URLSearchParams(body):JSON.stringify(body)):undefined}));
     return {status:res.status,headers:res.headers,data:res.headers.get('Content-Type')?.includes('json')?await res.json():null};
   }
-  async function enroll(user){
-    return request('/workspace',{token:user,method:'PUT',body:{revision:0,data:empty()}});
+  async function enroll(user,data=empty()){
+    return request('/workspace',{token:user,method:'PUT',body:{revision:0,data}});
   }
   async function oauth(user=first,provider='claude'){
-    const redirect_uri=provider==='claude'?'https://claude.ai/api/mcp/auth_callback':'https://chatgpt.com/connector_platform_oauth_redirect';
-    const register=await request('/register',{method:'POST',body:{redirect_uris:[redirect_uri],token_endpoint_auth_method:'none'}});
+    const isPlugin=provider==='plugin';
+    const prefix=isPlugin?'/chatgpt':'';
+    const redirect_uri=provider==='claude'?'https://claude.ai/api/mcp/auth_callback':(isPlugin&&pluginRedirect)||'https://chatgpt.com/connector_platform_oauth_redirect';
+    const register=await request(prefix+'/register',{method:'POST',body:{redirect_uris:[redirect_uri],token_endpoint_auth_method:'none'}});
     assert.equal(register.status,201);
     const {client_id}=register.data;
-    const auth={client_id,redirect_uri,response_type:'code',code_challenge_method:'S256',code_challenge:digest(verifier),state:'state-for-tests',resource:apiBase+'/mcp'};
-    assert.equal((await request('/authorize?'+new URLSearchParams({...auth,client_id:'other-client'}))).status,400);
-    const launch=await request('/authorize?'+new URLSearchParams(auth));
+    const auth={client_id,redirect_uri,response_type:'code',code_challenge_method:'S256',code_challenge:digest(verifier),state:'state-for-tests',resource:apiBase+prefix+'/mcp'};
+    assert.equal((await request(prefix+'/authorize?'+new URLSearchParams({...auth,client_id:'other-client'}))).status,400);
+    const launch=await request(prefix+'/authorize?'+new URLSearchParams(auth));
     assert.equal(launch.status,302);
     assert.equal(new URL(launch.headers.get('Location')).origin,new URL(app).origin);
-    const consent=await request('/consent',{token:user,method:'POST',body:{request:auth,allow:true}});
+    const consent=await request(prefix+'/consent',{token:user,method:'POST',body:{request:auth,allow:true}});
     assert.equal(consent.status,200);
     const redirect=new URL(consent.data.redirect);
     assert.equal(redirect.searchParams.get('state'),auth.state);
-    assert.equal(redirect.searchParams.get('iss'),apiBase);
-    const payload={client_id,redirect_uri,grant_type:'authorization_code',code:redirect.searchParams.get('code'),code_verifier:verifier,resource:apiBase+'/mcp'};
-    const exchange=overrides=>request('/token',{method:'POST',form:true,body:{...payload,...overrides}});
+    assert.equal(redirect.searchParams.get('iss'),apiBase+prefix);
+    const payload={client_id,redirect_uri,grant_type:'authorization_code',code:redirect.searchParams.get('code'),code_verifier:verifier,resource:apiBase+prefix+'/mcp'};
+    const exchange=overrides=>request(prefix+'/token',{method:'POST',form:true,body:{...payload,...overrides}});
     assert.equal((await exchange({code_verifier:'w'.repeat(64)})).status,400);
     assert.equal((await exchange({resource:'https://other.example'})).status,400);
     const exchanged=await exchange();
@@ -211,4 +215,47 @@ test('hosted Edge Function path serves discovery, both clients, and the existing
     assert.equal(result.status,200);
     assert.ok(result.data.result.tools.some(x=>x.name==='log_meal'));
   }
+});
+
+
+test('ChatGPT meal plugin has a separate scope and logs a saved breakfast once',async()=>{
+  const apiBase='https://edge.example/functions/v1/momentum-beta';
+  const {request,enroll,oauth}=fixture({apiBase,pluginRedirect:'https://chatgpt.com/connector/oauth/test-callback'});
+  const state=empty();
+  state.savedMeals=[{type:'meal',description:'Breakfast smoothie',p:35,c:55,mealSlot:'b',qualityChoice:'quality'},
+    {type:'meal',description:'Banana oatmeal',mealSlot:'b'},{type:'meal',description:'Apple oatmeal',mealSlot:'b'}];
+  await enroll(first,state);await enroll(second);
+  const plugin=(await oauth(first,'plugin'));
+  const general=(await oauth(first,'chatgpt')).access_token;
+  const mcp=(method,params,token=plugin.access_token,path='/chatgpt/mcp')=>request(path,{token,method:'POST',
+    body:{jsonrpc:'2.0',id:1,method,params}});
+  assert.equal(plugin.scope,'momentum:meals');
+  assert.equal((await request('/chatgpt/mcp')).status,401);
+  assert.equal((await request('/chatgpt/.well-known/oauth-protected-resource/mcp')).data.resource,apiBase+'/chatgpt/mcp');
+  assert.equal((await request('/chatgpt/register',{method:'POST',
+    body:{redirect_uris:['https://chatgpt.com/connector_platform_oauth_redirect']}})).status,400);
+  const tools=(await mcp('tools/list')).data.result.tools;
+  assert.deepEqual(tools.map(x=>x.name),['log_meal','log_saved_meal']);
+  assert.deepEqual(tools[0].securitySchemes,[{type:'oauth2',scopes:['momentum:meals']}]);
+  assert.equal((await mcp('tools/list',{},general)).status,401);
+  assert.equal((await mcp('tools/list',{},plugin.access_token,'/mcp')).status,401);
+  assert.equal((await call(request,plugin.access_token,'list_entries')).status,401);
+  assert.equal((await mcp('tools/call',{name:'list_entries'})).data.result.isError,true);
+  const saved=async (mealName,request_id='saved-smoothie',token=plugin.access_token)=>{
+    const res=await mcp('tools/call',{name:'log_saved_meal',arguments:{mealName,date:day,request_id,mealSlot:'b'}},token);
+    return res.data.result.content[0].text;
+  };
+  assert.match(await saved('oatmeal','ambiguous-favorite'),/Multiple favorites/);
+  assert.match(await saved('smoothie','other-account',(await oauth(second,'plugin')).access_token),/No matching/);
+  assert.deepEqual(JSON.parse(await saved('smoothie')),{status:'logged'});
+  assert.deepEqual(JSON.parse(await saved('smoothie')),{status:'logged'});
+  assert.deepEqual(JSON.parse(await saved('smoothie','another-request')),{status:'duplicate'});
+  const {entries}= (await call(request,general,'list_entries')).data;
+  assert.equal(entries.length,1);
+  assert.equal(entries[0].description,'Breakfast smoothie');
+  assert.equal(entries[0].p,35);
+  assert.equal(entries[0].mealSlot,'b');
+  const connection=(await request('/connections',{token:first})).data.find(x=>x.label==='ChatGPT Momentum Meals');
+  await request('/connections/'+connection.id,{token:first,method:'DELETE'});
+  assert.equal((await mcp('tools/list')).status,401);
 });

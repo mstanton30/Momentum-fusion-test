@@ -2016,7 +2016,7 @@ function connectedHtml(){
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
  ${cloudConflict?`<div class="note">The same record was changed here and in the cloud. Choose which version to keep for the conflicting records.
  <div class="row"><button class="btn small" data-cloud="local">Keep this device’s changes</button><button class="btn small ghost" data-cloud="remote">Keep the cloud changes</button></div></div>`:''}
- ${consentRequest?`<div class="note"><p>${consentRequest.redirect_uri==='https://claude.ai/api/mcp/auth_callback'?'Claude':'ChatGPT'} is requesting permission to read shared Momentum data and log or edit entries.</p>
+ ${consentRequest?`<div class="note"><p>${consentRequest.scope==='momentum:meals'?'ChatGPT Momentum Meals is requesting permission to add meals and use matching saved favorites to log them.':(consentRequest.redirect_uri==='https://claude.ai/api/mcp/auth_callback'?'Claude':'ChatGPT')+' is requesting permission to read shared Momentum data and log or edit entries.'}</p>
  <div class="row"><button class="btn small" data-cloud="consent" ${activeWorkspace?'':'disabled'}>Allow connection</button><button class="btn small ghost" data-cloud="deny">Decline</button></div></div>`:''}`:'<p class="muted xs">External AI connections are pending setup.</p>'}
  ${cloudDevices.length?`<h3>Connected apps and devices</h3>${cloudDevices.map(x=>`<div class="frow"><span>${esc(x.label)} · expires ${esc(new Date(x.refresh_expires_at||x.expires_at).toLocaleDateString())}</span>
  <button class="btn small ghost" data-cloud="revoke" data-id="${esc(x.id)}">Revoke</button></div>`).join('')}`:''}
@@ -2379,7 +2379,8 @@ document.addEventListener('click',async e=>{
   }
   if(action==='local'||action==='remote')await syncWorkspace(action);
   if(action==='consent'||action==='deny'){
-   const response=await cloudRequest('/consent','POST',{request:consentRequest,allow:action==='consent'});
+   const consentPath=consentRequest.scope==='momentum:meals'?'/chatgpt/consent':'/consent';
+   const response=await cloudRequest(consentPath,'POST',{request:consentRequest,allow:action==='consent'});
    sessionStorage.removeItem('momentumfusion.beta.consent');consentRequest=null;
    location.assign(response.redirect);return;
   }

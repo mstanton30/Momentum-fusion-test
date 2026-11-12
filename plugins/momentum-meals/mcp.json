@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "momentum-meals": {
+      "type": "streamable-http",
+      "url": "https://gwsvhhjqgpjjzftmnsqf.supabase.co/functions/v1/momentum-beta/chatgpt/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "provided",
+              "clientId": "momentum-beta-meal-plugin",
+              "tokenEndpointAuthMethod": "none"
+            },
+            "baseScopes": ["momentum:meals"]
+          }
+        }
+      }
+    }
+  }
+}

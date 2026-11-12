@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.13</title>
+<title>Momentum — Beta v9.10.14</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -203,7 +203,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.13"></script>
+<script src="./beta-config.js?v=9.10.14"></script>
 <script>
 (function(){
 "use strict";
@@ -658,13 +658,76 @@ function vOnboard(){
   </form></div>`;
 }
 
+const WEEKLY_SESSION_TYPES={aerobic:'Aerobic',strength:'Strength',mixed:'Mixed cardio + strength',mobility:'Mobility',other:'Other'};
+let weeklyEditorDay=null,weeklyEditorOpen=false;
+function weeklyPlanFor(date){
+ return (F.weeklyPlanHistory||[]).findLast(version=>version.from<=date)?.days??null;
+}
+function weeklyPlanLog(date,id){
+ return fusionActivities(date).find(entry=>entry.weeklySessionId===id);
+}
+function weeklyPlanStrength(week){
+ let planned=0,completed=0;
+ for(const date of week){
+  const plan=weeklyPlanFor(date);
+  if(!plan)continue;
+  for(const session of plan[parseD(date).getDay()]){
+   if(!['strength','mixed'].includes(session.category))continue;
+   planned++;
+   const entry=weeklyPlanLog(date,session.id);
+   if(entry&&['strength','mixed'].includes(entry.healthCategory))completed++;
+  }
+ }
+ return {planned,completed};
+}
+function weeklyWorkoutPanel(date){
+ const active=weeklyPlanFor(date), dayIndex=parseD(date).getDay();
+ const current=ymd(today()), editingDay=weeklyEditorDay??dayIndex;
+ const draft=F.weeklyPlanDraft;
+ const selected=draft?.[editingDay]||[];
+ const scheduled=active?.[dayIndex]||[];
+ const strength=weeklyPlanStrength(weekKeys(parseD(date)));
+ const categoryOptions=value=>Object.entries(WEEKLY_SESSION_TYPES).map(([key,label])=>`<option value="${key}" ${key===value?'selected':''}>${label}</option>`).join('');
+ const intensityOptions=value=>['light','moderate','vigorous'].map(key=>`<option value="${key}" ${key===value?'selected':''}>${key}</option>`).join('');
+ return `<div class="card"><div class="row" style="justify-content:space-between"><h2>My Plan</h2><span class="pill">${active?'Following My Plan':'Dan’s program'}</span></div>
+ ${active?`<h3>${esc(fmt(date))} · My Plan</h3><p class="muted sm">Strength this week · ${strength.completed} of ${strength.planned} complete</p>
+ ${scheduled.length?scheduled.map(session=>{
+  const logged=weeklyPlanLog(date,session.id);
+  return `<div class="home-progress-row"><div><b>${esc(session.name)}</b><div class="muted xs">${session.minutes} min · ${WEEKLY_SESSION_TYPES[session.category]}</div>
+  ${session.notes?`<div class="sm">${esc(session.notes)}</div>`:''}${session.link?`<a href="${esc(session.link)}" target="_blank" rel="noopener">Open workout link</a>`:''}</div>
+  <div class="row tight">${logged?`<span class="pill ok">Logged</span><button type="button" class="btn small ghost" data-fedit="${esc(logged.id)}">Edit log</button>`:date<=current?`<button type="button" class="btn small" data-weekly-log="${esc(session.id)}">Log</button><button type="button" class="btn small ghost" data-weekly-log="${esc(session.id)}" data-weekly-swap>Swap session</button>`:''}</div></div>`;
+ }).join(''):'<p class="muted sm">Rest day in your weekly plan.</p>'}`: '<p class="muted sm">Build a recurring week you can follow alongside the existing workout tools.</p>'}
+ <details id="weekly-workout-editor" ${weeklyEditorOpen?'open':''}><summary>Edit my week</summary><div>
+ <div class="row tight"><button type="button" class="btn small ghost" data-weekly-action="copy">Copy Dan’s plan</button><button type="button" class="btn small ghost" data-weekly-action="blank">Start blank</button></div>
+ ${draft?`<div class="home-week-days" role="group" aria-label="Edit day">${DAYS.map((day,index)=>`<button type="button" data-weekly-day="${index}" aria-pressed="${editingDay===index}">${day.name.slice(0,3)}</button>`).join('')}</div>
+ <h3>${DAYS[editingDay].name}</h3>
+ ${selected.length?selected.map((session,index)=>`<details><summary>${esc(session.name)} · ${session.minutes} min</summary><div>
+ <form data-weekly-edit="${esc(session.id)}">
+ <label>Session name<input name="name" required maxlength="100" value="${esc(session.name)}"></label>
+ <div class="fgrid"><label>Activity type<select name="category">${categoryOptions(session.category)}</select></label><label>Minutes<input name="minutes" type="number" min="1" max="1440" required value="${session.minutes}"></label></div>
+ <label>Intensity<select name="intensity">${intensityOptions(session.intensity)}</select></label>
+ <label>Notes<textarea name="notes" maxlength="1500">${esc(session.notes)}</textarea></label>
+ <label>Workout link<input name="link" type="url" maxlength="500" value="${esc(session.link)}"></label>
+ <div class="row tight"><button class="btn small" type="submit">Save session</button>
+ ${index>0?`<button type="button" class="btn small ghost" data-weekly-action="up" data-id="${esc(session.id)}">Move up</button>`:''}
+ ${index<selected.length-1?`<button type="button" class="btn small ghost" data-weekly-action="down" data-id="${esc(session.id)}">Move down</button>`:''}
+ <button type="button" class="btn small ghost" data-weekly-action="remove" data-id="${esc(session.id)}">Remove</button></div></form>
+ </div></details>`).join(''):'<p class="muted sm">Rest day</p>'}
+ <div class="row tight"><button type="button" class="btn small ghost" data-weekly-action="add">Add session</button>
+ ${selected.length?`<button type="button" class="btn small ghost" data-weekly-action="rest">Mark as rest day</button>`:''}</div>
+ <p class="muted xs">Save each session before applying the week. Changes start today.</p>
+ <div class="row tight"><button type="button" class="btn small" data-weekly-action="follow">Save &amp; follow plan</button>
+ ${weeklyPlanFor(current)?`<button type="button" class="btn small ghost" data-weekly-action="dan">Follow Dan’s plan</button>`:''}</div>`:''}
+ </div></details></div>`;
+}
 function vWorkout(){
   const d=parseD(sel), key=sel, tk=ymd(today()), day=dayDef(key), blk=blockFor(d), muscle=MONTH_MUSCLE[d.getMonth()], test=isTestWeek(d);
   const isToday=key===tk, future=key>tk, plan=planFor(key), daySource=F.daySources?.[key]||'dan';
   const mins=totalTrainingMinutes(key), wp=weekPoints(d), streak=mobStreak();
   const label=isToday?"Today":(future?"Coming up":"Looking back");
   let h=header("Momentum",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
-  h+=healthCard(d);
+  h+=weeklyWorkoutPanel(key)+healthCard(d);
+  if(weeklyPlanFor(key))h+=`<h2>Dan’s 52-week program</h2>`;
    h+=`<div class="row" style="margin:6px 0 12px"><span class="pill">${wp} legacy habit pts</span><span class="pill ${streak>=7?"ok":""}">${streak}-day mobility streak</span>${test?'<span class="pill hot">Test week</span>':""}</div>`;
   h+=`<div class="card"><label class="f">Workout source for ${fmt(key)}</label><select id="healthDaySource" data-date="${key}"><option value="dan" ${daySource==="dan"?"selected":""}>Dan's 52-week program</option><option value="custom" ${daySource==="custom"?"selected":""}>My custom workout</option><option value="rest" ${daySource==="rest"?"selected":""}>Rest / recovery</option></select></div>`;
    if(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind))){
@@ -961,8 +1024,9 @@ function vHomeDashboard(){
  const averages=dashboardPointAverages(points,now);
  const avgLabel=(value,unit)=>value===null?'—':value.toFixed(1)+' '+unit;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
- const plannedStrength=wk.filter(day=>dayDef(day).sessions.some(session=>session.kind==='lift'||session.kind==='boot'));
- const strengthDone=plannedStrength.filter(day=>day<=k&&(sessOf(day,'main').done||fusionReplacements(day).some(entry=>['strength','mixed'].includes(entry.healthCategory)))).length;
+ const plannedStrength=wk.filter(day=>!weeklyPlanFor(day)&&dayDef(day).sessions.some(session=>session.kind==='lift'||session.kind==='boot'));
+ const customStrength=weeklyPlanStrength(wk);
+ const strengthDone=customStrength.completed+plannedStrength.filter(day=>day<=k&&(sessOf(day,'main').done||fusionReplacements(day).some(entry=>['strength','mixed'].includes(entry.healthCategory)))).length;
  const friday=wk[5], fridayLogged=bodyRows().some(row=>row.d===friday&&Number(row.wt)>0);
  const checkIn=fridayLogged?'Logged':k===friday?'Due today':shiftDate(k,1)===friday?'Tomorrow':k<friday?'Upcoming':'Not logged';
  const dayLabel=day=>day>k?'Upcoming':(points.byDate.get(day)||0)+' pts earned';
@@ -985,11 +1049,10 @@ function vHomeDashboard(){
  <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
  </div>
  <div class="card"><h2>Weekly progress</h2>
- <div class="home-progress-row"><b>Planned strength workouts</b><span>${strengthDone} of ${plannedStrength.length}</span></div>
+ <div class="home-progress-row"><b>Planned strength workouts</b><span>${strengthDone} of ${plannedStrength.length+customStrength.planned}</span></div>
  <div class="home-progress-row"><b>Quality meals</b><span>${nutrition.pct==null?'—':nutrition.pct+'%'} · ${nutrition.q+nutrition.n} rated</span></div>
  <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
  </div></section>
- <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn" style="flex:1" data-go="nutrition">Log meal</button><button class="btn" style="flex:1" data-go="workout">Log workout</button><button class="btn ghost" style="flex:1" data-go="import">Import health screenshot</button></div>
  ${healthCard()}
  <div class="card"><h3>Activity</h3><p><b>${mins} min today</b> · ${workouts} logged session${workouts===1?'':'s'}</p>
  <p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p>
@@ -1015,7 +1078,7 @@ function vHomeDashboard(){
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.13</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.14</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1469,6 +1532,77 @@ function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
 function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
 <div class="card"><h3>Describe your meal</h3><p class="muted xs">AI PREVIEW ONLY: estimates are simulated examples, not live AI. Review and edit all numbers before saving.</p><form id="fMeal"><input type="hidden" name="editId" value=""><div class="fgrid"><label>Meal slot<select name="mealSlot"><option value="b">Breakfast</option><option value="l">Lunch</option><option value="d">Dinner</option><option value="s">Snack</option></select></label><label>Meal quality<select name="qualityChoice"><option value="quality">Quality: protein + fruit/vegetables</option><option value="off">Off plan</option><option value="unknown">Not sure / unclassified</option></select></label></div><textarea name="description" rows="2" required placeholder="Chicken burrito, rice, salad, two IPAs"></textarea><div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn small" type="button" data-fai="meal">✦ AI Preview: Estimate meal</button><span class="muted xs" id="fAiStatus">Or enter macros yourself below.</span></div><div class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber'],['calories','Calories']].map(([k,n])=>`<label>${n}<input name="${k}" type="number" min="0" step="any" value="0"></label>`).join('')}</div><button class="btn" type="submit">Save meal</button></form></div>
 <div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
+document.addEventListener('toggle',event=>{
+ if(event.target.id==='weekly-workout-editor'&&event.target.isConnected)weeklyEditorOpen=event.target.open;
+},true);
+document.addEventListener('click',event=>{
+ const button=event.target.closest('[data-weekly-day],[data-weekly-action],[data-weekly-log]');
+ if(!button)return;
+ const {weeklyDay,weeklyAction,weeklyLog}=button.dataset;
+ if(weeklyLog){
+  const session=weeklyPlanFor(sel)?.[parseD(sel).getDay()].find(item=>item.id===weeklyLog);
+  if(!session||!validLogDate(sel)||weeklyPlanLog(sel,weeklyLog))return;
+  render();
+  const form=document.getElementById('fActivity');
+  if(!form)return;
+  const swapping=button.hasAttribute('data-weekly-swap');
+  form.elements.weeklySessionId.value=session.id;
+  form.elements.description.value=swapping?'':session.name;
+  form.elements.minutes.value=session.minutes;
+  form.elements.components.value=swapping?'':session.notes;
+  form.elements.intensity.value=session.intensity;
+  form.elements.healthCategory.value=swapping?'other':session.category;
+  form.elements.healthCategory.dispatchEvent(new Event('change',{bubbles:true}));
+  form.querySelector('[type="submit"]').textContent='Log planned session';
+  form.scrollIntoView({block:'start'});
+  form.elements.description.focus({preventScroll:true});
+  return;
+ }
+ weeklyEditorOpen=true;
+ if(weeklyDay!==undefined){weeklyEditorDay=Number(weeklyDay);render();return}
+ const current=ymd(today()), index=weeklyEditorDay??parseD(sel).getDay();
+ if(weeklyAction==='copy'||weeklyAction==='blank'){
+  if(F.weeklyPlanDraft&&!confirm('Replace your draft week?'))return;
+  const week=weekKeys(today());
+  F.weeklyPlanDraft=DAYS.map((day,i)=>weeklyAction==='blank'?[]:day.sessions.map(session=>({
+   id:String(fusionId()),name:session.title,minutes:session.range.at(-1),
+   category:({lift:'strength',boot:'mixed',fin:'other',cardio:'aerobic',mobility:'mobility'})[session.kind],
+   intensity:day.intense&&session.id==='main'?'vigorous':session.kind==='mobility'?'light':'moderate',
+   notes:session.id==='main'?planFor(week[i]).text:'',
+   link:session.id==='main'&&/^https?:\/\//i.test(planFor(week[i]).link)?planFor(week[i]).link:''
+  })));
+ }else if(weeklyAction==='follow'||weeklyAction==='dan'){
+  if(weeklyAction==='follow'&&!F.weeklyPlanDraft)return;
+  const days=weeklyAction==='follow'?structuredClone(F.weeklyPlanDraft):null;
+  F.weeklyPlanHistory=[...(F.weeklyPlanHistory||[]).filter(item=>item.from<current),{from:current,days}];
+  toast(days?'Following My Plan':'Following Dan’s plan');
+ }else{
+  const day=F.weeklyPlanDraft?.[index];
+  if(!day)return;
+  const position=day.findIndex(session=>session.id===button.dataset.id);
+  if(weeklyAction==='add')day.push({id:String(fusionId()),name:'New workout',minutes:30,category:'aerobic',intensity:'moderate',notes:'',link:''});
+  if(weeklyAction==='rest'&&confirm('Clear this day’s draft sessions?'))day.length=0;
+  if(weeklyAction==='remove'&&position>=0)day.splice(position,1);
+  const next=position+(weeklyAction==='up'?-1:1);
+  if(['up','down'].includes(weeklyAction)&&position>=0&&next>=0&&next<day.length){
+   [day[position],day[next]]=[day[next],day[position]];
+  }
+ }
+ fsave();render();
+});
+document.addEventListener('submit',event=>{
+ const form=event.target,id=form.dataset.weeklyEdit;
+ if(!id)return;
+ event.preventDefault();
+ const day=F.weeklyPlanDraft?.[weeklyEditorDay??parseD(sel).getDay()];
+ const session=day?.find(item=>item.id===id);
+ if(!session)return;
+ const fields=Object.fromEntries(new FormData(form)),name=fields.name.trim(),link=fields.link.trim();
+ if(!name)return toast('Enter a session name');
+ if(link&&!/^https?:\/\//i.test(link))return toast('Use a link starting with https:// or http://');
+ Object.assign(session,{name,link,notes:fields.notes.trim(),minutes:Number(fields.minutes),category:fields.category,intensity:fields.intensity});
+ fsave();render();toast('Session saved to your draft');
+});
 function fWorkoutPanel(){
 const selected=sel,sub=F.substitutions[selected],future=selected>ymd(today());
 const templates=F.workoutTemplates.map((t,i)=>`<div class="workout-tile"><button type="button" class="workout-tile-main" data-ftemplate="${i}"><span class="workout-tile-icon">${/basketball/i.test(t.name)?'🏀':/pickleball/i.test(t.name)?'🏓':/trainer/i.test(t.name)?'🏋️':/strength|lift/i.test(t.name)?'💪':'🏃'}</span><span>${esc(t.name)}</span></button><button type="button" class="workout-tile-edit" data-ftemplate-edit="${i}" aria-label="Edit ${esc(t.name)}">✎</button></div>`).join(' ');
@@ -1477,7 +1611,7 @@ return `<h2>Log an activity</h2><div class="card"><h3>Log a workout</h3>
 ${F.rescheduled[selected]?`<p class="note">${esc(F.rescheduled[selected])}</p>`:''}
 ${sub?`<div class="note"><b>Substituted:</b> ${esc(sub.description)} · ${sub.minutes} min · ${esc(F.planChoices[selected]||'')} · +${customWorkoutPoints(fusionActivities(selected).find(x=>x.id===sub.id)||sub)} points <button class="btn small ghost" data-fclear="${selected}">Undo</button></div>`:''}
 <p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Activity Score based on activity type, duration, and intensity. Review category before logging.</p><div class="workout-tile-grid">${templates}</div>
-${!future?`<form id="fActivity"><input type="hidden" name="editId"><label>Workout or activity<textarea name="description" rows="2" required placeholder="Basketball, trainer session, lifting…"></textarea></label>
+${!future?`<form id="fActivity"><input type="hidden" name="editId"><input type="hidden" name="weeklySessionId"><label>Workout or activity<textarea name="description" rows="2" required placeholder="Basketball, trainer session, lifting…"></textarea></label>
 <div class="fgrid"><label>Minutes<input type="number" name="minutes" min="1" max="1440" value="50" required></label><label>Intensity<select name="intensity"><option value="moderate">Moderate</option><option value="light">Light</option><option value="vigorous">Vigorous</option></select></label></div>
 <label>Workout details<textarea name="components" rows="2" placeholder="Exercises, sets, reps, cardio, notes"></textarea></label>
 <label>Activity Score category<select name="healthCategory"><option value="aerobic">Aerobic activity</option><option value="strength">Strength training</option><option value="mixed">Mixed cardio + strength</option><option value="mobility">Mobility / recovery</option><option value="other">Other / unclassified</option></select></label><div id="customStrengthAssessment" hidden><p class="muted xs" style="margin-top:10px">For strength or mixed workouts: assess the resistance portion. Not used for aerobic-only activities.</p>${strengthAssessmentFields()}</div>
@@ -1702,6 +1836,12 @@ document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFee
    healthCategory:d.healthCategory||healthClassify(d.description),strengthAssessment:['strength','mixed'].includes(d.healthCategory)?strengthAssessmentFrom(d):null,
    planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),
    calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:old?.source??(form.dataset.ai==='yes'?'demo':'manual')};
+  if(!old&&d.weeklySessionId){
+   const session=weeklyPlanFor(x.date)?.[parseD(x.date).getDay()].find(item=>item.id===d.weeklySessionId);
+   if(!session||weeklyPlanLog(x.date,session.id)){toast('This planned session already has a log or is no longer scheduled');return}
+   x.weeklySessionId=session.id;
+   x.planAction='extra';
+  }
   if(old)Object.assign(old,x);else F.entries.push(x);
   if(x.planAction!=='extra'){
    for(const prev of fusionActivities(x.date))if(prev.id!==x.id&&prev.planAction!=='extra')prev.planAction='extra';
@@ -1909,7 +2049,7 @@ function workspaceData(){
    mealQuality:nutrition.pct,daysWithMeals:days.filter(d=>{const day=dayNutrition(d);return day.q+day.n>0}).length});
  }
  const sharedEntry=x=>Object.fromEntries(['id','type','date','description','mealSlot','qualityChoice','p','c','f','fiber','calories',
-  'minutes','intensity','components','healthCategory','strengthAssessment','planAction','caloriesBurned','calorieSource','source','assistant','editedBy']
+  'minutes','intensity','components','healthCategory','strengthAssessment','planAction','caloriesBurned','calorieSource','source','assistant','editedBy','weeklySessionId']
   .filter(key=>x[key]!==undefined).map(key=>[key,x[key]]));
  const byId=(rows,keep)=>Object.fromEntries(rows.filter(x=>x.id!=null).map(x=>[String(x.id),Object.fromEntries(keep.filter(k=>x[k]!==undefined).map(k=>[k,x[k]]))]));
  const progress={
@@ -2306,7 +2446,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.13';
+ const VERSION='9.10.14';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

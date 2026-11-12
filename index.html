@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.14</title>
+<title>Momentum — Beta v9.10.15</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -203,7 +203,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.14"></script>
+<script src="./beta-config.js?v=9.10.15"></script>
 <script>
 (function(){
 "use strict";
@@ -663,13 +663,22 @@ let weeklyEditorDay=null,weeklyEditorOpen=false;
 function weeklyPlanFor(date){
  return (F.weeklyPlanHistory||[]).findLast(version=>version.from<=date)?.days??null;
 }
+function workoutPlanForProgress(date){
+ const now=today(), currentWeek=weekKeys(now);
+ return weeklyPlanFor(currentWeek.includes(date)?ymd(now):date);
+}
 function weeklyPlanLog(date,id){
  return fusionActivities(date).find(entry=>entry.weeklySessionId===id);
+}
+function linkableWeeklyActivities(date,session){
+ const isStrength=['strength','mixed'].includes(session.category);
+ return fusionActivities(date).filter(entry=>!entry.weeklySessionId&&
+  (!isStrength||['strength','mixed'].includes(entry.healthCategory)));
 }
 function weeklyPlanStrength(week){
  let planned=0,completed=0;
  for(const date of week){
-  const plan=weeklyPlanFor(date);
+  const plan=workoutPlanForProgress(date);
   if(!plan)continue;
   for(const session of plan[parseD(date).getDay()]){
    if(!['strength','mixed'].includes(session.category))continue;
@@ -681,7 +690,7 @@ function weeklyPlanStrength(week){
  return {planned,completed};
 }
 function weeklyWorkoutPanel(date){
- const active=weeklyPlanFor(date), dayIndex=parseD(date).getDay();
+ const active=workoutPlanForProgress(date), dayIndex=parseD(date).getDay();
  const current=ymd(today()), editingDay=weeklyEditorDay??dayIndex;
  const draft=F.weeklyPlanDraft;
  const selected=draft?.[editingDay]||[];
@@ -693,9 +702,14 @@ function weeklyWorkoutPanel(date){
  ${active?`<h3>${esc(fmt(date))} · My Plan</h3><p class="muted sm">Strength this week · ${strength.completed} of ${strength.planned} complete</p>
  ${scheduled.length?scheduled.map(session=>{
   const logged=weeklyPlanLog(date,session.id);
+  const available=!logged&&date<=current?linkableWeeklyActivities(date,session):[];
   return `<div class="home-progress-row"><div><b>${esc(session.name)}</b><div class="muted xs">${session.minutes} min · ${WEEKLY_SESSION_TYPES[session.category]}</div>
   ${session.notes?`<div class="sm">${esc(session.notes)}</div>`:''}${session.link?`<a href="${esc(session.link)}" target="_blank" rel="noopener">Open workout link</a>`:''}</div>
-  <div class="row tight">${logged?`<span class="pill ok">Logged</span><button type="button" class="btn small ghost" data-fedit="${esc(logged.id)}">Edit log</button>`:date<=current?`<button type="button" class="btn small" data-weekly-log="${esc(session.id)}">Log</button><button type="button" class="btn small ghost" data-weekly-log="${esc(session.id)}" data-weekly-swap>Swap session</button>`:''}</div></div>`;
+  <div class="row tight">${logged?`<span class="pill ok">Logged</span><button type="button" class="btn small ghost" data-fedit="${esc(logged.id)}">Edit log</button>`:date<=current?`<button type="button" class="btn small" data-weekly-log="${esc(session.id)}">Log</button><button type="button" class="btn small ghost" data-weekly-log="${esc(session.id)}" data-weekly-swap>Swap session</button>`:''}</div></div>
+  ${available.length?`<form data-weekly-link="${esc(session.id)}" data-date="${esc(date)}">
+   <label>Link an existing workout<select name="entryId" required><option value="">Choose a workout</option>${available.map(entry=>`<option value="${esc(entry.id)}">${esc(entry.description)} · ${Number(entry.minutes)||0} min</option>`).join('')}</select></label>
+   <button type="submit" class="btn small ghost">Link workout</button>
+  </form>`:''}`;
  }).join(''):'<p class="muted sm">Rest day in your weekly plan.</p>'}`: '<p class="muted sm">Build a recurring week you can follow alongside the existing workout tools.</p>'}
  <details id="weekly-workout-editor" ${weeklyEditorOpen?'open':''}><summary>Edit my week</summary><div>
  <div class="row tight"><button type="button" class="btn small ghost" data-weekly-action="copy">Copy Dan’s plan</button><button type="button" class="btn small ghost" data-weekly-action="blank">Start blank</button></div>
@@ -727,7 +741,7 @@ function vWorkout(){
   const label=isToday?"Today":(future?"Coming up":"Looking back");
   let h=header("Momentum",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
   h+=weeklyWorkoutPanel(key)+healthCard(d);
-  if(weeklyPlanFor(key))h+=`<h2>Dan’s 52-week program</h2>`;
+  if(workoutPlanForProgress(key))h+=`<h2>Dan’s 52-week program</h2>`;
    h+=`<div class="row" style="margin:6px 0 12px"><span class="pill">${wp} legacy habit pts</span><span class="pill ${streak>=7?"ok":""}">${streak}-day mobility streak</span>${test?'<span class="pill hot">Test week</span>':""}</div>`;
   h+=`<div class="card"><label class="f">Workout source for ${fmt(key)}</label><select id="healthDaySource" data-date="${key}"><option value="dan" ${daySource==="dan"?"selected":""}>Dan's 52-week program</option><option value="custom" ${daySource==="custom"?"selected":""}>My custom workout</option><option value="rest" ${daySource==="rest"?"selected":""}>Rest / recovery</option></select></div>`;
    if(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind))){
@@ -1024,7 +1038,7 @@ function vHomeDashboard(){
  const averages=dashboardPointAverages(points,now);
  const avgLabel=(value,unit)=>value===null?'—':value.toFixed(1)+' '+unit;
  const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
- const plannedStrength=wk.filter(day=>!weeklyPlanFor(day)&&dayDef(day).sessions.some(session=>session.kind==='lift'||session.kind==='boot'));
+ const plannedStrength=wk.filter(day=>!workoutPlanForProgress(day)&&dayDef(day).sessions.some(session=>session.kind==='lift'||session.kind==='boot'));
  const customStrength=weeklyPlanStrength(wk);
  const strengthDone=customStrength.completed+plannedStrength.filter(day=>day<=k&&(sessOf(day,'main').done||fusionReplacements(day).some(entry=>['strength','mixed'].includes(entry.healthCategory)))).length;
  const friday=wk[5], fridayLogged=bodyRows().some(row=>row.d===friday&&Number(row.wt)>0);
@@ -1078,7 +1092,7 @@ function vHomeDashboard(){
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.14</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.15</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1540,7 +1554,7 @@ document.addEventListener('click',event=>{
  if(!button)return;
  const {weeklyDay,weeklyAction,weeklyLog}=button.dataset;
  if(weeklyLog){
-  const session=weeklyPlanFor(sel)?.[parseD(sel).getDay()].find(item=>item.id===weeklyLog);
+  const session=workoutPlanForProgress(sel)?.[parseD(sel).getDay()].find(item=>item.id===weeklyLog);
   if(!session||!validLogDate(sel)||weeklyPlanLog(sel,weeklyLog))return;
   render();
   const form=document.getElementById('fActivity');
@@ -1592,6 +1606,19 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('submit',event=>{
  const form=event.target,id=form.dataset.weeklyEdit;
+ const sessionId=form.dataset.weeklyLink;
+ if(sessionId){
+  event.preventDefault();
+  const date=form.dataset.date;
+  if(!validLogDate(date))return;
+  const session=workoutPlanForProgress(date)?.[parseD(date).getDay()].find(item=>item.id===sessionId);
+  if(!session||weeklyPlanLog(date,sessionId))return;
+  const entry=linkableWeeklyActivities(date,session).find(item=>String(item.id)===form.elements.entryId.value);
+  if(!entry)return toast('Choose an available workout');
+  entry.weeklySessionId=sessionId;
+  fsave();render();toast('Existing workout linked');
+  return;
+ }
  if(!id)return;
  event.preventDefault();
  const day=F.weeklyPlanDraft?.[weeklyEditorDay??parseD(sel).getDay()];
@@ -1837,7 +1864,7 @@ document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFee
    planAction:d.planAction,caloriesBurned:d.caloriesBurned===''?null:Math.max(0,+d.caloriesBurned||0),
    calorieSource:d.caloriesBurned===''?null:d.calorieSource,source:old?.source??(form.dataset.ai==='yes'?'demo':'manual')};
   if(!old&&d.weeklySessionId){
-   const session=weeklyPlanFor(x.date)?.[parseD(x.date).getDay()].find(item=>item.id===d.weeklySessionId);
+   const session=workoutPlanForProgress(x.date)?.[parseD(x.date).getDay()].find(item=>item.id===d.weeklySessionId);
    if(!session||weeklyPlanLog(x.date,session.id)){toast('This planned session already has a log or is no longer scheduled');return}
    x.weeklySessionId=session.id;
    x.planAction='extra';
@@ -2446,7 +2473,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.14';
+ const VERSION='9.10.15';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

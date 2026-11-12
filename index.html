@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.9</title>
+<title>Momentum — Beta v9.10.10</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.9"></script>
+<script src="./beta-config.js?v=9.10.10"></script>
 <script>
 (function(){
 "use strict";
@@ -914,7 +914,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.9</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.10</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2197,7 +2197,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.9';
+ const VERSION='9.10.10';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

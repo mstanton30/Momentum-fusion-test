@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.12</title>
+<title>Momentum — Beta v9.10.13</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -177,7 +177,23 @@ details>div{padding-top:8px}
 .momentum-reminder-fields label{display:block;min-width:0;font-size:.78rem;color:var(--muted)}
 .momentum-reminder-fields input,.momentum-reminder-fields select{box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;margin-top:3px}
 @media(max-width:430px){.momentum-reminder-fields{grid-template-columns:minmax(0,1fr);gap:8px}}
- .workout-tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.workout-tile{position:relative;min-width:0;border:1px solid var(--line,#aaa);border-radius:14px;overflow:hidden}.workout-tile-main{width:100%;min-height:102px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 34px 12px 12px;font:inherit;font-weight:650;overflow-wrap:anywhere;text-align:center}.workout-tile-icon{font-size:26px}.workout-tile-edit{position:absolute;right:4px;top:4px;min-width:34px;min-height:34px;border:0;background:transparent;color:inherit;font-size:20px} </style>
+ .workout-tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.workout-tile{position:relative;min-width:0;border:1px solid var(--line,#aaa);border-radius:14px;overflow:hidden}.workout-tile-main{width:100%;min-height:102px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 34px 12px 12px;font:inherit;font-weight:650;overflow-wrap:anywhere;text-align:center}.workout-tile-icon{font-size:26px}.workout-tile-edit{position:absolute;right:4px;top:4px;min-width:34px;min-height:34px;border:0;background:transparent;color:inherit;font-size:20px} 
+.home-week-days,.home-points-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.home-week-days button{background:transparent;color:var(--fg);border:1px solid transparent;border-radius:10px;padding:8px 0;min-height:44px;font:inherit;font-size:.76rem}
+.home-week-days button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.home-week-days button[aria-current="date"]:not([aria-pressed="true"]){border-color:var(--accent)}
+.home-points-summary .stat b{font-size:clamp(1.15rem,5vw,1.9rem);color:var(--accent)}
+.home-points-summary .stat span{text-transform:none;letter-spacing:normal}
+.home-points-chart{align-items:end;margin:12px 0}
+.home-points-bar{height:58px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid var(--line)}
+.home-points-bar i{display:block;width:66%;border-radius:5px 5px 0 0;background:var(--green)}
+.home-progress-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.home-progress-row:last-child{border-bottom:0}
+.home-progress-row span{text-align:right}
+.home-points-guide dl{margin:0}
+.home-points-guide dt{font-weight:700;margin-top:8px}
+.home-points-guide dd{margin:0}
+</style>
 </head>
 <body>
 <main id="main"></main>
@@ -187,7 +203,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.12"></script>
+<script src="./beta-config.js?v=9.10.13"></script>
 <script>
 (function(){
 "use strict";
@@ -399,14 +415,39 @@ function pointTotals(d=today()){
   for(const entry of F.entries)if(entry.type==='meal'||entry.type==='activity')dates.add(entry.date);
   for(const key of ['heat','cold','medit','roll','light'])for(const entry of S[key])dates.add(entry.d);
   const all={activity:0,nutrition:0,benefits:0,sleep:0,total:0};
+  const byDate=new Map();
   let weekly=0;
   for(const date of dates){
     if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>current)continue;
     const earned=pointBreakdown(date);
+    byDate.set(date,earned.total);
     for(const key of Object.keys(all))all[key]+=earned[key];
     if(week.has(date))weekly+=earned.total;
   }
-  return {all,weekly};
+  return {all,weekly,byDate};
+}
+function dashboardPointAverages(points,d){
+  const todayKey=ymd(d), sunday=ymd(startOfWeek(d));
+  const dayNumber=key=>Date.parse(key+'T00:00:00Z')/86400000;
+  let firstEarned=null;
+  for(const [key,value] of points.byDate){
+    if(value>0&&(firstEarned===null||key<firstEarned))firstEarned=key;
+  }
+  const daysThisWeek=dayNumber(todayKey)-dayNumber(sunday);
+  const daysAllTime=firstEarned===null?0:dayNumber(todayKey)-dayNumber(firstEarned);
+  const firstSunday=firstEarned===null?null:ymd(startOfWeek(parseD(firstEarned)));
+  const firstFullWeek=firstSunday===firstEarned?firstEarned:firstSunday&&shiftDate(firstSunday,7);
+  const fullWeeks=firstFullWeek===null?0:(dayNumber(sunday)-dayNumber(firstFullWeek))/7;
+  let completedWeekPoints=0, completedLifetimeWeekPoints=0;
+  for(const [key,value] of points.byDate){
+    if(key>=sunday&&key<todayKey)completedWeekPoints+=value;
+    if(firstFullWeek!==null&&key>=firstFullWeek&&key<sunday)completedLifetimeWeekPoints+=value;
+  }
+  return {
+    weeklyDaily:daysThisWeek>0?completedWeekPoints/daysThisWeek:null,
+    lifetimeDaily:daysAllTime>0?(points.all.total-(points.byDate.get(todayKey)||0))/daysAllTime:null,
+    lifetimeWeekly:fullWeeks>0?completedLifetimeWeekPoints/fullWeeks:null
+  };
 }
 function mealRating(m){
  if(!m)return '';
@@ -916,7 +957,16 @@ function saveHealthImport(d){
 }
 
 function vHomeDashboard(){
- const k=ymd(today()), wk=weekKeys(), nutrition=weekNutrition(), points=pointTotals();
+ const now=today(), k=ymd(now), wk=weekKeys(now), nutrition=weekNutrition(now), points=pointTotals(now);
+ const averages=dashboardPointAverages(points,now);
+ const avgLabel=(value,unit)=>value===null?'—':value.toFixed(1)+' '+unit;
+ const weekdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+ const plannedStrength=wk.filter(day=>dayDef(day).sessions.some(session=>session.kind==='lift'||session.kind==='boot'));
+ const strengthDone=plannedStrength.filter(day=>day<=k&&(sessOf(day,'main').done||fusionReplacements(day).some(entry=>['strength','mixed'].includes(entry.healthCategory)))).length;
+ const friday=wk[5], fridayLogged=bodyRows().some(row=>row.d===friday&&Number(row.wt)>0);
+ const checkIn=fridayLogged?'Logged':k===friday?'Due today':shiftDate(k,1)===friday?'Tomorrow':k<friday?'Upcoming':'Not logged';
+ const dayLabel=day=>day>k?'Upcoming':(points.byDate.get(day)||0)+' pts earned';
+ const maxPoints=Math.max(1,...wk.map(day=>points.byDate.get(day)||0));
  const activities=fusionActivities(k), scheduled=dayDef(k).sessions.filter(x=>sessOf(k,x.id).done);
  const workouts=scheduled.length+activities.length, mins=totalTrainingMinutes(k), pts=dayPoints(k);
  const active=wk.filter(x=>dayDef(x).sessions.some(y=>sessOf(x,y.id).done)||fusionActivities(x).length).length;
@@ -924,30 +974,61 @@ function vHomeDashboard(){
  const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
- const bars=wk.map((day,i)=>{const done=dayDef(day).sessions.some(x=>sessOf(day,x.id).done)||fusionActivities(day).length>0;return `<div style="flex:1;text-align:center"><div style="height:7px;border-radius:5px;background:${done?'var(--green)':'var(--line)'}"></div><span class="muted xs">${['S','M','T','W','T','F','S'][i]}</span></div>`}).join('');
- return header('Your day at a glance','Momentum · Home')+healthCard()+`
- <div class="card hero"><div class="eyebrow">Today · ${esc(fmt(k))}</div><h2 style="margin:8px 0">Your Momentum</h2>
- <div class="stat"><div><b>${pts}</b><span>points today</span></div><div><b>${mins}</b><span>training min</span></div><div><b>${workouts}</b><span>workouts</span></div></div>
- <p class="muted sm" style="margin:14px 0 8px">This week · ${active}/7 active days · ${logged} workouts · ${weekMin} minutes</p><div style="display:flex;gap:5px">${bars}</div></div>
+ return header('Momentum','Home')+`
+ <section aria-labelledby="home-week-title">
+ <h2 id="home-week-title">Your week</h2>
+ <div class="card">
+ <div class="home-week-days" role="group" aria-label="Day of the week">${wk.map((day,i)=>`<button type="button" data-home-day="${esc(weekdays[i]+' · '+dayLabel(day))}" aria-label="${esc(fmt(day))}" aria-pressed="${day===k}" ${day===k?'aria-current="date"':''}>${weekdays[i]}</button>`).join('')}</div>
+ <p id="home-day-points" class="muted xs" aria-live="polite" style="margin:6px 0 0">${weekdays[now.getDay()]} · ${dayLabel(k)}</p>
+ </div>
+ <div class="card home-points-summary"><h2>Momentum Points</h2>
+ <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
+ </div>
+ <div class="card"><h2>Weekly progress</h2>
+ <div class="home-progress-row"><b>Planned strength workouts</b><span>${strengthDone} of ${plannedStrength.length}</span></div>
+ <div class="home-progress-row"><b>Quality meals</b><span>${nutrition.pct==null?'—':nutrition.pct+'%'} · ${nutrition.q+nutrition.n} rated</span></div>
+ <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
+ </div></section>
  <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn" style="flex:1" data-go="nutrition">Log meal</button><button class="btn" style="flex:1" data-go="workout">Log workout</button><button class="btn ghost" style="flex:1" data-go="import">Import health screenshot</button></div>
- <div class="home-grid"><div class="card"><div class="eyebrow">Nutrition · this week</div><h3>${nutrition.pct==null?'–':nutrition.pct+'%'} <span class="muted xs">quality meals</span></h3>
- <p class="muted sm">${nutrition.q+nutrition.n} meals rated</p><button class="btn small ghost" data-go="nutrition">Nutrition details</button></div>
- <div class="card"><div class="eyebrow">Activity</div><h3>${mins} min</h3><p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p><p class="muted xs">${workouts} workout${workouts===1?'':'s'} today</p><button class="btn small ghost" data-go="workout">Workout details</button></div></div>
+ ${healthCard()}
+ <div class="card"><h3>Activity</h3><p><b>${mins} min today</b> · ${workouts} logged session${workouts===1?'':'s'}</p>
+ <p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p>
+ <p class="muted xs">This week · ${active}/7 active days · ${logged} logged sessions · ${weekMin} min</p><button class="btn small ghost" data-go="workout">Workout details</button></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Today's Momentum Coach</h3><span class="pill">Preview</span></div>
  <p><b>${esc(coach.category)}:</b> ${esc(coach.focus)}</p><p class="muted sm">${esc(coach.reason)}</p><details><summary>Why this suggestion?</summary><p class="muted sm">Rule-based guidance from your logged data. Missing entries are not treated as missed meals or workouts. No wearable readiness is connected.</p></details></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Progress</h3><button class="btn small ghost" data-go="progress">View trends</button></div>
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
- <div class="card"><h3>Momentum points</h3>
- <div class="stat two"><div><b>${points.weekly}</b><span>this week</span></div><div><b>${points.all.total.toLocaleString()}</b><span>all time</span></div></div>
- <details><summary>All-time points breakdown</summary><div class="stat two"><div><b>${points.all.activity}</b><span>Activity</span></div><div><b>${points.all.nutrition}</b><span>Nutrition</span></div><div><b>${points.all.benefits}</b><span>Benefits</span></div><div><b>${points.all.sleep}</b><span>Sleep</span></div></div></details></div>
+ <div class="card"><h2>Points breakdown</h2>
+ <div class="home-points-chart" role="list" aria-label="Points by day">${wk.map((day,i)=>{
+   const value=points.byDate.get(day)||0;
+   return `<div role="listitem" aria-label="${weekdays[i]} · ${dayLabel(day)}"><b class="xs">${day<=k?value:'—'}</b><div class="home-points-bar" aria-hidden="true"><i style="height:${day<=k?value/maxPoints*100:0}%"></i></div><span class="muted xs">${weekdays[i]}</span></div>`;
+ }).join('')}</div>
+ <div class="stat two"><div><b>${points.all.total.toLocaleString()}</b><span>Lifetime total</span></div><div><b>${avgLabel(averages.lifetimeWeekly,'pts/week')}</b><span>Lifetime weekly average</span></div></div>
+ <details><summary>All-time points by category</summary><div class="stat two"><div><b>${points.all.activity}</b><span>Activity</span></div><div><b>${points.all.nutrition}</b><span>Nutrition</span></div><div><b>${points.all.benefits}</b><span>Benefits</span></div><div><b>${points.all.sleep}</b><span>Sleep</span></div></div></details></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
+ <details class="card home-points-guide"><summary>How Momentum Points work</summary>
+ <dl class="sm">
+ <dt>Activity</dt><dd>Scheduled main workouts earn 5 points. Custom workouts of at least 15 minutes earn 2–5 based on duration and intensity. These share a 5-point daily cap. Scheduled mobility adds 3 and a scheduled finisher adds 2.</dd>
+ <dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day.</dd>
+ <dt>Benefits</dt><dd>Sauna, hot tub, and cold sessions earn 2 each. Meditation, foam rolling, and light sessions earn 1 each. Recovery drink, creatine, collagen, and omega-3 each earn 1. Logging the drink also checks creatine and collagen.</dd>
+ <dt>Sleep</dt><dd>Logging at least 7 hours earns 2 points.</dd>
+ </dl>
+ <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.12</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.13</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
 
 function vHome(){return vHomeDashboard()}
+document.addEventListener('click',event=>{
+ const selected=event.target.closest('[data-home-day]');
+ if(!selected)return;
+ for(const button of selected.parentElement.querySelectorAll('[data-home-day]')){
+   button.setAttribute('aria-pressed',String(button===selected));
+ }
+ document.getElementById('home-day-points').textContent=selected.dataset.homeDay;
+});
 const RENPHO_METRICS=[
  ['bmi','BMI','',150],['fat_free_mass_lb','Fat-free mass',' lb',1000],['subcutaneous_fat_pct','Subcutaneous fat','%',100],
  ['visceral_fat','Visceral fat rating','',100],['body_water_pct','Body water','%',100],['skeletal_muscle_pct','Skeletal muscle','%',100],
@@ -2225,7 +2306,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.12';
+ const VERSION='9.10.13';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.11</title>
+<title>Momentum — Beta v9.10.12</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.11"></script>
+<script src="./beta-config.js?v=9.10.12"></script>
 <script>
 (function(){
 "use strict";
@@ -375,19 +375,39 @@ function exercisePoints(k){
  const extraPoints=extras.length?Math.max(...extras.map(customWorkoutPoints)):0;
  return Math.min(5,Math.max(planned,replacementPoints,extraPoints));
 }
-function dayPoints(k){
-  let p=0; const day=dayDef(k);
-  for(const s of day.sessions) if(s.id!=='main'&&sessOf(k,s.id).done) p+=s.pts;
-  p+=exercisePoints(k);
-  const m=effectiveMeals(k); for(const [id] of MEALS) if(mealQuality(m[id])) p+=PTS.meal;
-  const sp=S.supps[k]||{}; for(const s of SUPPS) if(sp[s.k]) p+=s.pts;
-  p+=S.heat.filter(x=>x.d===k).length*PTS.heat + S.cold.filter(x=>x.d===k).length*PTS.cold;
-  p+=S.medit.filter(x=>x.d===k).length*PTS.medit + S.roll.filter(x=>x.d===k).length*PTS.roll + S.light.filter(x=>x.d===k).length*PTS.light;
-  const sl=sleepHours(k); if(sl!=null&&sl>=SLEEP_GOAL) p+=PTS.sleep;
-
-  return p;
+function pointBreakdown(k){
+  let activity=exercisePoints(k), nutrition=0, benefits=0;
+  for(const session of dayDef(k).sessions){
+    if(session.id!=='main'&&sessOf(k,session.id).done)activity+=session.pts;
+  }
+  const meals=effectiveMeals(k);
+  for(const [id] of MEALS)if(mealQuality(meals[id]))nutrition+=PTS.meal;
+  const supplements=S.supps[k]||{};
+  for(const item of SUPPS)if(supplements[item.k])benefits+=item.pts;
+  for(const key of ['heat','cold','medit','roll','light']){
+    benefits+=S[key].filter(entry=>entry.d===k).length*PTS[key];
+  }
+  const hours=sleepHours(k);
+  const sleep=hours!=null&&hours>=SLEEP_GOAL?PTS.sleep:0;
+  return {activity,nutrition,benefits,sleep,total:activity+nutrition+benefits+sleep};
 }
-function weekPoints(d=today()){ return weekKeys(d).reduce((a,k)=>a+dayPoints(k),0) }
+function dayPoints(k){return pointBreakdown(k).total}
+function weekPoints(d=today()){return weekKeys(d).reduce((total,k)=>total+dayPoints(k),0)}
+function pointTotals(d=today()){
+  const current=ymd(d), week=new Set(weekKeys(d));
+  const dates=new Set([S.sess,S.meals,S.supps,S.sleep].flatMap(log=>Object.keys(log)));
+  for(const entry of F.entries)if(entry.type==='meal'||entry.type==='activity')dates.add(entry.date);
+  for(const key of ['heat','cold','medit','roll','light'])for(const entry of S[key])dates.add(entry.d);
+  const all={activity:0,nutrition:0,benefits:0,sleep:0,total:0};
+  let weekly=0;
+  for(const date of dates){
+    if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>current)continue;
+    const earned=pointBreakdown(date);
+    for(const key of Object.keys(all))all[key]+=earned[key];
+    if(week.has(date))weekly+=earned.total;
+  }
+  return {all,weekly};
+}
 function mealRating(m){
  if(!m)return '';
  if(m.rating!==undefined)return m.rating;
@@ -896,31 +916,33 @@ function saveHealthImport(d){
 }
 
 function vHomeDashboard(){
- const k=ymd(today()), wk=weekKeys(), meals=F.entries.filter(x=>x.type==='meal'&&x.date===k);
- const totals=fTotalsFor(k), activities=fusionActivities(k), scheduled=dayDef(k).sessions.filter(x=>sessOf(k,x.id).done);
+ const k=ymd(today()), wk=weekKeys(), nutrition=weekNutrition(), points=pointTotals();
+ const activities=fusionActivities(k), scheduled=dayDef(k).sessions.filter(x=>sessOf(k,x.id).done);
  const workouts=scheduled.length+activities.length, mins=totalTrainingMinutes(k), pts=dayPoints(k);
  const active=wk.filter(x=>dayDef(x).sessions.some(y=>sessOf(x,y.id).done)||fusionActivities(x).length).length;
  const logged=wk.reduce((n,x)=>n+dayDef(x).sessions.filter(y=>sessOf(x,y.id).done).length+fusionActivities(x).length,0);
- const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0), proteinGoal=Number(F.targets.p)||0;
- const proteinPct=proteinGoal?Math.min(100,Math.round(totals.p/proteinGoal*100)):0;
+ const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
  const bars=wk.map((day,i)=>{const done=dayDef(day).sessions.some(x=>sessOf(day,x.id).done)||fusionActivities(day).length>0;return `<div style="flex:1;text-align:center"><div style="height:7px;border-radius:5px;background:${done?'var(--green)':'var(--line)'}"></div><span class="muted xs">${['S','M','T','W','T','F','S'][i]}</span></div>`}).join('');
  return header('Your day at a glance','Momentum · Home')+healthCard()+`
  <div class="card hero"><div class="eyebrow">Today · ${esc(fmt(k))}</div><h2 style="margin:8px 0">Your Momentum</h2>
- <div class="stat"><div><b>${pts}</b><span>legacy habit points today</span></div><div><b>${mins}</b><span>training min</span></div><div><b>${workouts}</b><span>workouts</span></div></div>
+ <div class="stat"><div><b>${pts}</b><span>points today</span></div><div><b>${mins}</b><span>training min</span></div><div><b>${workouts}</b><span>workouts</span></div></div>
  <p class="muted sm" style="margin:14px 0 8px">This week · ${active}/7 active days · ${logged} workouts · ${weekMin} minutes</p><div style="display:flex;gap:5px">${bars}</div></div>
  <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn" style="flex:1" data-go="nutrition">Log meal</button><button class="btn" style="flex:1" data-go="workout">Log workout</button><button class="btn ghost" style="flex:1" data-go="import">Import health screenshot</button></div>
- <div class="home-grid"><div class="card"><div class="eyebrow">Nutrition</div><h3>${Math.round(totals.p)}g <span class="muted xs">${proteinGoal?'/ '+proteinGoal+'g protein':'protein'}</span></h3>
- <div class="home-progress"><div style="width:${proteinPct}%"></div></div><p class="muted sm">${meals.length} meal${meals.length===1?'':'s'} logged · ${Math.round(totals.fiber)}g fiber</p><button class="btn small ghost" data-go="nutrition">Nutrition details</button></div>
+ <div class="home-grid"><div class="card"><div class="eyebrow">Nutrition · this week</div><h3>${nutrition.pct==null?'–':nutrition.pct+'%'} <span class="muted xs">quality meals</span></h3>
+ <p class="muted sm">${nutrition.q+nutrition.n} meals rated</p><button class="btn small ghost" data-go="nutrition">Nutrition details</button></div>
  <div class="card"><div class="eyebrow">Activity</div><h3>${mins} min</h3><p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p><p class="muted xs">${workouts} workout${workouts===1?'':'s'} today</p><button class="btn small ghost" data-go="workout">Workout details</button></div></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Today's Momentum Coach</h3><span class="pill">Preview</span></div>
  <p><b>${esc(coach.category)}:</b> ${esc(coach.focus)}</p><p class="muted sm">${esc(coach.reason)}</p><details><summary>Why this suggestion?</summary><p class="muted sm">Rule-based guidance from your logged data. Missing entries are not treated as missed meals or workouts. No wearable readiness is connected.</p></details></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Progress</h3><button class="btn small ghost" data-go="progress">View trends</button></div>
- <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
+ <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
+ <div class="card"><h3>Momentum points</h3>
+ <div class="stat two"><div><b>${points.weekly}</b><span>this week</span></div><div><b>${points.all.total.toLocaleString()}</b><span>all time</span></div></div>
+ <details><summary>All-time points breakdown</summary><div class="stat two"><div><b>${points.all.activity}</b><span>Activity</span></div><div><b>${points.all.nutrition}</b><span>Nutrition</span></div><div><b>${points.all.benefits}</b><span>Benefits</span></div><div><b>${points.all.sleep}</b><span>Sleep</span></div></div></details></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.11</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.12</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2203,7 +2225,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.11';
+ const VERSION='9.10.12';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.10</title>
+<title>Momentum — Beta v9.10.11</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -187,7 +187,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.10"></script>
+<script src="./beta-config.js?v=9.10.11"></script>
 <script>
 (function(){
 "use strict";
@@ -739,17 +739,23 @@ function vSupps(){
 }
 
 function vPerks(){
-  const hm=weekMinutes(S.heat), cm=weekMinutes(S.cold);
+  const sauna=S.heat.filter(x=>x.kind!=="soak"), soaks=S.heat.filter(x=>x.kind==="soak");
+  const hm=weekMinutes(sauna), sm=weekMinutes(soaks), cm=weekMinutes(S.cold);
   const recent=l=>[...l].sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
   const tbl=(l,k)=>recent(l).length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent(l).map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:"";
   return `
-  <p class="muted">The add-ons that optimize everything else. Sauna and cold are +${PTS.heat} a session; the rest are +1.</p>
+  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat} a session; the rest are +1.</p>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Sauna</h3><span class="pill ${hm>=60?"ok":""}">${hm} / 60 min this week</span></div>
   <div class="meter"><i style="width:${Math.min(100,hm/60*100)}%"></i></div>
   <p style="margin-top:10px"><b>Target:</b> 3 sessions of ~20 minutes a week, 170–200°F.</p>
   <p><b>Evidence:</b> Finnish cohort data: 4–7 sauna sessions a week associated with roughly 40–50% lower cardiovascular and all-cause mortality versus once a week, with 2–3 sessions in between. Also helps sleep, blood pressure and recovery.</p>
   <p class="muted sm">After training is ideal. Hydrate and salt afterwards.</p>
-  <div class="row tight" style="margin-top:8px"><button class="btn small" data-log="heat" data-min="20">+20 min</button><button class="btn small ghost" data-log="heat" data-min="15">+15</button><button class="btn small ghost" data-log="heat" data-min="30">+30</button></div>${tbl(S.heat,"heat")}</div>
+  <div class="row tight" style="margin-top:8px"><button class="btn small" data-log="heat" data-min="20">+20 min</button><button class="btn small ghost" data-log="heat" data-min="15">+15</button><button class="btn small ghost" data-log="heat" data-min="30">+30</button></div>${tbl(sauna,"heat")}</div>
+  <div class="card"><div class="row" style="justify-content:space-between"><h3>Hot tub / warm soak</h3><span class="pill">${sm} min this week</span></div>
+  <p>A warm bath or shower 1–2 hours before bed may help you fall asleep faster. A hot tub offers similar passive heat. Research on lasting cardiovascular benefits is mixed.</p>
+  <p class="muted sm">Keep hot tub water at 104°F or below. Avoid alcohol before or during use.</p>
+  <p class="muted xs"><a href="https://doi.org/10.1016/j.smrv.2019.04.008" target="_blank" rel="noopener">Sleep research</a> · <a href="https://doi.org/10.1016/j.ajpc.2025.101082" target="_blank" rel="noopener">Cardiovascular research</a> · <a href="https://www.cdc.gov/healthy-swimming/safety/what-you-can-do-to-stay-healthy-in-hot-tubs.html" target="_blank" rel="noopener">CDC guidance</a></p>
+  <div class="row tight"><button class="btn small" data-log="heat" data-kind="soak" data-min="10">+10 min</button><button class="btn small ghost" data-log="heat" data-kind="soak" data-min="15">+15 min</button></div>${tbl(soaks,"heat")}</div>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Cold</h3><span class="pill ${cm>=11?"ok":""}">${cm} / 11 min this week</span></div>
   <div class="meter"><i style="width:${Math.min(100,cm/11*100)}%;background:var(--blue)"></i></div>
   <p style="margin-top:10px"><b>Target:</b> 11 minutes total per week, split into 2–4 sessions, cold enough that you want to get out but can stay in safely.</p>
@@ -914,7 +920,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div><div><b>${weekPoints()}</b><span>legacy habit points</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.10</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.11</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1141,7 +1147,7 @@ function drawShareCard(){
   x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("Momentum · WEEK OF "+fmt(wk[0]).toUpperCase(),80,120);
   x.fillStyle="#f4f1ea"; x.font="900 120px Archivo, Helvetica, Arial"; x.fillText(String(wp),80,260); const nw=x.measureText(String(wp)).width; x.font="700 44px Archivo, Helvetica, Arial"; x.fillText("points",80+nw+24,260);
   x.font="600 40px Inter, Helvetica, Arial";
-  const rows=[["Sessions",sessions+" / 7"],["Mobility days",mobs+" / 7"],["Training minutes",wk.reduce((a,k)=>a+totalTrainingMinutes(k),0)+""],["Quality eating",wn.pct==null?"–":wn.pct+"%"],["Sauna · cold",weekMinutes(S.heat)+" · "+weekMinutes(S.cold)+" min"],["Sleep avg",weekSleep()!=null?weekSleep().toFixed(1)+" h":"–"]];
+  const rows=[["Sessions",sessions+" / 7"],["Mobility days",mobs+" / 7"],["Training minutes",wk.reduce((a,k)=>a+totalTrainingMinutes(k),0)+""],["Quality eating",wn.pct==null?"–":wn.pct+"%"],["Heat · cold",weekMinutes(S.heat)+" · "+weekMinutes(S.cold)+" min"],["Sleep avg",weekSleep()!=null?weekSleep().toFixed(1)+" h":"–"]];
   rows.forEach((r,i)=>{ const y=360+i*74; x.fillStyle="#9aa3ab"; x.fillText(r[0],80,y); x.fillStyle="#f4f1ea"; x.textAlign="right"; x.fillText(r[1],W-80,y); x.textAlign="left" });
   x.strokeStyle="#2a2f34"; x.lineWidth=3; x.beginPath(); x.moveTo(80,790); x.lineTo(W-80,790); x.stroke();
   x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("4-WEEK TREND",80,860);
@@ -2110,7 +2116,7 @@ document.addEventListener("click",e=>{
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
   if(ds.vitd){ S.profile.vitd=!S.profile.vitd; save(); render(); return }
   if(ds.planReset){ const f=$("#fPlan"); const mk=f.dataset.mk, day=f.dataset.day; if(S.plans[mk]) delete S.plans[mk][day]; save(); render(); toast("Back to the default plan"); return }
-  if(ds.log){ S[ds.log].push({id:Date.now(),d:ymd(today()),min:+ds.min}); save(); render(); toast("+"+ds.min+" min · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":"")); return }
+  if(ds.log){ S[ds.log].push({id:Date.now(),d:ymd(today()),min:+ds.min,...(ds.log==="heat"&&ds.kind==="soak"?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":"")); return }
   if(ds.del){ S[ds.del]=S[ds.del].filter(x=>String(x.id)!==ds.id); save(); render(); return }
   if(ds.say){ startSpeech(); return }
   if(t.id==="share"){ shareCard(); return }
@@ -2197,7 +2203,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.10';
+ const VERSION='9.10.11';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

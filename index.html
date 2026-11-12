@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.10.15</title>
+<title>Momentum — Beta v9.11.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -163,6 +163,11 @@ details>div{padding-top:8px}
 .gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .plan{white-space:pre-wrap;font-size:.9rem;background:var(--soft);border-radius:10px;padding:10px 12px;margin-top:8px}
 .hero .plan{background:color-mix(in srgb,var(--bg) 14%,transparent)}
+.scorestrip{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:var(--fg);color:var(--bg);border-radius:12px;padding:8px 6px;margin:8px 0 14px}
+.scorestrip>div{text-align:center;min-width:0}.scorestrip b{display:block;font-family:var(--display);font-size:1.1rem;font-weight:900;line-height:1.1}.scorestrip span{font-size:.58rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;white-space:nowrap}
+.altrow{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 2px 36px}.altrow button{background:transparent;border:1px dashed var(--line);color:var(--muted);border-radius:999px;padding:3px 9px;font-size:.72rem;font-family:var(--display);font-weight:700}.altrow button[aria-pressed="true"]{background:var(--green);color:#fff;border-style:solid;border-color:var(--green)}
+.hero .altrow button{border-color:color-mix(in srgb,var(--bg) 40%,transparent);color:inherit}
+.seg.three{grid-template-columns:repeat(3,1fr)}.seg button.m[aria-pressed="true"]{color:var(--amber)}
 .goalbar{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;font-size:.85rem}
 
 .fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
@@ -203,7 +208,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.10.15"></script>
+<script src="./beta-config.js?v=9.11.0"></script>
 <script>
 (function(){
 "use strict";
@@ -216,22 +221,31 @@ const PTS={main:5,mob:3,fin:2,meal:1,drink:1,supp:1,heat:2,cold:2,medit:1,roll:1
 const SLEEP_GOAL=7;
 const DAY_GOAL=45; // minutes per day
 /* Each day is a set of sessions. Each session is checked and timed on its own. */
-const DAYS=[
- {k:"sun",name:"Sunday",title:"Yoga / Pilates day",intense:false,blurb:"Reset day. This is the group's weak point, so it stays.",
-   sessions:[{id:"main",title:"Yoga or Pilates class",range:[20,30],kind:"mobility",mins:[20,30,45],pts:PTS.main},{id:"mob",title:"Stretch / mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"mon",name:"Monday",title:"Easy cardio + mobility",intense:false,blurb:"Conversational pace. Feeling good on Monday is the point.",
-   sessions:[{id:"main",title:"Recovery / easy cardio",range:[20,30],kind:"cardio",mins:[20,30,45],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"tue",name:"Tuesday",title:"Strength A + mobility",intense:false,blurb:"Five patterns: squat, hinge, push, pull, carry/core. Heavier than the cue, 8–10 reps near failure.",
-   sessions:[{id:"main",title:"Strength A",range:[30,30],kind:"lift",mins:[20,30,45],pts:PTS.main},{id:"fin",title:"Finisher",range:[5,5],kind:"fin",mins:[5],pts:PTS.fin},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"wed",name:"Wednesday",title:"Intense cardio + mobility",intense:true,blurb:"Block focus day. Whatever this block is building, this is where it happens.",
-   sessions:[{id:"main",title:"Intense cardio",range:[30,45],kind:"cardio",mins:[30,45,60],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"thu",name:"Thursday",title:"Strength B + mobility",intense:false,blurb:"Same five patterns, different variations from Tuesday.",
-   sessions:[{id:"main",title:"Strength B",range:[30,30],kind:"lift",mins:[20,30,45],pts:PTS.main},{id:"fin",title:"Finisher",range:[5,5],kind:"fin",mins:[5],pts:PTS.fin},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"fri",name:"Friday",title:"Easy cardio + mobility",intense:false,blurb:"Easy day. Weigh-in this morning: after the bathroom, before coffee, same scale.",
-   sessions:[{id:"main",title:"Recovery / easy cardio",range:[20,30],kind:"cardio",mins:[20,30,45],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
- {k:"sat",name:"Saturday",title:"Bootcamp + mobility",intense:true,blurb:"Half hard cardio, half heavy lifting. Group session.",
-   sessions:[{id:"main",title:"Bootcamp",range:[30,45],kind:"boot",mins:[30,45,60],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]}
-];
+/* Day TYPES are templates (a pairing of session categories), not routines. The app says what kind of
+   session to do and where to find one; it never prescribes exercises. Each phone lays the week out
+   from a default weekday map, a personal layout (profile), and one-off swaps. */
+const DAY_TYPES={
+ yoga:{type:"yoga",title:"Yoga / Pilates + stretch",intense:false,blurb:"Reset day. This is the part everyone skips and the part that keeps you lifting at 60.",
+   sessions:[{id:"main",title:"Yoga or Pilates class",range:[20,30],kind:"mobility",mins:[20,30,45],pts:PTS.main},{id:"mob",title:"Stretch",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
+ easy:{type:"easy",title:"Easy cardio + mobility",intense:false,blurb:"Conversational pace. Feeling good today is the point.",
+   sessions:[{id:"main",title:"Easy cardio",range:[20,30],kind:"cardio",mins:[20,30,45],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
+ strength:{type:"strength",title:"Strength + mobility",intense:false,blurb:"A full-body strength session: push, pull, legs, core. Heavier than you think, close to failure.",
+   sessions:[{id:"main",title:"Strength",range:[30,30],kind:"lift",mins:[20,30,45],pts:PTS.main},{id:"fin",title:"Finisher",range:[5,5],kind:"fin",mins:[5],pts:PTS.fin},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
+ intervals:{type:"intervals",title:"Intervals + stretch",intense:true,blurb:"The hard cardio day. Whatever this block is building, this is where it happens.",
+   sessions:[{id:"main",title:"Interval cardio",range:[30,45],kind:"cardio",mins:[30,45,60],pts:PTS.main},{id:"mob",title:"Stretch",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
+ boot:{type:"boot",title:"Bootcamp + mobility",intense:true,blurb:"Half hard cardio, half strength. Counts as a strength day.",
+   sessions:[{id:"main",title:"Bootcamp",range:[30,45],kind:"boot",mins:[30,45,60],pts:PTS.main},{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]},
+ rest:{type:"rest",title:"Rest day",intense:false,blurb:"Nothing scheduled. A walk and ten minutes of stretching still count.",
+   sessions:[{id:"mob",title:"Mobility",range:[10,15],kind:"mobility",mins:[10,15,20],pts:PTS.mob}]}
+};
+const DAY_TYPE_LABEL={yoga:"Yoga / Pilates",easy:"Easy cardio",strength:"Strength",intervals:"Intervals",boot:"Bootcamp",rest:"Rest"};
+/* Default week. Three strength days (Tue, Thu, Sat bootcamp), two cardio days, one yoga day, one easy day. */
+const WEEKDAYS=[["sun","Sunday"],["mon","Monday"],["tue","Tuesday"],["wed","Wednesday"],["thu","Thursday"],["fri","Friday"],["sat","Saturday"]];
+const DEFAULT_LAYOUT={sun:"yoga",mon:"easy",tue:"strength",wed:"intervals",thu:"strength",fri:"easy",sat:"boot"};
+const WEEK_QUOTA={strength:3,cardio:3,mobility:5}; // strength = lift or boot; cardio = easy or intervals; mobility = any mobility session
+const DAYS=WEEKDAYS.map(([k,name])=>({...DAY_TYPES[DEFAULT_LAYOUT[k]],k,name}));
+/* "Something else" chips per slot kind. Sport only ever fills a cardio slot, never strength. */
+const ALT={cardio:["Ride","Run","Row","Pickleball","Basketball","Hike","Swim","Walk"],lift:["Dumbbells at home","Strength class","Trainer","Bodyweight"],boot:["Strength class","Trainer","Circuit"],mobility:["Yoga","Pilates","Stretch","Foam roll"],fin:[]};
 const OPTIONS={
  lift:[["On your own","The five patterns with dumbbells or kettlebells. Log sets in Strong or Hevy (free)."],["Peloton Strength+","Build Strength A/B once, share the link, everyone logs their own weights."],["Peloton / Apple Fitness+","A 30-min full-body strength class; go heavier than the cue."],["YouTube","Jeff Nippard, Jeremy Ethier, Athlean-X 30-min dumbbell follow-alongs. Nike Training Club is free too."],["Trainer or gym","Hand them the five patterns and the rep scheme for the block."]],
  cardio:[["Bike","Peloton class, Zwift or TrainerRoad on any trainer, GCN free sessions on YouTube. Intense day: 4×4 min hard, easy between."],["Row","Peloton Row, Concept2 ErgData (free), Hydrow, Ergatta, Dark Horse Rowing on YouTube. Intense day: 4×4 or 6×500 m."],["Tread / run","Peloton Tread, Apple Fitness+, Nike Run Club (free), iFit on YouTube, or outside. Intense day: 4×4 min hard with jog recoveries."],["Easy days","Any of the above at a pace you can talk through. A brisk walk counts."]],
@@ -244,34 +258,41 @@ const BLOCKS=[
  {n:1,months:"Jan–Feb",cardio:"Base + baseline test",lift:"Heavy, 6–8 reps",
    guide:"Build the aerobic engine. Longer, steadier efforts you could hold a sentence through, with the FTP test in the first week to set zones.",
    m1:"Endurance rides, Power Zone Endurance (zones 2–3), 30–45 min. Test week: FTP test.",m2:"Low Impact or Endurance 45 min; one Power Zone class a week at zone 3.",
-   picks:["Endurance","Power Zone Endurance","Low Impact 45"],A:"Goblet squat 3×8\nRomanian deadlift 3×8\nFloor press 3×8\nBent-over row 3×8\nFarmer carry 3×40 m",B:"Reverse lunge 3×8/side\nKettlebell deadlift 3×8\nOverhead press 3×8\nChest-supported row 3×8\nSuitcase carry 3×40 m/side"},
+   picks:["Endurance","Power Zone Endurance","Low Impact 45"]},
  {n:2,months:"Mar–Apr",cardio:"Tempo / sweet spot",lift:"Unilateral, 10–12 reps",
    guide:"Sweet spot is 85–95% of FTP: hard enough to build threshold, easy enough to repeat. Blocks of 8–15 min at that effort with short rests.",
    m1:"Power Zone classes (zones 3–4), 2×10 min at sweet spot.",m2:"Power Zone 45, 3×10 min, or a Climb class ridden at steady effort.",
-   picks:["Power Zone","Climb","Tempo"],A:"Split squat 3×10/side\nSingle-leg RDL 3×10/side\nOne-arm press 3×10/side\nOne-arm row 3×10/side\nSuitcase carry 3×40 m/side",B:"Step-up 3×10/side\nHip thrust 3×12\nPush-up 3×12\nSingle-arm pulldown or row 3×10/side\nPlank 3×45 s"},
+   picks:["Power Zone","Climb","Tempo"]},
  {n:3,months:"May–Jun",cardio:"Threshold",lift:"Heavy, 6–8 reps",
    guide:"Threshold is FTP itself: the hardest pace you could hold for about an hour. Intervals of 5–10 min at zone 4 raise the number you test on.",
    m1:"Power Zone Max or Intervals & Arms, 3×6 min at zone 4.",m2:"2×12 min at threshold; test week: FTP test.",
-   picks:["Power Zone Max","Intervals","Climb"],A:"Front-rack squat 3×6\nHip thrust 3×8\nOverhead press 3×6\nChest-supported row 3×8\nFarmer carry 3×40 m",B:"Trap-bar or KB deadlift 3×6\nGoblet squat 3×8\nIncline press 3×8\nPull-up or pulldown 3×6\nSide plank 3×30 s/side"},
+   picks:["Power Zone Max","Intervals","Climb"]},
  {n:4,months:"Jul–Aug",cardio:"Climbing / low cadence strength",lift:"Supersets, 8–10 reps",
    guide:"Big resistance, slow cadence (55–70 rpm). Builds leg strength on the bike and protects the knees better than grinding at high cadence.",
    m1:"Climb classes, 30–45 min, cadence under 70 on the hills.",m2:"Climb or Hills & Intervals; seated climbs at zone 3–4.",
-   picks:["Climb","Hills","Low cadence"],A:"Step-up ss KB swing 3×10\nPush-up ss pull-up 3×10\nLoaded carry 3×40 m",B:"Goblet squat ss RDL 3×10\nDB press ss row 3×10\nDead bug 3×10/side"},
+   picks:["Climb","Hills","Low cadence"]},
  {n:5,months:"Sep–Oct",cardio:"VO2 intervals",lift:"Heavy, 5–6 reps",
    guide:"Short, very hard efforts at 110–120% of FTP, 2–4 min each, with equal rest. This is the block that moves VO2 max the most.",
    m1:"HIIT or Intervals classes: 4×3 min hard, 3 min easy.",m2:"4×4 min at zone 5–6; test week: FTP test.",
-   picks:["HIIT & Hills","Intervals","Tabata"],A:"Back or goblet squat 4×5\nBench or floor press 4×5\nRow 4×6\nFarmer carry 3×40 m",B:"Deadlift 4×5\nOverhead press 4×5\nPull-up or pulldown 4×6\nSuitcase carry 3×40 m/side"},
+   picks:["HIIT & Hills","Intervals","Tabata"]},
  {n:6,months:"Nov–Dec",cardio:"Power + year-end test",lift:"Tempo and control, 10–12 reps",
    guide:"Power means short all-out bursts, 10–30 seconds, with long full recoveries. Sprint and Tabata formats. Sharpens the top end before the year-end test.",
    m1:"Tabata or Sprint classes: 8×20 s on / 10 s off, 2–3 rounds.",m2:"Sprint intervals 6×30 s all out, 3 min easy; test week: year-end FTP.",
-   picks:["Tabata","Sprint","HIIT"],A:"Pause squat 3×10\nRDL (3 s down) 3×10\nSlow press 3×10\nSlow row 3×10\nHollow hold 3×30 s",B:"Tempo split squat 3×10/side\nHip thrust (pause) 3×12\nTempo push-up 3×10\nTempo row 3×10\nPlank 3×45 s"}
+   picks:["Tabata","Sprint","HIIT"]}
 ];
 const MONTH_MUSCLE=["Calves","Forearms & grip","Rear delts","Biceps","Triceps","Glutes","Side delts","Hamstrings","Chest","Upper back","Core / obliques","Calves"];
 const MEALS=[["b","Breakfast"],["l","Lunch"],["d","Dinner"],["s","Snack"]];
 const FOOD=[["p","Protein"],["f","Fruit"],["v","Veg"],["c","Carb"]];
 const PROTEIN_PER_SERVING=30, DRINK_PROTEIN=25, PRODUCE_GOAL=5, REWARD_PER_UNIT=3;
 const IN_DRINK=["creatine","collagen"]; // ticked automatically when the recovery drink is logged
-const REWARDS=[["snack","Junk snack"],["alc","Alcohol"],["dessert","Dessert"],["other","Other"]];
+const REWARDS=[["alc","Alcohol"],["dessert","Dessert"],["snack","Junk snack"],["other","Other"]];
+/* What each rating looks like, per meal. Quality = palm of protein + produce. In-between = real food, missing one. Off plan = neither. */
+const MEAL_EXAMPLES={
+ b:{q:"Smoothie · eggs, toast and berries · Greek yogurt with fruit",m:"Oatmeal with no protein · egg sandwich, no fruit",n:"Bagel and cream cheese · croissant and latte · nothing"},
+ l:{q:"Chicken, rice and salad · turkey sandwich with an apple",m:"Sandwich and chips · soup and bread",n:"Drive-through · pizza with no protein"},
+ d:{q:"Steak, potatoes and two vegetables · salmon and roasted veg",m:"Pasta with meat sauce, no salad · burger, no veg",n:"Takeout and dessert · cereal"},
+ s:{q:"Greek yogurt · jerky and fruit · the recovery drink",m:"Granola bar · crackers and cheese",n:"Chips · cookies"}
+};
 const DEFAULT_DRINK="1 scoop whey (Wegmans whey, or a plant protein with minimal ingredients)\n5 g creatine monohydrate (BulkSupplements)\n½ tsp sodium bicarbonate\n¼ tsp potassium chloride (BulkSupplements)\n200 mg magnesium glycinate (BulkSupplements)\n10–15 g collagen peptides (BiOptimal)\n12–16 oz water or milk";
 const DEFAULT_SMOOTHIE="1 scoop whey (Wegmans) or plant protein\n1 cup coconut water, almond milk or milk\n½ cup Bob's Red Mill oats\n1 cup frozen fruit (berries, mango, banana)\nHandful of frozen veg (spinach, kale or riced cauliflower)\n1 tbsp peanut or almond butter";
 const BUY={drink:"https://www.amazon.com/s?k=bulksupplements+potassium+chloride+magnesium+glycinate",creatine:"https://www.amazon.com/s?k=bulksupplements+creatine+monohydrate",collagen:"https://www.amazon.com/s?k=bioptimal+collagen+peptides",fish:"https://www.amazon.com/s?k=nordic+naturals+ultimate+omega",vitd:"https://www.amazon.com/s?k=vitamin+d3+2000+iu+usp+verified"};
@@ -288,7 +309,8 @@ const GOALS={fat:"Lose fat",muscle:"Build muscle",both:"Recomp: muscle up, fat d
 /* =========================== STATE =========================== */
 const DEFAULT={
  profile:null, links:{}, drink:DEFAULT_DRINK, plans:{}, strength:[],
- sess:{},            // per date: {main:{done,min},mob:{...},fin:{...}}
+ sess:{},            // per date: {main:{done,min,alt},mob:{...},fin:{...}}
+ swaps:{},           // per date: day type override for that date only
  meals:{},rewards:{},supps:{},
  weigh:[],tests:[],heat:[],cold:[],medit:[],roll:[],light:[],sleep:{},extras:[]
 };
@@ -333,7 +355,11 @@ function weekKeys(d=today()){ const s=startOfWeek(d); return [...Array(7)].map((
 function weekMinutes(list,d=today()){ const ks=weekKeys(d); return list.filter(x=>ks.includes(x.d)).reduce((a,x)=>a+(parseFloat(x.min)||0),0) }
 function parseTime(s){ if(!s) return null; const p=String(s).split(":").map(Number); if(p.length===1) return p[0]; if(p.some(isNaN)) return null; return p[0]*60+p[1] }
 function fmtTime(sec){ return Math.floor(sec/60)+":"+String(Math.round(sec%60)).padStart(2,"0") }
-function dayDef(k){ return DAYS[parseD(k).getDay()] }
+function dayTypeFor(k){ const wd=WEEKDAYS[parseD(k).getDay()][0]; const sw=(S.swaps||{})[k]; const lay=(S.profile&&S.profile.layout)||{}; return DAY_TYPES[sw||lay[wd]||DEFAULT_LAYOUT[wd]]?(sw||lay[wd]||DEFAULT_LAYOUT[wd]):DEFAULT_LAYOUT[wd] }
+function dayDef(k){ const [wd,name]=WEEKDAYS[parseD(k).getDay()]; return {...DAY_TYPES[dayTypeFor(k)],k:wd,name} }
+function isStrengthDay(k){ return ["strength","boot"].includes(dayTypeFor(k)) }
+/* Week quotas: how many strength / cardio / mobility sessions are done vs. planned this week */
+function weekQuota(d=today()){ const q={strength:0,cardio:0,mobility:0,strengthDone:0,cardioDone:0,mobilityDone:0}; for(const k of weekKeys(d)){ const t=dayTypeFor(k); const main=sessOf(k,"main"); if(["strength","boot"].includes(t)){ q.strength++; if(main.done) q.strengthDone++ } else if(["easy","intervals"].includes(t)){ q.cardio++; if(main.done) q.cardioDone++ } else if(t==="yoga"&&main.done) q.mobilityDone++; if(sessOf(k,"mob").done) q.mobilityDone++; q.mobility++ } return q }
 function sessOf(k,id){ return (S.sess[k]||{})[id]||{} }
 function fusionActivities(k){return (typeof F!=='undefined'&&F.entries?F.entries:[]).filter(x=>x.type==='activity'&&x.date===k)}
 function fusionMinutes(k){return fusionActivities(k).reduce((a,x)=>a+(Number(x.minutes)||0),0)}
@@ -342,13 +368,13 @@ function fusionReplacements(k){return fusionActivities(k).filter(x=>x.planAction
 function dayMinutes(k){ const defs=dayDef(k).sessions; return Object.entries(S.sess[k]||{}).reduce((a,[id,s])=>{ if(!s.done) return a; const def=defs.find(x=>x.id===id); return a+(s.min||(def?def.range[1]:0)) },0) }
 
 /* Plan for a given date: per-month editable text + link per day, defaulting to the block's lifts */
-function defaultPlan(k){ const d=parseD(k), day=dayDef(k), b=blockFor(d), m=MONTH_MUSCLE[d.getMonth()];
-  if(day.k==="tue") return `Strength A · ${b.lift}\n${b.A}\nFinisher: ${m}, 2 sets to failure`;
-  if(day.k==="thu") return `Strength B · ${b.lift}\n${b.B}\nFinisher: ${m}, 2 sets to failure`;
-  if(day.k==="wed"){ const m2=d.getMonth()%2===1; return `${b.cardio}\n${b.guide}\nThis month: ${m2?b.m2:b.m1}\nPeloton picks: ${b.picks.join(", ")}` }
-  if(day.k==="sat") return `Bootcamp. Half hard cardio, half of this block's lifts (${b.lift}).`;
-  if(day.k==="sun") return `A 20–30 min yoga or Pilates class, then 10–15 min of stretching.`;
-  return `20–30 min easy cardio you can talk through, then 10–15 min mobility.`; }
+function defaultPlan(k){ const d=parseD(k), t=dayTypeFor(k), b=blockFor(d), m=MONTH_MUSCLE[d.getMonth()], m2=d.getMonth()%2===1;
+  if(t==="strength") return `Any full-body strength session, 30 min: push, pull, legs, core.\nFinisher: ${m}, 2 hard sets.`;
+  if(t==="intervals") return `${b.cardio}\n${b.guide}\nThis month: ${m2?b.m2:b.m1}\nPeloton picks: ${b.picks.join(", ")}`;
+  if(t==="boot") return `Bootcamp: half hard cardio, half strength. Counts as a strength day.`;
+  if(t==="yoga") return `A 20–30 min yoga or Pilates class, then 10–15 min of stretching.`;
+  if(t==="rest") return `Nothing scheduled. Ten minutes of mobility keeps the streak.`;
+  return `20–30 min of cardio you can talk through, then 10–15 min mobility.`; }
 function planFor(k){ const mk=monthKey(parseD(k)), day=dayDef(k).k; const p=(S.plans[mk]||{})[day]||{}; return {text:p.text||defaultPlan(k),link:p.link||S.links[day]||"",custom:!!p.text} }
 
 /* Points for one day */
@@ -457,9 +483,11 @@ function mealRating(m){
  if(m.q)return 'q';
  if(m.n)return 'n';
  if(m.p>0&&(m.f>0||m.v>0))return 'q';
+ if(m.p>0||m.f>0||m.v>0)return 'm';
  return FOOD.some(([key])=>m[key]>0)?'n':'';
 }
 function mealQuality(m){return mealRating(m)==='q'}
+function mealCredit(m){ const r=mealRating(m); return r==='q'?1:r==='m'?0.5:0 }
 function setMealRating(date,slot,rating,guideProtein){
  const meals=S.meals[date]||(S.meals[date]={});
  meals[slot]={...meals[slot],rating,guideProtein};
@@ -467,28 +495,29 @@ function setMealRating(date,slot,rating,guideProtein){
 }
 function dayNutrition(k){
  const meals=effectiveMeals(k);
- let p=0,f=0,v=0,c=0,q=0,n=0;
+ let p=0,f=0,v=0,c=0,q=0,mid=0,n=0;
  for(const [id] of MEALS){
   const meal=meals[id],rating=mealRating(meal);
   if(!rating)continue;
   p+=meal.p||(meal.guideProtein?1:0); f+=meal.f||0; v+=meal.v||0; c+=meal.c||0;
-  if(rating==='q')q++; else n++;
+  if(rating==='q')q++; else if(rating==='m')mid++; else n++;
  }
- const rewards=S.rewards[k]||{};
- const r=Object.values(rewards).reduce((a,b)=>a+b,0), drink=!!(S.supps[k]||{}).drink;
- return {p,f,v,c,q,n,r,alcohol:rewards.alc||0,drink,protein:p*PROTEIN_PER_SERVING+(drink?DRINK_PROTEIN:0),produce:f+v};
+ const rewards=S.rewards[k]||{}, drink=!!(S.supps[k]||{}).drink;
+ /* Drinks stay OUT of the ratio (they get their own weekly number). Other reward servings: three = one off-plan unit. */
+ const r=Object.entries(rewards).filter(([id])=>id!=='alc').reduce((a,[,b])=>a+b,0);
+ const credit=q+mid*0.5+(drink?1:0), units=q+mid+n+(drink?1:0)+r/REWARD_PER_UNIT;
+ return {p,f,v,c,q,mid,n,r,credit,units,alcohol:rewards.alc||0,drink,protein:p*PROTEIN_PER_SERVING+(drink?DRINK_PROTEIN:0),produce:f+v};
 }
 function weekNutrition(d=today()){
- let q=0,n=0,r=0,alcohol=0;
+ let q=0,mid=0,n=0,r=0,alcohol=0,credit=0,units=0;
  const protein=[],produce=[];
  for(const k of weekKeys(d)){
   const day=dayNutrition(k);
-  q+=day.q; n+=day.n; r+=day.r; alcohol+=day.alcohol;
+  q+=day.q; mid+=day.mid; n+=day.n; r+=day.r; alcohol+=day.alcohol; credit+=day.credit; units+=day.units;
   if(day.p||day.drink)protein.push(day.protein);
   if(day.produce)produce.push(day.produce);
  }
- const units=q+n+r/REWARD_PER_UNIT;
- return {q,n,r,alcohol,units,pct:units?Math.round(q/units*100):null,protein:avg(protein),produce:avg(produce)};
+ return {q,mid,n,r,alcohol,units,pct:units?Math.round(credit/units*100):null,protein:avg(protein),produce:avg(produce)};
 }
 function ratioLabel(pct){
  if(pct==null)return ["Nothing logged yet","pill"];
@@ -610,7 +639,9 @@ let nutDay=ymd(today());    // selected day on the Nutrition tab
 function checkBtn(on,label,sub,pts,data){ return `<button class="check" role="checkbox" aria-checked="${on}" ${data}><span class="box">${on?CHECK:""}</span><span><b>${esc(label)}</b>${sub?`<br><span class="muted xs">${esc(sub)}</span>`:""}</span><span class="pts">${pts?"+"+pts:""}</span></button>` }
 function minRow(k,id,choices,cur){ return `<div class="minrow">${choices.map(m=>`<button aria-pressed="${cur===m}" data-min-set="${id}" data-k="${k}" data-v="${m}">${m} min</button>`).join("")}</div>` }
 function optionsBlock(kind,label){ return `<details><summary>${esc(label||"Where to do it")}</summary><div class="opts">${OPTIONS[kind].map(([t,d])=>`<b>${esc(t)}</b>${esc(d)}`).join("")}</div></details>` }
-function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach" style="width:auto;padding:0 10px;border-radius:999px;font-weight:800;font-size:.75rem">✦ Coach</button><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>` }
+function scoreStrip(){ if(!S.profile) return ""; const k=ymd(today()), wn=weekNutrition(), [lab,cls]=ratioLabel(wn.pct), q=weekQuota(), streak=mobStreak();
+  return `<div class="scorestrip" role="group" aria-label="This week"><div><b>${dayPoints(k)}</b><span>today</span></div><div><b>${weekPoints()}</b><span>week pts</span></div><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${q.strengthDone}/${q.strength}</b><span>strength</span></div><div><b>${streak}</b><span>mobility streak</span></div></div>` }
+function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach" style="width:auto;padding:0 10px;border-radius:999px;font-weight:800;font-size:.75rem">✦ Coach</button><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>${scoreStrip()}` }
 
 function vWhy(){
   return `<div class="onb"><div class="eyebrow">Momentum</div><h1>Why we do this</h1>
@@ -653,6 +684,7 @@ function vOnboard(){
     <div class="row"><div class="field"><label class="f">Body fat % (if known)</label><input name="bf" type="number" step="0.1" inputmode="decimal" value="${esc(p.bf||"")}"></div><div class="field"><label class="f">Muscle mass lb (if known)</label><input name="mm" type="number" step="0.1" inputmode="decimal" value="${esc(p.mm||"")}"></div></div>
     <div class="field"><label class="f">Cardio you'll test on</label><select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select></div>
     <div class="field"><label class="f">Goal for the year</label><select name="goal">${Object.entries(GOALS).map(([k,g])=>`<option value="${k}" ${p.goal===k?"selected":""}>${g}</option>`).join("")}</select></div>
+    <details style="margin-bottom:12px"><summary class="sm">My week (optional)</summary><div><p class="muted xs">The default is three strength days, two cardio, one yoga, one easy. If Thursday is always pickleball, make it a cardio day and move strength elsewhere. You can still change any single day later.</p>${WEEKDAYS.map(([k,n])=>`<div class="row" style="margin-bottom:6px;align-items:center"><span class="sm" style="flex:0 0 90px">${n}</span><select name="layout_${k}" style="flex:1;padding:6px 8px;font-size:.85rem">${Object.entries(DAY_TYPE_LABEL).map(([t,l])=>`<option value="${t}" ${((p.layout||{})[k]||DEFAULT_LAYOUT[k])===t?"selected":""}>${l}</option>`).join("")}</select></div>`).join("")}<p class="muted xs">Aim for three strength days. Sport counts as cardio, never as strength.</p></div></details>
     <div class="field"><label class="f">What does better health mean to you this year? (optional)</label><input name="why" value="${esc(p.why||"")}" placeholder="e.g. 15% body fat, 3 W/kg, no shoulder pain"></div>
     <div class="row tight"><button class="btn" type="submit">${S.profile?"Save":"Start the year →"}</button>${S.profile?`<button class="btn ghost" type="button" data-go="workout">Cancel</button>`:""}</div>
   </form></div>`;
@@ -736,43 +768,42 @@ function weeklyWorkoutPanel(date){
 }
 function vWorkout(){
   const d=parseD(sel), key=sel, tk=ymd(today()), day=dayDef(key), blk=blockFor(d), muscle=MONTH_MUSCLE[d.getMonth()], test=isTestWeek(d);
-  const isToday=key===tk, future=key>tk, plan=planFor(key), daySource=F.daySources?.[key]||'dan';
+  const isToday=key===tk, future=key>tk, plan=planFor(key), daySource='dan', q=weekQuota(d);
   const mins=totalTrainingMinutes(key), wp=weekPoints(d), streak=mobStreak();
   const label=isToday?"Today":(future?"Coming up":"Looking back");
   let h=header("Momentum",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
-  h+=weeklyWorkoutPanel(key)+healthCard(d);
-  if(workoutPlanForProgress(key))h+=`<h2>Dan’s 52-week program</h2>`;
-   h+=`<div class="row" style="margin:6px 0 12px"><span class="pill">${wp} legacy habit pts</span><span class="pill ${streak>=7?"ok":""}">${streak}-day mobility streak</span>${test?'<span class="pill hot">Test week</span>':""}</div>`;
-  h+=`<div class="card"><label class="f">Workout source for ${fmt(key)}</label><select id="healthDaySource" data-date="${key}"><option value="dan" ${daySource==="dan"?"selected":""}>Dan's 52-week program</option><option value="custom" ${daySource==="custom"?"selected":""}>My custom workout</option><option value="rest" ${daySource==="rest"?"selected":""}>Rest / recovery</option></select></div>`;
-   if(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind))){
-    const a=(F.strengthAssessments||{})[key]||{};
-    h+=`<div class="card"><h3>Assess planned strength workout</h3><p class="muted sm">After completing the scheduled lift or bootcamp, record its quality. Only completed sessions earn points.</p><form id="fStrengthAssess" data-date="${key}">${strengthAssessmentFields(a)}<button class="btn small" type="submit">Save assessment</button></form></div>`;
-   }
+  if(workoutPlanForProgress(key))h+=`<p class="muted xs">You're following My Plan (under More). The program day is shown below for reference.</p>`;
+   if(test) h+=`<div class="row" style="margin:0 0 10px"><span class="pill hot">Test week</span></div>`;
+  const assessHtml=(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind)))?(()=>{ const a=(F.strengthAssessments||{})[key]||{}; return `<details><summary>Rate today's strength session</summary><div><form id="fStrengthAssess" data-date="${key}">${strengthAssessmentFields(a)}<button class="btn small" type="submit">Save</button></form></div></details>` })():"";
    h+=`<div class="card hero">
     <div class="eyebrow">${label}${S.profile&&isToday?", "+esc(S.profile.name):""}</div>
-    <h2 style="margin:4px 0 2px;font-size:1.5rem">${daySource==="dan"?esc(day.title):daySource==="custom"?"Custom workout day":"Recovery day"}</h2>
+    <h2 style="margin:4px 0 2px;font-size:1.5rem">${esc(day.title)}</h2>
     <div class="muted" style="margin-bottom:8px">${day.intense?'<span class="pill hot">Intense</span> ':""}Goal ${DAY_GOAL}–50 min</div>
-    <p style="opacity:.85">${esc(day.blurb)}</p>
-    ${fusionReplacements(key).length?`<div class="note"><b>↔ Replacement completed:</b> ${fusionReplacements(key).map(x=>esc(x.description)+' · '+x.minutes+' min').join(', ')}. Original scheduled workout not marked complete.</div>`:''}${daySource==="dan"?`<div class="plan">${esc(plan.text)}</div>`:`<p class="muted sm">${daySource==="custom"?"Log a custom workout below. Dan’s program remains available if you switch back.":"Rest or recover today. Any activity you choose to log still counts."}</p>`}
-    ${daySource==="dan"&&plan.link?`<a class="btn" style="margin-top:10px" href="${esc(plan.link)}" target="_blank" rel="noopener">Start →</a>`:""}
-    ${future?`<p class="muted xs" style="margin-top:10px">You can log this once the day arrives.</p>`:daySource!=="dan"?"":day.sessions.map(s=>{ const st=sessOf(key,s.id); const sub=s.id==="fin"?muscle+" · 2 sets to failure":s.range[0]===s.range[1]?s.range[0]+" min":s.range[0]+"–"+s.range[1]+" min"; return checkBtn(!!st.done,s.title,sub,s.pts,`data-sess="${s.id}" data-k="${key}"`)+(st.done?minRow(key,s.id,s.mins,st.min):"") }).join("")}
+    <p style="opacity:.85">${esc(day.blurb)}</p>${!future&&isStrengthDay(key)===false&&q.strengthDone<q.strength&&["intervals","easy","yoga","rest"].includes(dayTypeFor(key))&&!sessOf(key,"main").done?`<p class="xs" style="opacity:.8;margin:-4px 0 8px">Strength this week: ${q.strengthDone}/${q.strength}. Sport and cardio never fill a strength day; swap one in below if you'd rather lift today.</p>`:""}
+    ${fusionReplacements(key).length?`<div class="note"><b>↔ Logged instead:</b> ${fusionReplacements(key).map(x=>esc(x.description)+' · '+x.minutes+' min').join(', ')}.</div>`:''}<div class="plan">${esc(plan.text)}</div>
+    ${plan.link?`<a class="btn" style="margin-top:10px" href="${esc(plan.link)}" target="_blank" rel="noopener">Start →</a>`:""}
+    ${future?`<p class="muted xs" style="margin-top:10px">You can log this once the day arrives.</p>`:day.sessions.map(s=>{ const st=sessOf(key,s.id); const sub=s.id==="fin"?muscle+" · 2 hard sets":(st.alt?st.alt+" · ":"")+(s.range[0]===s.range[1]?s.range[0]+" min":s.range[0]+"–"+s.range[1]+" min"); return checkBtn(!!st.done,s.title,sub,s.pts,`data-sess="${s.id}" data-k="${key}"`)+(st.done?minRow(key,s.id,s.mins,st.min):"")+(ALT[s.kind].length?`<div class="altrow" aria-label="Or something else">${ALT[s.kind].map(a=>`<button aria-pressed="${st.alt===a}" data-alt="${esc(a)}" data-sid="${s.id}" data-k="${key}">${esc(a)}</button>`).join("")}</div>`:"") }).join("")}
+    ${(S.swaps||{})[key]?`<p class="muted xs" style="margin-top:8px">Swapped for today only. <button class="del" data-unswap="${key}" style="text-decoration:underline">Undo</button></p>`:""}
     ${future?"":`<div class="goalbar"><span class="muted">Minutes today</span><span><b style="font-family:var(--display);font-size:1.2rem">${mins}</b> <span class="muted">/ ${DAY_GOAL}</span></span></div><div class="meter"><i style="width:${Math.min(100,mins/DAY_GOAL*100)}%;background:${mins>=DAY_GOAL?"var(--green)":"var(--accent)"}"></i></div>`}
   </div>`;
+  if(!future||key>=tk) h+=`<div class="row" style="margin:-4px 0 10px;align-items:center"><span class="muted xs" style="flex:0 0 auto">Make ${isToday?"today":fmt(key)}:</span><select data-swap="${key}" style="width:auto;flex:1;padding:6px 8px;font-size:.85rem">${Object.entries(DAY_TYPE_LABEL).map(([t,l])=>`<option value="${t}" ${dayTypeFor(key)===t?"selected":""}>${l}</option>`).join("")}</select></div>`;
   const kinds=[...new Set(day.sessions.map(s=>s.kind))];
-  h+=kinds.map(k=>optionsBlock(k,k==="mobility"?"Where to do mobility":k==="fin"?"The finisher":"Where to do "+(k==="lift"?"the lift":k==="boot"?"bootcamp":"cardio"))).join("");
-  h+=`<details><summary>Edit ${esc(monthName(d))}'s plan for ${esc(day.name)}s</summary><div><p class="muted xs">This replaces the generic plan for every ${esc(day.name)} in ${esc(monthName(d))}. Paste your Strength+ routine, or the class you want everyone on.</p>
+  h+=kinds.map(k=>optionsBlock(k,k==="mobility"?"Where to find mobility":k==="fin"?"The finisher":"Where to find "+(k==="lift"?"a strength session":k==="boot"?"a bootcamp":"cardio"))).join("");
+  h+=assessHtml;
+  h+=`<details><summary>Notes for ${esc(day.name)}s in ${esc(monthName(d))}</summary><div><p class="muted xs">Optional. Your own note and start link for every ${esc(day.name)} this month: the class you like, a Strength+ share link, a trainer's plan.</p>
   <form id="fPlan" data-mk="${monthKey(d)}" data-day="${day.k}"><div class="field"><label class="f">Plan</label><textarea name="text">${esc(plan.text)}</textarea></div><div class="field"><label class="f">Start link (Strength+ share link, Peloton class, YouTube…)</label><input type="url" name="link" value="${esc(plan.link)}" placeholder="https://…"></div><div class="row tight"><button class="btn small" type="submit">Save for ${esc(monthName(d))}</button>${plan.custom?`<button class="btn small ghost" type="button" data-plan-reset="1">Back to default</button>`:""}</div></form></div></details>`;
   if(day.k==="fri"&&!future){ const logged=bodyRows().some(x=>x.d===key&&Number(x.wt)>0);
     h+=`<div class="card"><div class="eyebrow">Friday weigh-in</div><p style="margin:6px 0">${logged?"Logged. Nice.":"Same scale, same conditions, then log it in Progress."}</p><button class="btn small" data-go="progress">Go to weigh-in</button></div>`; }
   const sow=startOfWeek(d), wk=weekKeys(d);
-  h+=`<div class="navrow"><button data-week="-1">‹ Prev</button><h2 style="margin:0">Week of ${fmt(wk[0])}</h2><button data-week="1">Next ›</button></div><div class="week">`+DAYS.map((x,i)=>{ const k=wk[i]; const p=dayPoints(k); const replacement=fusionReplacements(k).length>0; const done=!!sessOf(k,"main").done||replacement;
-    return `<div class="d ${k===tk?"today":""} ${k===sel?"sel":""} ${done?"done":""} ${x.intense?"intense":""}" data-sel="${k}"><b>${x.name.slice(0,3)}</b>${replacement?"↔ ":""}${esc(x.title.split(" ")[0])}<span class="dot"></span><span class="muted xs">${p?p+"p":(k>tk?"":"–")}</span></div>` }).join("")+`</div>
-  <p class="muted xs" style="margin-top:8px">Tap a day to see what's coming or what you did. Orange dot = intense day. Green = completed; ↔ = replacement activity.${sel!==tk?' <button class="del" data-sel="'+tk+'" style="text-decoration:underline">Back to today</button>':""}</p>`;
+  h+=`<div class="navrow"><button data-week="-1">‹ Prev</button><h2 style="margin:0">Week of ${fmt(wk[0])}</h2><button data-week="1">Next ›</button></div><div class="week">`+DAYS.map((x,i)=>{ const k=wk[i]; const dd=dayDef(k); const p=dayPoints(k); const replacement=fusionReplacements(k).length>0; const done=!!sessOf(k,"main").done||replacement;
+    return `<div class="d ${k===tk?"today":""} ${k===sel?"sel":""} ${done?"done":""} ${dd.intense?"intense":""}" data-sel="${k}"><b>${x.name.slice(0,3)}</b>${replacement?"↔ ":""}${esc(DAY_TYPE_LABEL[dd.type].split(" ")[0])}<span class="dot"></span><span class="muted xs">${p?p+"p":(k>tk?"":"–")}</span></div>` }).join("")+`</div>
+  <p class="muted xs" style="margin-top:8px">This week: strength ${q.strengthDone}/${q.strength} · cardio ${q.cardioDone}/${q.cardio} · mobility ${q.mobilityDone}/7. Tap a day to see it or change it. Orange dot = hard day.${sel!==tk?' <button class="del" data-sel="'+tk+'" style="text-decoration:underline">Back to today</button>':""}</p>`;
+  h+=`<details><summary>More: My Plan, activity score, custom workouts, Apple Health</summary><div>`+weeklyWorkoutPanel(key)+healthCard(d);
      h+=`<h2>Weekly activity target</h2><div class="card"><label class="f">Your activity goal</label><select id="healthGoalSelect">${Object.entries(HEALTH_GOALS).map(([k,g])=>`<option value="${k}" ${F.healthGoal===k?'selected':''}>${esc(g.name)} · ${g.minutes} aerobic min</option>`).join('')}</select><p class="muted xs" style="margin-top:8px">Aerobic 70 points + strength 30 points. Legacy habit points remain separate; a future Overall Health Score may combine activity, nutrition and recovery.</p></div>`+healthReading();
 const m2=d.getMonth()%2===1;
-  h+=`<h2>Block ${blk.n} · ${esc(blk.months)}</h2><div class="card"><span class="pill">Cardio: ${esc(blk.cardio)}</span><p style="margin:10px 0 6px">${esc(blk.guide)}</p><p class="sm"><b>${esc(monthName(d))}:</b> ${esc(m2?blk.m2:blk.m1)}</p><p class="sm"><b>Peloton picks:</b> ${esc(blk.picks.join(" · "))}</p><p style="margin:10px 0 6px"><b>Lifts:</b> ${esc(blk.lift)}. Same five patterns every block, new variations each time.</p><p class="muted sm">Focus muscles: ${esc(MONTH_MUSCLE[(blk.n-1)*2])}, then ${esc(MONTH_MUSCLE[(blk.n-1)*2+1])}.</p>${test?`<div class="note">Test week: do your ${esc(MODALITIES[(S.profile||{}).modality||"bike"].test)}, log it in Track, and your 4-week body comp average rolls into this block's outcomes.</div>`:""}</div>
-  <h2>The year</h2>`+BLOCKS.map(b=>`<details ${b.n===blk.n?"open":""}><summary>Block ${b.n} · ${esc(b.months)}</summary><div><p><b>Cardio:</b> ${esc(b.cardio)}. ${esc(b.guide)}</p><p class="sm"><b>Month 1:</b> ${esc(b.m1)}<br><b>Month 2:</b> ${esc(b.m2)}<br><b>Peloton picks:</b> ${esc(b.picks.join(" · "))}</p><p><b>Lifts:</b> ${esc(b.lift)}</p><div class="plan"><b>A</b>\n${esc(b.A)}</div><div class="plan"><b>B</b>\n${esc(b.B)}</div></div></details>`).join("");
-  return h+fWorkoutPanel();
+  h+=`<h2>Block ${blk.n} · ${esc(blk.months)}</h2><div class="card"><span class="pill">Cardio: ${esc(blk.cardio)}</span><p style="margin:10px 0 6px">${esc(blk.guide)}</p><p class="sm"><b>${esc(monthName(d))}:</b> ${esc(m2?blk.m2:blk.m1)}</p><p class="sm"><b>Peloton picks:</b> ${esc(blk.picks.join(" · "))}</p><p style="margin:10px 0 6px"><b>Strength days:</b> ${esc(blk.lift)}. Any full-body session; go heavier as the block goes on.</p><p class="muted sm">Focus muscles: ${esc(MONTH_MUSCLE[(blk.n-1)*2])}, then ${esc(MONTH_MUSCLE[(blk.n-1)*2+1])}.</p>${test?`<div class="note">Test week: do your ${esc(MODALITIES[(S.profile||{}).modality||"bike"].test)}, log it in Track, and your 4-week body comp average rolls into this block's outcomes.</div>`:""}</div>
+  <h2>The year</h2>`+BLOCKS.map(b=>`<details ${b.n===blk.n?"open":""}><summary>Block ${b.n} · ${esc(b.months)}</summary><div><p><b>Cardio:</b> ${esc(b.cardio)}. ${esc(b.guide)}</p><p class="sm"><b>Month 1:</b> ${esc(b.m1)}<br><b>Month 2:</b> ${esc(b.m2)}<br><b>Peloton picks:</b> ${esc(b.picks.join(" · "))}</p><p><b>Strength days:</b> ${esc(b.lift)}</p></div></details>`).join("");
+  return h+fWorkoutPanel()+`</div></details>`;
 }
 
 function vNutrition(){
@@ -780,20 +811,23 @@ function vNutrition(){
   const counter=(mealId,x)=>`<div class="counter">${FOOD.map(([f,name])=>`<div class="${(x[f]||0)>0?"on":""}"><div class="lab">${name}</div><div class="ctl"><button data-food="${f}" data-meal="${mealId}" data-dv="-1" aria-label="less">−</button><b>${x[f]||0}</b><button data-food="${f}" data-meal="${mealId}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>`;
   return header("Nutrition","Tab 3")+`
   <div class="card hero"><div class="row" style="justify-content:space-between"><div class="eyebrow">Week of ${fmt(weekKeys(d)[0])}</div><span class="${cls}">${lab}</span></div>
-  <div class="stat"><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${wn.q+wn.n}</b><span>meals rated</span></div><div><b>${wn.alcohol}</b><span>drinks logged</span></div></div>
-  <p class="muted xs">${wn.q} quality · ${wn.n} off plan · ${wn.r} rewards. Three reward servings count as one off-plan meal.${wn.protein==null?'':' Approx. '+Math.round(wn.protein)+' g protein/day with servings or a recovery drink logged.'}</p></div>
+  <div class="stat"><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality · target ${S.profile?.nutritionTarget||70}</span></div><div><b>${wn.q+wn.mid+wn.n}</b><span>meals rated</span></div><div><b>${wn.alcohol}</b><span>drinks · line at 7</span></div></div>
+  <p class="muted xs">${wn.q} quality · ${wn.mid} in-between (half credit) · ${wn.n} off plan. Snacks and the recovery drink count too, so one great meal plus a skipped breakfast doesn't read as a bad day. Drinks sit outside the ratio.${wn.protein==null?'':' About '+Math.round(wn.protein)+' g protein a day.'}</p></div>
   <div class="navrow"><button data-nut="-1" aria-label="Previous day">‹</button><h2 style="margin:0">${key===tk?"Today":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2><button data-nut="1" aria-label="Next day" ${key>=tk?"disabled":""}>›</button></div>
   <div class="card">
-  <h2>What makes a quality meal?</h2>
-  <p class="muted sm">Aim for a palm of protein and make fruit or vegetables a meaningful part of the meal. Half a plate is a guide. Oats, rice, and other grains count as carbs.</p>
+  <h2>Rate each meal</h2>
+  <p class="muted sm"><b>Quality</b> = a palm of protein and fruit or veg on the plate. <b>In-between</b> = real food, but one of those is missing. <b>Off plan</b> = neither, or nothing. Examples under each one.</p>
   <button class="btn small" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button>
   ${MEALS.map(([id,name])=>{
    const x=m[id]||{},state=mealRating(x);
-   return `<div class="meal"><b>${name}</b><span class="${state==="q"?"pill ok":state==="n"?"pill warn":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="n"?"Off plan":"Not rated"}</span></div>
-   <div class="seg"><button class="q" aria-pressed="${state==="q"}" data-mealset="${id}" data-v="q">Quality</button><button class="n" aria-pressed="${state==="n"}" data-mealset="${id}" data-v="n">Off plan</button>${state?`<button data-mealset="${id}" data-v="">Clear rating</button>`:''}</div>
+   const ex=MEAL_EXAMPLES[id];
+   return `<div class="meal"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Skipped"}</span></div>
+   <div class="seg three"><button class="q" aria-pressed="${state==="q"}" data-mealset="${id}" data-v="q">Quality</button><button class="m" aria-pressed="${state==="m"}" data-mealset="${id}" data-v="m">In-between</button><button class="n" aria-pressed="${state==="n"}" data-mealset="${id}" data-v="n">Off plan</button></div>
+   <p class="muted xs" style="margin:4px 0 2px"><span style="color:var(--green)">●</span> ${esc(ex.q)} &nbsp;<span style="color:var(--amber)">●</span> ${esc(ex.m)} &nbsp;<span style="color:var(--red)">●</span> ${esc(ex.n)}</p>
+   ${state?`<button class="del xs" data-mealset="${id}" data-v="" style="text-decoration:underline">Mark skipped</button>`:''}
    <details class="xs"><summary>Help me rate ${name.toLowerCase()}</summary><div><form class="fgrid" data-meal-guide="${id}">
    <label>A palm of protein?<select name="protein" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-   <label>Fruit or vegetables were a meaningful part?<select name="produce" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+   <label>Fruit or vegetables on the plate?<select name="produce" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label>
    <button type="submit" class="btn small">Save rating</button></form></div></details>
    ${S.profile?.detailedNutrition?`<details class="xs"><summary>Servings · P${x.p||0} F${x.f||0} V${x.v||0} C${x.c||0}</summary><div>${counter(id,x)}</div></details>`:''}`;
   }).join("")}
@@ -1063,7 +1097,7 @@ function vHomeDashboard(){
  <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
  </div>
  <div class="card"><h2>Weekly progress</h2>
- <div class="home-progress-row"><b>Planned strength workouts</b><span>${strengthDone} of ${plannedStrength.length+customStrength.planned}</span></div>
+ <div class="home-progress-row"><b>Strength days</b><span>${weekQuota(now).strengthDone} of ${weekQuota(now).strength}</span></div>
  <div class="home-progress-row"><b>Quality meals</b><span>${nutrition.pct==null?'—':nutrition.pct+'%'} · ${nutrition.q+nutrition.n} rated</span></div>
  <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
  </div></section>
@@ -1086,13 +1120,13 @@ function vHomeDashboard(){
  <details class="card home-points-guide"><summary>How Momentum Points work</summary>
  <dl class="sm">
  <dt>Activity</dt><dd>Scheduled main workouts earn 5 points. Custom workouts of at least 15 minutes earn 2–5 based on duration and intensity. These share a 5-point daily cap. Scheduled mobility adds 3 and a scheduled finisher adds 2.</dd>
- <dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day.</dd>
+ <dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day. In-between earns half credit toward the weekly quality ratio, not points.</dd>
  <dt>Benefits</dt><dd>Sauna, hot tub, and cold sessions earn 2 each. Meditation, foam rolling, and light sessions earn 1 each. Recovery drink, creatine, collagen, and omega-3 each earn 1. Logging the drink also checks creatine and collagen.</dd>
  <dt>Sleep</dt><dd>Logging at least 7 hours earns 2 points.</dd>
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.10.15</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1310,7 +1344,7 @@ function applyParsed(k,res){ S.meals[k]=S.meals[k]||{}; S.rewards[k]=S.rewards[k
   for(const [id] of MEALS){
    if(id!==res.smoothie&&!Object.keys(res.meals[id]).length)continue;
    const meal=S.meals[k][id];
-   meal.suggestion=meal.p>0&&(meal.f>0||meal.v>0)?'q':'n';
+   meal.suggestion=meal.p>0&&(meal.f>0||meal.v>0)?'q':(meal.p>0||meal.f>0||meal.v>0)?'m':'n';
   }
   for(const [id,name] of REWARDS){ if(res.rewards[id]){ S.rewards[k][id]=(S.rewards[k][id]||0)+res.rewards[id]; touched.push(name+" ×"+res.rewards[id]) } }
   return touched; }
@@ -1937,7 +1971,8 @@ document.addEventListener('change',e=>{
  if(e.target.id==='detailedNutrition'){S.profile.detailedNutrition=e.target.checked;save();render()}
  if(e.target.id==='nutritionTarget'){S.profile.nutritionTarget=Number(e.target.value);save();render()}
 });
-document.addEventListener('change',e=>{if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.swap){ const k=e.target.dataset.swap; S.swaps=S.swaps||{}; const wd=WEEKDAYS[parseD(k).getDay()][0]; const base=((S.profile&&S.profile.layout)||{})[wd]||DEFAULT_LAYOUT[wd]; if(e.target.value===base) delete S.swaps[k]; else S.swaps[k]=e.target.value; save(); render(); toast("Day changed"); return }
+if(e.target.id==='healthGoalSelect'){F.healthGoal=e.target.value;fsave();render();toast('Weekly activity goal updated')}if(e.target.id==='healthDaySource'){F.daySources[e.target.dataset.date]=e.target.value;fsave();render();toast('Workout source saved; existing logs were not deleted')}});
 const connectionConfig=window.MOMENTUM_BETA_CONFIG||{};
 const aiConnectionsEnabled=connectionConfig.aiEnabled===true;
 const betaAccountUrl=new URL('./',location.href).href;
@@ -2372,10 +2407,12 @@ function render(){
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tab],[data-go],[data-sess],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export"); if(!t) return;
+  const t=e.target.closest("[data-tab],[data-go],[data-sess],[data-alt],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export"); if(!t) return;
   const ds=t.dataset;
   if(ds.tab||ds.go){ lastTab=null; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
+  if(ds.alt!==undefined){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sid]||{}; if(s.alt===ds.alt){ delete s.alt; s.done=false } else { s.alt=ds.alt; s.done=true; if(!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sid); s.min=def.range[1] } } S.sess[k][ds.sid]=s; save(); render(); if(s.done) toast(ds.alt+" counts · +"+dayDef(k).sessions.find(x=>x.id===ds.sid).pts); return }
+  if(ds.unswap!==undefined){ delete (S.swaps||{})[ds.unswap]; save(); render(); return }
   if(ds.minSet){ const k=ds.k; S.sess[k]=S.sess[k]||{}; S.sess[k][ds.minSet]=S.sess[k][ds.minSet]||{done:true}; S.sess[k][ds.minSet].min=+ds.v; save(); render(); return }
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
   if(ds.week){ sel=shiftDate(sel,7*+ds.week); lastTab=null; render(); return }
@@ -2428,7 +2465,7 @@ document.addEventListener('change',async e=>{
 document.addEventListener("submit",async e=>{
   if(e.defaultPrevented)return;
   e.preventDefault(); const f=e.target, fd=new FormData(f), d=Object.fromEntries(fd);
-  if(f.id==="fOnboard"){ const prev=S.profile||{}; S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,goal:d.goal,why:d.why.trim(),start:prev.start||ymd(today())};
+  if(f.id==="fOnboard"){ const prev=S.profile||{}; S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,goal:d.goal,why:d.why.trim(),layout:Object.fromEntries(WEEKDAYS.map(([k])=>[k,d["layout_"+k]||DEFAULT_LAYOUT[k]])),start:prev.start||ymd(today())};
     if(!S.weigh.length) S.weigh.push({id:Date.now(),d:S.profile.start,wt:d.weightLb,bf:d.bf,mm:d.mm});
     tab="home"; location.hash=tab; save(); render(); toast(prev.name?"Profile saved":"Baseline set. Let's go."); return }
   if(f.id==="fWeigh"){ let photo=null; const file=fd.get("photo"); if(file&&file.size) photo=await shrinkImage(file); if(!validLogDate(d.d))return toast("Choose a valid measurement date"); S.weigh=S.weigh.filter(x=>x.d!==d.d||x.source!=="manual"); S.weigh.push({id:Date.now(),d:d.d,wt:d.wt,bf:d.bf,mm:d.mm,photo,source:"manual"}); toast("Weigh-in logged") }
@@ -2436,7 +2473,7 @@ document.addEventListener("submit",async e=>{
   if(f.id==="fPlan"){ const mk=f.dataset.mk, day=f.dataset.day; S.plans[mk]=S.plans[mk]||{}; S.plans[mk][day]={text:d.text.trim(),link:d.link.trim()}; toast("Plan saved for the month") }
   if(f.dataset.mealGuide){
    if(!d.protein||!d.produce)return;
-   setMealRating(nutDay,f.dataset.mealGuide,d.protein==='yes'&&d.produce==='yes'?'q':'n',d.protein==='yes');
+   setMealRating(nutDay,f.dataset.mealGuide,d.protein==='yes'&&d.produce==='yes'?'q':(d.protein==='yes'||d.produce==='yes')?'m':'n',d.protein==='yes');
    render();return;
   }
   if(f.id==="fSay"){ const txt=d.text.trim(); if(!txt) return; const res=parseMeal(txt); const touched=applyParsed(nutDay,res); save(); render(); const out=$("#sayOut"); if(out) out.textContent=touched.length?"Added: "+touched.join(" · ")+". Review the meal ratings above.":"Didn't recognize any food words in that. Try naming the foods: eggs, chicken, salad, rice, a beer."; return }
@@ -2473,7 +2510,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.10.15';
+ const VERSION='9.11.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

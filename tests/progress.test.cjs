@@ -7,7 +7,7 @@ const {parseHTML}=require('linkedom');
 test('Beta copies local records, preserves original keys, and renders five tabs and progress ranges',()=>{
  const html=fs.readFileSync('index.html','utf8');
  const main=html.match(/<script>\s*(\(function\(\)\{\s*"use strict";[\s\S]*?)<\/script>/)[1]
-  .replace('\nrender();\nif(cloudClient&&authCode)void finishCloudAuthCallback(authCode);\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows},reviewScan(data){healthExtracted=data;renderHealthExtract()}};render();\n})();');
+  .replace('\nif(cloudClient&&authCode)void finishCloudAuthCallback(authCode);\n})();','\nwindow.testApp={get S(){return S},get F(){return F},render,ymd,shiftDate,healthWeekly,dailyCards,lessonFor,LESSONS,workspaceData,mergeWorkspace,connectedHtml,setCloudSession(session){cloudSession=session},setHealth(rows){healthReadings=rows},reviewScan(data){healthExtracted=data;renderHealthExtract()}};render();\n})();');
  const today=new Date();
  const date=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
  const prior=new Date(today);prior.setDate(prior.getDate()-61);
@@ -27,6 +27,23 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
   Intl,URL,URLSearchParams,Date,setTimeout:()=>0,setInterval:()=>0,clearTimeout:()=>{},console,history:{replaceState(){}},confirm:()=>true};
  vm.runInNewContext(main,context);
  const app=window.testApp;
+ assert.equal(app.LESSONS.length,365);
+ assert.equal(app.lessonFor(app.S.profile.start).n,1);
+ assert.equal(app.lessonFor(app.shiftDate(app.S.profile.start,364)).n,365);
+ assert.equal(app.lessonFor(app.shiftDate(app.S.profile.start,365)).n,1);
+ const fixtureDay=date(today), weekday=today.getDay();
+ const days=Array.from({length:7},()=>[]);
+ days[weekday]=[{id:'fixture-plan',name:'My scheduled strength',minutes:30,category:'strength'}];
+ app.F.weeklyPlanHistory=[{from:fixtureDay,days}];
+ assert.match(app.dailyCards().join(''),/My scheduled strength/);
+ assert.doesNotMatch(app.dailyCards().join(''),/data-sess=/);
+ app.F.entries.push({id:'fixture-log',type:'activity',date:fixtureDay,weeklySessionId:'fixture-plan',description:'Completed plan',minutes:30,healthCategory:'strength'});
+ assert.doesNotMatch(app.dailyCards().join(''),/My scheduled strength|data-sess=/);
+ app.F.entries.pop();
+ days[weekday]=[];
+ assert.match(app.dailyCards().join(''),/data-sess=/);
+ delete app.F.weeklyPlanHistory;
+
  assert.deepEqual([...document.querySelectorAll('#tabbar button')].map(x=>x.textContent),['Home','Workout','Nutrition','Benefits','Progress']);
  assert.match(document.querySelector('main h1').textContent,/Progress/);
  assert.match(app.connectedHtml(),/Create account/);
@@ -58,13 +75,14 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  assert.match(document.querySelector('main').textContent,/Post-workout recovery drink/);
  click('[data-benefit="perks"]');
  assert.match(document.querySelector('main').textContent,/Sauna/);
- for(const [tab,heading] of [['home','Your day at a glance'],['workout','Momentum'],['nutrition','Nutrition'],['progress','Progress']]){
+ for(const [tab,heading] of [['home','Momentum'],['workout','Momentum'],['nutrition','Nutrition'],['progress','Progress']]){
   click(`[data-tab="${tab}"]`);
   assert.match(document.querySelector('main h1').textContent,new RegExp(heading,'i'));
  }
  click('[data-go="coach"]');
  assert.match(document.querySelector('main').textContent,/Coach/i);
- click('[data-tab="home"]');
+ click('[data-tab="progress"]');
+ click('[data-progress-pane="body"]');
  click('[data-go="import"]');
  assert.match(document.querySelector('main').textContent,/Import/i);
  const scale={kind:'weight',source:'RENPHO',date:null,confidence:'high',weight:174.2,bodyFat:20.5,muscle:112};

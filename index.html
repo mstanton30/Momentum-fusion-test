@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.14.3</title>
+<title>SD Health Stack — Beta v9.15.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -327,6 +327,13 @@ summary::-webkit-details-marker{display:none}
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 .brand{display:inline-flex;align-items:center;gap:10px}.brandmark{width:34px;height:34px;flex:none;border-radius:9px}.apphead h1:has(.brand){font-size:1.3rem;letter-spacing:-.02em}.brand>span{white-space:nowrap}.apphead>div:first-child{min-width:0}
 .scorestrip,.card.hero{background:#12244a;color:#fff}.card.hero .eyebrow,.card.hero .muted,.hero .stat span{color:rgba(255,255,255,.72)}.hero .stat>div,.hero .check,.hero .plan{background:rgba(255,255,255,.12)}.hero .check{color:#fff}
+.measure-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.measure-row>div:first-child{min-width:0;line-height:1.35}
+.measure-when{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 38%;text-align:right}
+.measure-when .pill{white-space:normal;text-align:right;border-radius:10px}
+.lab-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem}
+.lab-row input{width:auto;flex:none}.lab-row>span:nth-child(2){flex:1;min-width:0}.lab-val{font-family:var(--display);font-weight:700;white-space:nowrap}
+#lab-import{margin:4px 0 16px}
 </style>
 </head>
 <body>
@@ -338,7 +345,7 @@ summary::-webkit-details-marker{display:none}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.14.3"></script>
+<script src="./beta-config.js?v=9.15.0"></script>
 <script>
 (function(){
 "use strict";
@@ -1740,7 +1747,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.3</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.15.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1796,9 +1803,63 @@ function bodyRows(){
  return [...S.weigh,...imported].filter(x=>validLogDate(x.d)).sort((a,b)=>a.d.localeCompare(b.d)||(a.measuredAt||'').localeCompare(b.measuredAt||''));
 }
 function bodyPoints(key){return bodyRows().map(x=>({d:x.d,v:valueOrNull(x[key]),label:x.measuredAt?`${new Date(x.measuredAt).toLocaleString()} · ${x.source}`:`${x.d} · ${x.source||'Baseline'}`}))}
+/* What to measure and when: the short list, with the date each was last done */
+function measurePlan(){ const last=(d)=>d?fmt(d):"not yet", extras=S.extras||[];
+  const w=bodyRows().filter(x=>valueOrNull(x.wt)!=null).at(-1), test=[...(S.tests||[])].sort((a,b)=>a.d<b.d?-1:1).at(-1);
+  const dexa=extras.filter(x=>/^dexa\b/i.test(x.kind)).map(x=>x.d).sort().at(-1), lab=extras.filter(x=>!/^dexa\b/i.test(x.kind)&&!/blood pressure|vo2/i.test(x.kind)).map(x=>x.d).sort().at(-1), bp=extras.filter(x=>/blood pressure/i.test(x.kind)).map(x=>x.d).sort().at(-1);
+  const rows=[
+   ["Weigh-in, with body fat and muscle if your scale shows them","Every week, Friday morning","The trend between scans. Read the four-week average, not one day.",last(w&&w.d)],
+   ["Waist at the navel","Once a month","Tracks the fat that matters most. Aim for under half your height.",""],
+   ["Fitness test: bike, 2K row or timed mile","Every second month","Your heart and lungs in one number. Same test each time.",last(test&&test.d)],
+   ["DEXA body scan","Once or twice a year","The best measure of muscle, fat and bone most people can get.",last(dexa)],
+   ["Blood work","Once a year","Lipids including ApoB, fasting glucose and A1c, kidney and liver panel, vitamin D. Fasting insulin and hs-CRP are worth asking about.",last(lab)],
+   ["Blood pressure","A few times a year","A home cuff is fine. Sit quietly for five minutes first.",last(bp)],
+   ["Resting heart rate","Glance monthly","From a watch or a morning pulse. Drifting down over months means you are fitter.",""],
+   ["Bone density","When your doctor says it is due","Recommended for women at 65, earlier with risk factors."," "]];
+  return `<details class="card" id="measure-plan"><summary>What to measure and when</summary><div><p class="muted sm">Eight measurements cover what this program is trying to change. Anything beyond these is optional.</p>
+  ${rows.map(([what,when,why,done])=>`<div class="measure-row"><div><b>${what}</b><br><span class="muted sm">${why}</span></div><div class="measure-when"><span class="pill">${when}</span>${done.trim()?`<span class="muted xs">Last: ${esc(done)}</span>`:""}</div></div>`).join("")}
+  <p class="muted xs" style="margin:12px 0 0">A general list, not medical advice for you. Your own doctor decides which tests you need and how often.</p></div></details>` }
+/* Lab report import: a PDF or photo is read by the server, you review every line, and only what you tick is saved */
+let labImport=null; // {busy,msg,result:{date,source,results:[{name,value,unit,flag,on}]}}
+function labImportHtml(){ const L=labImport||{}, r=L.result;
+  return `<details id="lab-import" ${L.busy||r||L.msg?"open":""}><summary>Import a lab report (PDF or photo)</summary><div>
+  <p class="muted sm">Works with reports from Quest, Labcorp, Function Health or a patient portal. Download the PDF, choose it here, then check each line before saving.</p>
+  <input id="labFile" type="file" accept="application/pdf,image/*" aria-label="Choose a lab report PDF or photo">
+  <button class="btn small" type="button" data-lab-read style="margin-top:10px" ${L.busy?"disabled":""}>${L.busy?"Reading…":"Read report"}</button>
+  <p class="muted xs" style="margin:8px 0 0">The file is sent to our server and to OpenAI to be read. The app keeps only the results you save, not the file.</p>
+  ${L.msg?`<p class="sm" role="status" style="margin:10px 0 0">${esc(L.msg)}</p>`:""}
+  ${r?`<div class="verdict"><label class="f">Date collected<input id="labDate" type="date" value="${esc(r.date||"")}" max="${ymd(today())}"></label>
+   <p class="muted xs" style="margin:8px 0">${r.results.length} result${r.results.length===1?"":"s"} found${r.source?" · "+esc(r.source):""}. Untick anything that looks wrong.</p>
+   ${r.results.map((x,i)=>`<label class="lab-row"><input type="checkbox" data-lab-row="${i}" ${x.on?"checked":""}><span><b>${esc(x.name)}</b>${x.flag&&x.flag!=="normal"?` <span class="pill warn">${esc(x.flag)}</span>`:""}</span><span class="lab-val">${esc(String(x.value))}${x.unit?" "+esc(x.unit):""}</span></label>`).join("")}
+   <div class="row" style="margin-top:12px"><button class="btn small" type="button" data-lab-save>Save ticked results</button><button class="btn small ghost" type="button" data-lab-clear>Discard</button></div></div>`:""}
+  </div></details>` }
+async function readLabReport(){ const file=document.getElementById("labFile")?.files?.[0]; if(!file){ labImport={msg:"Choose a PDF or photo first."}; render(); return }
+  const pdf=file.type==="application/pdf"||/\.pdf$/i.test(file.name||"");
+  if(!pdf&&!file.type.startsWith("image/")){ labImport={msg:"Choose a PDF or a photo."}; render(); return }
+  if(pdf&&file.size>4.5*1024*1024){ labImport={msg:"That PDF is over 4.5 MB. Export just the results pages, or take screenshots of them."}; render(); return }
+  labImport={busy:true,msg:"Reading the report. This can take up to a minute."}; render();
+  try{ const data=await (pdf||(/^image\/(png|jpeg|webp)$/.test(file.type)&&file.size<=4.5*1024*1024)?new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file) }):shrinkImage(file,2400,.9));
+    if(!data||data.length>6900000) throw Error("The file is too large to send.");
+    const labReport=pdf?String(data).replace(/^data:[^;]*;/,"data:application/pdf;"):data;
+    const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),90000);
+    const res=await fetch(HEALTH_SUPABASE_URL+"/functions/v1/momentum-extract-health",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({labReport}),signal:ctl.signal}); clearTimeout(timer);
+    const out=await res.json().catch(()=>({})); if(!res.ok) throw Error(out.error||"The report could not be read");
+    const results=(Array.isArray(out.results)?out.results:[]).filter(x=>x&&x.name&&x.value!==null&&x.value!==undefined&&String(x.value).trim()!=="").slice(0,200).map(x=>({name:String(x.name).slice(0,80),value:x.value,unit:x.unit?String(x.unit).slice(0,24):"",flag:x.flag||null,on:true}));
+    if(!results.length) throw Error("No lab results were found in that file.");
+    labImport={result:{date:/^\d{4}-\d{2}-\d{2}$/.test(out.date||"")?out.date:"",source:out.source?String(out.source).slice(0,60):"",results},msg:out.date?"Check the date and each line, then save.":"No collection date was found. Enter it, check each line, then save."};
+  }catch(e){ labImport={msg:"Could not read the report: "+(e&&e.name==="AbortError"?"it took too long. Try fewer pages.":String(e.message||e))} }
+  render() }
+function saveLabReport(){ const r=labImport&&labImport.result; if(!r) return; const d=document.getElementById("labDate")?.value||"";
+  if(!validLogDate(d)){ labImport.msg="Enter the date the sample was collected."; render(); return }
+  const picked=r.results.filter(x=>x.on); if(!picked.length){ labImport.msg="Tick at least one result."; render(); return }
+  let n=0; for(const x of picked){ const kind=x.name+(x.unit?" ("+x.unit+")":""), v=String(x.value); if(S.extras.some(e=>e.d===d&&e.kind===kind&&e.v===v)) continue; S.extras.push({id:fusionId(),d,kind,v,note:"Imported"+(r.source?" · "+r.source:"")+(x.flag&&x.flag!=="normal"?" · flagged "+x.flag:"")}); n++ }
+  labImport=null; save(); render(); toast(n?n+" lab result"+(n===1?"":"s")+" saved":"Those results were already saved") }
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-lab-read],[data-lab-save],[data-lab-clear]"); if(!b) return;
+  if(b.dataset.labRead!==undefined) readLabReport(); else if(b.dataset.labSave!==undefined) saveLabReport(); else { labImport=null; render() } });
+document.addEventListener("change",e=>{ const i=e.target&&e.target.dataset&&e.target.dataset.labRow; if(i===undefined||!labImport||!labImport.result) return; const x=labImport.result.results[+i]; if(x) x.on=e.target.checked });
 function vTrack(){
  const weekly=progressPane==='body'?[]:progressWeeks();
- return header("Progress","Your trends")+progressButtons([['body','Body composition'],['fitness','Fitness'],['nutrition','Nutrition']],progressPane,'progress-pane','Progress sections')+
+ return header("Progress","Your trends")+measurePlan()+progressButtons([['body','Body composition'],['fitness','Fitness'],['nutrition','Nutrition']],progressPane,'progress-pane','Progress sections')+
  progressButtons(PROGRESS_RANGES,progressRange,'progress-range','Chart period')+
  (progressPane==='body'?bodyProgress():progressPane==='fitness'?fitnessProgress(weekly):nutritionProgress(weekly))+
  `<div class="row"><button class="btn small ghost" id="share">Share weekly card</button><button class="btn small ghost" id="export">Export my data</button>${activeWorkspace?'':'<button class="del" id="wipe">Reset local data</button>'}</div>`;
@@ -1854,7 +1915,8 @@ function dexaProgress(){
  ${DEXA_METRICS.filter(([kind])=>dexa.some(x=>x.kind===kind)).map(([kind,label,unit])=>`<details><summary>${label} · all scans</summary>${progressChart(label,dexa.filter(x=>x.kind===kind).map(x=>({d:x.d,v:valueOrNull(x.v)})),unit,{all:true})}</details>`).join('')}
    <h2>Other labs and tests</h2>
   <div class="card">
-    <p class="muted sm">Anything measured outside the app: vitamin D, lipids, A1c, testosterone, blood pressure or lab VO2 max.</p>
+    <p class="muted sm">Anything measured outside the app: vitamin D, lipids, A1c, testosterone, blood pressure or lab VO2 max. Type one in, or import a whole report.</p>
+    ${labImportHtml()}
     <form id="fExtra"><div class="row"><div class="field"><label class="f">Date</label><input type="date" name="d" value="${ymd(today())}" required></div><div class="field"><label class="f">Type</label><select name="kind"><option>Vitamin D (ng/mL)</option><option>Lipids (LDL / HDL / TG)</option><option>A1c</option><option>Testosterone</option><option>Blood pressure</option><option>VO2 max (lab)</option><option>Other</option></select></div></div>
     <div class="row"><div class="field"><label class="f">Result</label><input name="v" required placeholder="e.g. 18.4"></div><div class="field"><label class="f">Note</label><input name="note" placeholder="where, who ordered it"></div></div><button class="btn" type="submit">Log result</button></form>
     ${labs.length?`<table><tr><th>Date</th><th>Type</th><th class="r">Result</th><th></th></tr>${[...labs].sort((a,b)=>a.d<b.d?1:-1).map(x=>`<tr><td>${fmt(x.d)}</td><td>${esc(x.kind)}${x.note?`<br><span class="muted xs">${esc(x.note)}</span>`:""}</td><td class="r">${esc(x.v)}</td><td class="r"><button class="del" data-del="extras" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}
@@ -3219,7 +3281,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.14.3';
+ const VERSION='9.15.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

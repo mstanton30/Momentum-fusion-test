@@ -3,5 +3,7 @@ window.MOMENTUM_BETA_CONFIG = Object.freeze({
   supabaseUrl: 'https://gwsvhhjqgpjjzftmnsqf.supabase.co',
   publishableKey: 'sb_publishable_bUUBP6d982BlTCzvJrD4vg_43wxpit7',
   apiUrl: 'https://gwsvhhjqgpjjzftmnsqf.supabase.co/functions/v1/momentum-beta',
+  // Enable only after authenticated lab backend is configured and smoke-tested.
+  labImportEnabled: false,
   aiEnabled: true
 });

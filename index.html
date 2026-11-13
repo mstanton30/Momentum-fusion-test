@@ -1100,9 +1100,8 @@ function saveHealthImport(d){
 }
 
 /* =========================== DAILY LESSON + TODAY'S THREE ===========================
-   One short lesson a day. This starter set (four weeks) repeats until the full 365 are written;
-   each entry is {t: title, b: body (~50 words), tag}. Lessons are picked by day of year, so
-   everyone sees the same lesson on the same day. */
+   One short lesson per program day, starting at each person's profile start date.
+   The full 365-day sequence repeats after the first year. */
 const LESSONS=[
  {"m": 1, "tag": "Start here", "t": "Start where you are", "b": "It's day one. Most people who start a fitness plan are gone within a couple of months, usually because they tried to change everything at once. We'll go slower. This week you learn how the program works and log what you already do. Nothing new yet. Read the lesson, tap what's true, close the app."},
  {"m": 1, "tag": "Start here", "t": "Inputs and outputs", "b": "You control a handful of inputs: how you move, what you eat, how you sleep. The app scores those every day. Every couple of months you measure the outputs: a fitness test, muscle, body fat. Keep the inputs steady and the outputs follow, usually later than you'd like. Your only job today is today's inputs."},
@@ -1486,7 +1485,13 @@ let dailyOpen=false, dailyHiddenAt=0;
 function dailyCards(){ const k=ymd(today()), cards=[];
   if(!lessonRead(k)) cards.push(lessonCard(k,true));
   const open=workoutOpen(k), day=dayDef(k);
-  if(open.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
+  const scheduled=workoutPlanForProgress(k)?.[parseD(k).getDay()]||[];
+  const pending=scheduled.filter(session=>!weeklyPlanLog(k,session.id));
+  if(scheduled.length){
+   if(pending.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout · My Plan</div>
+    ${pending.map(session=>`<h3 style="margin:6px 0 2px">${esc(session.name)}</h3><p class="muted sm">${session.minutes} min · ${WEEKLY_SESSION_TYPES[session.category]}</p>`).join("")}
+    <button class="btn small" type="button" data-go="workout">Open my scheduled workouts</button></div>`);
+  }else if(open.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
    ${open.map(x=>checkBtn(false,x.title,x.range[0]===x.range[1]?x.range[0]+" min":x.range[0]+"–"+x.range[1]+" min",x.pts,`data-sess="${x.id}" data-k="${k}"`)).join("")}
    <button class="del xs" type="button" data-go="workout" style="text-decoration:underline;margin-top:8px">Did something else, or want to change the day</button></div>`);
   const due=dueMeals(k);

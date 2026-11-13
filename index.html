@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.14.2</title>
+<title>SD Health Stack — Beta v9.14.3</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -256,7 +256,7 @@ summary::-webkit-details-marker{display:none}
 /* score strip */
 .scorestrip{border-radius:var(--r-card);padding:14px 8px;margin:14px 0 20px;gap:2px}
 .scorestrip b{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
-.scorestrip span{font-size:.62rem;letter-spacing:.04em}
+.scorestrip span{font-size:.6rem;letter-spacing:.04em;white-space:normal;line-height:1.25;display:block;margin-top:3px}
 .scorestrip b.bump{animation:bump .5s ease}
 /* tab bar */
 .tabbar{background:color-mix(in srgb,var(--panel) 86%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line)}
@@ -338,7 +338,7 @@ summary::-webkit-details-marker{display:none}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.14.2"></script>
+<script src="./beta-config.js?v=9.14.3"></script>
 <script>
 (function(){
 "use strict";
@@ -794,11 +794,11 @@ function checkBtn(on,label,sub,pts,data){ return `<button class="check" role="ch
 function minRow(k,id,choices,cur){ return `<div class="minrow">${choices.map(m=>`<button aria-pressed="${cur===m}" data-min-set="${id}" data-k="${k}" data-v="${m}">${m} min</button>`).join("")}</div>` }
 function optionsBlock(kind,label){ return `<details><summary>${esc(label||"Where to do it")}</summary><div class="opts">${OPTIONS[kind].map(([t,d])=>`<b>${esc(t)}</b>${esc(d)}`).join("")}</div></details>` }
 function scoreStrip(){ if(!S.profile) return ""; const k=ymd(today()), wn=weekNutrition(), [lab,cls]=ratioLabel(wn.pct), q=weekQuota(), streak=mobStreak();
-  return `<div class="scorestrip" role="group" aria-label="This week"><div><b>${dayPoints(k)}</b><span>today</span></div><div><b>${weekPoints()}</b><span>week pts</span></div><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${q.strengthDone}/${q.strength}</b><span>strength</span></div><div><b>${streak}</b><span>streak</span></div></div>` }
+  return `<div class="scorestrip" role="group" aria-label="This week"><div><b>${dayPoints(k)}</b><span>today</span></div><div><b>${weekPoints()}</b><span>week stack</span></div><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${q.strengthDone}/${q.strength}</b><span>strength</span></div><div><b>${streak}</b><span>days stacked</span></div></div>` }
 function header(title,sub){ return `<div class="apphead"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="headbtns"><button class="gear" data-go="lessons" aria-label="Lesson library" title="Lessons">${ICON.book}</button><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach">${ICON.spark}</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>${scoreStrip()}` }
 
 function vWhy(){
-  return `<div class="onb"><div class="eyebrow">SD Health Stack</div><h1>Why we do this</h1>
+  return `<div class="onb"><div class="eyebrow">SD Health Stack · Stack the day</div><h1>Why we do this</h1>
   <p class="muted" style="margin-top:10px">A year-long program built by sports medicine physicians who train and want to stay healthy, for anyone who wants the same. It follows the research, costs very little, and takes about a minute a day to log.</p>
   <div class="card hero"><div class="eyebrow">The idea</div><h2 style="margin:4px 0 8px;font-size:1.4rem">Inputs in, outputs out</h2>
   <p style="opacity:.9;margin:0">You control a handful of inputs: how you move, what you eat, how you sleep. The app scores those. Every two months you measure the outputs: fitness, muscle, body fat. Keep the inputs steady and the outputs follow.</p></div>
@@ -1640,7 +1640,7 @@ function renderDaily(){ const el=document.getElementById("daily"); if(!el) retur
   if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; deckLast=null; return }
   const all=dailyDeck(), deck=all.filter(c=>!dailySkipped.has(c.id));
   if(deckFirst) deck.sort((a,b)=>(a.id===deckFirst?-1:0)-(b.id===deckFirst?-1:0));
-  if(!deck.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; deckLast=null; if(el.dataset.had==="1"){ el.dataset.had=""; toast(all.length?"Skipped for now. They're on Home when you're ready.":"That's today's three. Done.") } return }
+  if(!deck.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; deckLast=null; if(el.dataset.had==="1"){ el.dataset.had=""; toast(all.length?"Skipped for now. They're on Home when you're ready.":"That's today's three. Day stacked.") } return }
   el.dataset.had="1"; el.hidden=false;
   const cur=deck[0], left=all.map(c=>c.id), fresh=deckLast!==cur.id; deckLast=cur.id;
   const dots=DECK_ORDER.map(id=>`<i class="${!left.includes(id)?"done":id===cur.id?"cur":""}"></i>`).join("");
@@ -1710,8 +1710,8 @@ function vHomeDashboard(){
  <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
  <button class="btn small ghost" type="button" data-go="recap" style="margin-top:16px">${ICON.share} Share my week</button>
  </div></section>
- <details class="morebox"><summary>Points, activity and coach</summary><div>
- <div class="card home-points-summary"><h2>Points</h2>
+ <details class="morebox"><summary>Stack points, activity and coach</summary><div>
+ <div class="card home-points-summary"><h2>Stack points</h2>
  <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
  </div>
  ${healthCard()}
@@ -1722,7 +1722,7 @@ function vHomeDashboard(){
  <p><b>${esc(coach.category)}:</b> ${esc(coach.focus)}</p><p class="muted sm">${esc(coach.reason)}</p><details><summary>Why this suggestion?</summary><p class="muted sm">Rule-based guidance from your logged data. Missing entries are not treated as missed meals or workouts. No wearable readiness is connected.</p></details></div>
  <div class="card"><div class="row" style="justify-content:space-between"><h3>Progress</h3><button class="btn small ghost" data-go="progress">View trends</button></div>
  <div class="stat two"><div><b>${Number.isFinite(weight)?weight.toFixed(1):'–'}</b><span>latest weight · lb</span></div></div><p class="muted xs">Body composition, VO₂ max, sleep, and historical charts are available in Progress.</p></div>
- <div class="card"><h2>Points breakdown</h2>
+ <div class="card"><h2>Your stack by day</h2>
  <div class="home-points-chart" role="list" aria-label="Points by day">${wk.map((day,i)=>{
    const value=points.byDate.get(day)||0;
    return `<div role="listitem" aria-label="${weekdays[i]} · ${dayLabel(day)}"><b class="xs">${day<=k?value:'—'}</b><div class="home-points-bar" aria-hidden="true"><i style="height:${day<=k?value/maxPoints*100:0}%"></i></div><span class="muted xs">${weekdays[i]}</span></div>`;
@@ -1730,7 +1730,7 @@ function vHomeDashboard(){
  <div class="stat two"><div><b>${points.all.total.toLocaleString()}</b><span>Lifetime total</span></div><div><b>${avgLabel(averages.lifetimeWeekly,'pts/week')}</b><span>Lifetime weekly average</span></div></div>
  <details><summary>All-time points by category</summary><div class="stat two"><div><b>${points.all.activity}</b><span>Activity</span></div><div><b>${points.all.nutrition}</b><span>Nutrition</span></div><div><b>${points.all.benefits}</b><span>Benefits</span></div><div><b>${points.all.sleep}</b><span>Sleep</span></div></div></details></div>
  <div class="card"><h3>Weekly coaching review</h3><p class="muted sm">${esc(fCoach())}</p><button class="btn small ghost" data-go="coach">Open Coach</button></div>
- <details class="card home-points-guide"><summary>How Points work</summary>
+ <details class="card home-points-guide"><summary>How Stack points work</summary>
  <dl class="sm">
  <dt>Activity</dt><dd>Scheduled main workouts earn 5 points. Custom workouts of at least 15 minutes earn 2–5 based on duration and intensity. These share a 5-point daily cap. Scheduled mobility adds 3 and a scheduled finisher adds 2.</dd>
  <dt>Lesson</dt><dd>Reading the day's lesson earns 1 point.</dd><dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day. In-between earns half credit toward the weekly quality ratio, not points.</dd>
@@ -1740,7 +1740,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.2</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.3</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -3037,7 +3037,7 @@ function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset
   const mob=wk.filter(k=>sessOf(k,"mob").done||(dayTypeFor(k)==="yoga"&&sessOf(k,"main").done)).length, drinks=wn.alcohol||0, pts=weekPoints(ref), need=q.strength||3;
   const praise=q.strengthDone>=need?"All "+(need===3?"three":need)+" strength days done.":wn.pct!=null&&wn.pct>=80?wn.pct+" percent quality meals. That is the stretch goal.":wn.pct!=null&&wn.pct>=70?"Majority rules. "+wn.pct+" percent quality meals.":mob>=5?"Mobility on "+mob+" of seven days.":pts>0?"Showed up and logged it.":"A new week starts now.";
   const nudge=q.strengthDone<need?(need-q.strengthDone)+" more strength day"+(need-q.strengthDone===1?"":"s")+" would have made the full week. Put them on the calendar first.":wn.pct!=null&&wn.pct<70?"Meals came in under 70 percent. Start with protein at breakfast.":drinks>7?"Drinks were over seven. Aim to come in under next week.":mob<5?"Mobility was light. Ten minutes after each workout covers it.":"Nothing to fix. Do the same again.";
-  return {wk,praise,nudge,tiles:[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Points"]]} }
+  return {wk,praise,nudge,tiles:[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Stack points"]]} }
 function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=recapData(), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial";
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
   x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
@@ -3046,7 +3046,7 @@ function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=reca
   else{ const g=x.createRadialGradient(W*.85,H*.1,0,W*.85,H*.1,W*.9); g.addColorStop(0,"rgba(226,81,42,.55)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
   x.textBaseline="alphabetic"; if(recapPhoto){ x.shadowColor="rgba(0,0,0,.55)"; x.shadowBlur=18 } x.fillStyle="#fff"; x.font="800 40px "+F1;
   { x.save(); x.shadowColor="transparent"; x.translate(80,66); x.scale(72/64,72/64); x.fillStyle="#12244a"; rr(0,0,64,64,15); x.fill(); x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=1.2; x.stroke(); x.translate(-1,-1); x.strokeStyle="#fff"; x.lineWidth=7.5; x.stroke(new Path2D("M29.5 17.5C27 11.5 11.5 11.5 11.5 19.5 11.5 28.5 30 24 30 33 30 41 14.5 41.5 11 35")); x.stroke(new Path2D("M38.2 13.2h5.3a12.6 12.6 0 0 1 0 25.2h-5.3z")); x.translate(1,1); [["#e2512a",46],["rgba(255,255,255,.55)",51.6],["rgba(255,255,255,.28)",57.2]].forEach(([c,y])=>{ x.fillStyle=c; rr(9.5,y,45,3.6,1.8); x.fill() }); x.restore() }
-  x.fillStyle="#fff"; x.fillText("SD HEALTH STACK",170,117);
+  x.fillStyle="#fff"; x.fillText("SD HEALTH STACK",170,108); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.8)"; x.fillText("Stack the day.",171,146); x.fillStyle="#fff";
   x.fillStyle="rgba(255,255,255,.8)"; x.font="600 32px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-80,120); x.textAlign="left";
   x.fillStyle="#fff"; x.font="800 84px "+F1; const words=d.praise.split(" "); let line="", y=330; const lines=[];
   for(const w of words){ const test=line?line+" "+w:w; if(x.measureText(test).width>W-160&&line){ lines.push(line); line=w } else line=test } lines.push(line);
@@ -3057,7 +3057,7 @@ function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=reca
   return c }
 function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return; try{ drawRecap(c); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) }catch(e){} }
 function vRecap(){ const d=recapData();
-  return header("Your week","Recap")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas" width="1080" height="1080" role="img" aria-label="Weekly recap image"></canvas>
+  return header("What's your stack?","Your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas" width="1080" height="1080" role="img" aria-label="Weekly recap image"></canvas>
   <div class="seg" style="grid-template-columns:repeat(2,1fr);margin:0 0 12px"><button type="button" data-recap-week="0" aria-pressed="${recapOffset===0}">This week</button><button type="button" data-recap-week="1" aria-pressed="${recapOffset===1}">Last week</button></div>
   <div class="row"><label class="btn ghost" style="justify-content:center;cursor:pointer">${recapPhoto?"Change photo":"Add a photo"}<input id="recapPhoto" type="file" accept="image/*" hidden></label>${recapPhoto?`<button class="btn ghost" type="button" data-recap-clear style="justify-content:center">Remove photo</button>`:""}</div>
   <button class="btn" type="button" data-recap-share style="width:100%;justify-content:center;margin-top:10px">${ICON.share} Share</button>
@@ -3065,7 +3065,7 @@ function vRecap(){ const d=recapData();
   <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
 async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; drawRecap(c);
   c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"My SD Health Stack week"}) }catch(e){} }
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text:"My week on SD Health Stack. What's your stack?"}) }catch(e){} }
     else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Image saved") } },"image/png") }
 document.addEventListener("change",e=>{ if(!e.target||e.target.id!=="recapPhoto") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
 document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-week],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
@@ -3219,7 +3219,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.14.2';
+ const VERSION='9.14.3';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

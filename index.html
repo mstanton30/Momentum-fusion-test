@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.11.1</title>
+<title>Momentum — Beta v9.11.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -208,7 +208,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.11.1"></script>
+<script src="./beta-config.js?v=9.11.2"></script>
 <script>
 (function(){
 "use strict";
@@ -742,7 +742,7 @@ function weeklyWorkoutPanel(date){
    <label>Link an existing workout<select name="entryId" required><option value="">Choose a workout</option>${available.map(entry=>`<option value="${esc(entry.id)}">${esc(entry.description)} · ${Number(entry.minutes)||0} min</option>`).join('')}</select></label>
    <button type="submit" class="btn small ghost">Link workout</button>
   </form>`:''}`;
- }).join(''):'<p class="muted sm">Rest day in your weekly plan.</p>'}`: '<p class="muted sm">Build a recurring week you can follow alongside the existing workout tools.</p>'}
+ }).join(''):'<p class="muted sm">No workouts scheduled in My Plan for this day.</p>'}`: '<p class="muted sm">Build a recurring week you can follow alongside the existing workout tools.</p>'}
  <details id="weekly-workout-editor" ${weeklyEditorOpen?'open':''}><summary>Edit my week</summary><div>
  <div class="row tight"><button type="button" class="btn small ghost" data-weekly-action="copy">Copy Dan’s plan</button><button type="button" class="btn small ghost" data-weekly-action="blank">Start blank</button></div>
  ${draft?`<div class="home-week-days" role="group" aria-label="Edit day">${DAYS.map((day,index)=>`<button type="button" data-weekly-day="${index}" aria-pressed="${editingDay===index}">${day.name.slice(0,3)}</button>`).join('')}</div>
@@ -772,7 +772,9 @@ function vWorkout(){
   const mins=totalTrainingMinutes(key), wp=weekPoints(d), streak=mobStreak();
   const label=isToday?"Today":(future?"Coming up":"Looking back");
   let h=header("Momentum",d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
-  if(workoutPlanForProgress(key))h+=`<p class="muted xs">You're following My Plan (under More). The program day is shown below for reference.</p>`;
+  const hasScheduledWorkouts=!!workoutPlanForProgress(key)?.[d.getDay()]?.length;
+  if(hasScheduledWorkouts)h+=weeklyWorkoutPanel(key);
+  if(!hasScheduledWorkouts){
    if(test) h+=`<div class="row" style="margin:0 0 10px"><span class="pill hot">Test week</span></div>`;
   const assessHtml=(daySource==='dan'&&!future&&day.sessions.some(x=>['lift','boot'].includes(x.kind)))?(()=>{ const a=(F.strengthAssessments||{})[key]||{}; return `<details><summary>Rate today's strength session</summary><div><form id="fStrengthAssess" data-date="${key}">${strengthAssessmentFields(a)}<button class="btn small" type="submit">Save</button></form></div></details>` })():"";
    h+=`<div class="card hero">
@@ -792,13 +794,14 @@ function vWorkout(){
   h+=assessHtml;
   h+=`<details><summary>Notes for ${esc(day.name)}s in ${esc(monthName(d))}</summary><div><p class="muted xs">Optional. Your own note and start link for every ${esc(day.name)} this month: the class you like, a Strength+ share link, a trainer's plan.</p>
   <form id="fPlan" data-mk="${monthKey(d)}" data-day="${day.k}"><div class="field"><label class="f">Plan</label><textarea name="text">${esc(plan.text)}</textarea></div><div class="field"><label class="f">Start link (Strength+ share link, Peloton class, YouTube…)</label><input type="url" name="link" value="${esc(plan.link)}" placeholder="https://…"></div><div class="row tight"><button class="btn small" type="submit">Save for ${esc(monthName(d))}</button>${plan.custom?`<button class="btn small ghost" type="button" data-plan-reset="1">Back to default</button>`:""}</div></form></div></details>`;
+  }
   if(day.k==="fri"&&!future){ const logged=bodyRows().some(x=>x.d===key&&Number(x.wt)>0);
     h+=`<div class="card"><div class="eyebrow">Friday weigh-in</div><p style="margin:6px 0">${logged?"Logged. Nice.":"Same scale, same conditions, then log it in Progress."}</p><button class="btn small" data-go="progress">Go to weigh-in</button></div>`; }
   const sow=startOfWeek(d), wk=weekKeys(d);
   h+=`<div class="navrow"><button data-week="-1">‹ Prev</button><h2 style="margin:0">Week of ${fmt(wk[0])}</h2><button data-week="1">Next ›</button></div><div class="week">`+DAYS.map((x,i)=>{ const k=wk[i]; const dd=dayDef(k); const p=dayPoints(k); const replacement=fusionReplacements(k).length>0; const done=!!sessOf(k,"main").done||replacement;
     return `<div class="d ${k===tk?"today":""} ${k===sel?"sel":""} ${done?"done":""} ${dd.intense?"intense":""}" data-sel="${k}"><b>${x.name.slice(0,3)}</b>${replacement?"↔ ":""}${esc(DAY_TYPE_LABEL[dd.type].split(" ")[0])}<span class="dot"></span><span class="muted xs">${p?p+"p":(k>tk?"":"–")}</span></div>` }).join("")+`</div>
   <p class="muted xs" style="margin-top:8px">This week: strength ${q.strengthDone}/${q.strength} · cardio ${q.cardioDone}/${q.cardio} · mobility ${q.mobilityDone}/7. Tap a day to see it or change it. Orange dot = hard day.${sel!==tk?' <button class="del" data-sel="'+tk+'" style="text-decoration:underline">Back to today</button>':""}</p>`;
-  h+=`<details><summary>More: My Plan, activity score, custom workouts, Apple Health</summary><div>`+weeklyWorkoutPanel(key)+healthCard(d);
+  h+=`<details><summary>More: My Plan, activity score, custom workouts, Apple Health</summary><div>`+(hasScheduledWorkouts?'':weeklyWorkoutPanel(key))+healthCard(d);
      h+=`<h2>Weekly activity target</h2><div class="card"><label class="f">Your activity goal</label><select id="healthGoalSelect">${Object.entries(HEALTH_GOALS).map(([k,g])=>`<option value="${k}" ${F.healthGoal===k?'selected':''}>${esc(g.name)} · ${g.minutes} aerobic min</option>`).join('')}</select><p class="muted xs" style="margin-top:8px">Aerobic 70 points + strength 30 points. Legacy habit points remain separate; a future Overall Health Score may combine activity, nutrition and recovery.</p></div>`+healthReading();
 const m2=d.getMonth()%2===1;
   h+=`<h2>Block ${blk.n} · ${esc(blk.months)}</h2><div class="card"><span class="pill">Cardio: ${esc(blk.cardio)}</span><p style="margin:10px 0 6px">${esc(blk.guide)}</p><p class="sm"><b>${esc(monthName(d))}:</b> ${esc(m2?blk.m2:blk.m1)}</p><p class="sm"><b>Peloton picks:</b> ${esc(blk.picks.join(" · "))}</p><p style="margin:10px 0 6px"><b>Strength days:</b> ${esc(blk.lift)}. Any full-body session; go heavier as the block goes on.</p><p class="muted sm">Focus muscles: ${esc(MONTH_MUSCLE[(blk.n-1)*2])}, then ${esc(MONTH_MUSCLE[(blk.n-1)*2+1])}.</p>${test?`<div class="note">Test week: do your ${esc(MODALITIES[(S.profile||{}).modality||"bike"].test)}, log it in Track, and your 4-week body comp average rolls into this block's outcomes.</div>`:""}</div>
@@ -1126,7 +1129,7 @@ function vHomeDashboard(){
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.2</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1602,6 +1605,7 @@ document.addEventListener('click',event=>{
   form.elements.healthCategory.value=swapping?'other':session.category;
   form.elements.healthCategory.dispatchEvent(new Event('change',{bubbles:true}));
   form.querySelector('[type="submit"]').textContent='Log planned session';
+  form.closest('details')?.setAttribute('open','');
   form.scrollIntoView({block:'start'});
   form.elements.description.focus({preventScroll:true});
   return;
@@ -1880,6 +1884,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-ftemplate-
    document.getElementById('customStrengthAssessment').hidden=!['strength','mixed'].includes(form.elements.healthCategory.value);
   }
   form.elements.editId.value=x.id;form.querySelector('[type=submit]').textContent=meal?'Update meal':'Update activity';
+  form.closest('details')?.setAttribute('open','');
   form.scrollIntoView({behavior:'smooth',block:'start'});return;
  }
  if(b.dataset.fsave!==undefined){const x=F.entries.find(x=>String(x.id)===b.dataset.fsave);if(x){const key=JSON.stringify([x.type,x.description,x.mealSlot,x.p,x.c,x.f,x.fiber,x.minutes,x.intensity]);if(F.favorites.some(y=>JSON.stringify([y.type,y.description,y.mealSlot,y.p,y.c,y.f,y.fiber,y.minutes,y.intensity])===key))toast('Already in favorites');else{F.favorites.push({...x});toast('Favorite saved')}}}
@@ -2510,7 +2515,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.11.1';
+ const VERSION='9.11.2';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.11.0</title>
+<title>Momentum — Beta v9.11.1</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -208,7 +208,7 @@ details>div{padding-top:8px}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.11.0"></script>
+<script src="./beta-config.js?v=9.11.1"></script>
 <script>
 (function(){
 "use strict";
@@ -359,7 +359,7 @@ function dayTypeFor(k){ const wd=WEEKDAYS[parseD(k).getDay()][0]; const sw=(S.sw
 function dayDef(k){ const [wd,name]=WEEKDAYS[parseD(k).getDay()]; return {...DAY_TYPES[dayTypeFor(k)],k:wd,name} }
 function isStrengthDay(k){ return ["strength","boot"].includes(dayTypeFor(k)) }
 /* Week quotas: how many strength / cardio / mobility sessions are done vs. planned this week */
-function weekQuota(d=today()){ const q={strength:0,cardio:0,mobility:0,strengthDone:0,cardioDone:0,mobilityDone:0}; for(const k of weekKeys(d)){ const t=dayTypeFor(k); const main=sessOf(k,"main"); if(["strength","boot"].includes(t)){ q.strength++; if(main.done) q.strengthDone++ } else if(["easy","intervals"].includes(t)){ q.cardio++; if(main.done) q.cardioDone++ } else if(t==="yoga"&&main.done) q.mobilityDone++; if(sessOf(k,"mob").done) q.mobilityDone++; q.mobility++ } return q }
+function weekQuota(d=today()){ const q={strength:0,cardio:0,mobility:0,strengthDone:healthWeekly(d).strengthDays,cardioDone:0,mobilityDone:0}; for(const k of weekKeys(d)){ const t=dayTypeFor(k); const main=sessOf(k,"main"); if(["strength","boot"].includes(t)){ q.strength++ } else if(["easy","intervals"].includes(t)){ q.cardio++; if(main.done) q.cardioDone++ } else if(t==="yoga"&&main.done) q.mobilityDone++; if(sessOf(k,"mob").done) q.mobilityDone++; q.mobility++ } return q }
 function sessOf(k,id){ return (S.sess[k]||{})[id]||{} }
 function fusionActivities(k){return (typeof F!=='undefined'&&F.entries?F.entries:[]).filter(x=>x.type==='activity'&&x.date===k)}
 function fusionMinutes(k){return fusionActivities(k).reduce((a,x)=>a+(Number(x.minutes)||0),0)}
@@ -1126,7 +1126,7 @@ function vHomeDashboard(){
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.1</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2510,7 +2510,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.11.0';
+ const VERSION='9.11.1';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

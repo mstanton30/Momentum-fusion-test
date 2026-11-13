@@ -7,15 +7,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1113" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="./momentum-icon-192-v91010.png">
 <link rel="manifest" href="./manifest.json?v=icon-refresh-1">
 <link rel="apple-touch-icon" href="./momentum-icon-180-v91010.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.13.0</title>
+<title>Momentum — Beta v9.14.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -209,6 +209,122 @@ main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .home-points-guide dl{margin:0}
 .home-points-guide dt{font-weight:700;margin-top:8px}
 .home-points-guide dd{margin:0}
+
+/* ===== v9.14 visual overhaul: one accent, a calmer type scale, more room, some motion ===== */
+:root{
+  --bg:#f5f5f1; --panel:#ffffff; --fg:#15181b; --muted:#687078; --line:#e7e6e0; --soft:#f1f0eb;
+  --accent:#e2512a; --accent-ink:#ffffff; --green:#1f8a55;
+  --shadow:0 1px 2px rgba(20,24,27,.05),0 10px 28px -16px rgba(20,24,27,.22);
+  --r-card:20px; --r-ctl:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0e1012; --panel:#181b1e; --fg:#eef0f2; --muted:#9aa3ab; --line:#272c31; --soft:#20252a; --accent:#ff6b42; --accent-ink:#1a0b05; --shadow:0 0 0 1px #272c31 }}
+:root[data-theme="dark"]{ --bg:#0e1012; --panel:#181b1e; --fg:#eef0f2; --muted:#9aa3ab; --line:#272c31; --soft:#20252a; --accent:#ff6b42; --accent-ink:#1a0b05; --shadow:0 0 0 1px #272c31 }
+body{font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+main{padding:18px max(20px,env(safe-area-inset-right,0px)) calc(104px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+h1{font-size:1.9rem;font-weight:800;letter-spacing:-.025em;text-transform:none;line-height:1.05}
+h2{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin:30px 0 12px}
+h3{font-size:1.02rem;font-weight:700}
+.eyebrow{font-size:.72rem;letter-spacing:.1em}
+.card{border:0;border-radius:var(--r-card);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card.hero{box-shadow:none}
+.card>h2:first-child,.card>h3:first-child{margin-top:0}
+.btn{border-radius:var(--r-ctl);padding:13px 18px;transition:transform .12s ease,filter .12s ease}
+.btn:active,.check:active,.today-row:active,.lib-head:active{transform:scale(.975)}
+.btn.small{padding:9px 14px;border-radius:12px}
+.btn.ghost{border:1px solid var(--line);opacity:1;background:var(--panel);color:var(--fg)}
+.hero .btn.ghost{background:transparent;color:inherit;border-color:color-mix(in srgb,var(--bg) 40%,transparent)}
+.btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+input,select,textarea{border-radius:12px;padding:12px}
+.check{border-radius:16px;padding:14px 16px;margin-top:10px;transition:transform .12s ease,background .2s ease}
+.check .box{border-radius:8px}
+.check[aria-checked="true"] .box{animation:pop .28s ease}
+.seg{border-radius:14px;padding:4px}.seg button{padding:10px 4px;border-radius:11px;font-size:.84rem}
+.seg button.q[aria-pressed="true"]{color:var(--green)}
+.pill{padding:4px 10px;font-size:.74rem}
+.stat>div{border-radius:14px;padding:12px}
+/* boxes inside boxes: a collapsible inside a card is a quiet row, not another box */
+.card details,details details{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0 0;margin:14px 0 0;background:transparent}
+details{border-radius:16px;padding:14px 16px;margin-bottom:12px;border-color:var(--line)}
+details.card{border:0;padding:20px}
+summary{font-size:.95rem}
+summary::-webkit-details-marker{display:none}
+/* header */
+.apphead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:4px}
+.headbtns{display:flex;gap:8px;flex:none}
+.gear{width:40px;height:40px;background:var(--panel);box-shadow:var(--shadow)}
+.gear svg{width:19px;height:19px}
+/* score strip */
+.scorestrip{border-radius:var(--r-card);padding:14px 8px;margin:14px 0 20px;gap:2px}
+.scorestrip b{font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+.scorestrip span{font-size:.62rem;letter-spacing:.04em}
+.scorestrip b.bump{animation:bump .5s ease}
+/* tab bar */
+.tabbar{background:color-mix(in srgb,var(--panel) 86%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line)}
+.tabbar button{padding:10px 2px 8px;font-size:.66rem;font-weight:600;letter-spacing:0;text-transform:none;gap:4px;position:relative;transition:color .15s ease}
+.tabbar button[aria-selected="true"]::before{content:"";position:absolute;top:0;left:50%;width:22px;height:3px;border-radius:0 0 3px 3px;background:var(--accent);transform:translateX(-50%)}
+.tabbar svg{width:23px;height:23px}
+/* Home: today's three */
+.today-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 0;color:inherit;transition:transform .12s ease}
+.today-row:first-of-type{border-top:0;margin-top:8px}
+.today-row b{font-family:var(--display)}
+.today-ic{width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--accent);display:grid;place-items:center;flex:none}
+.today-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.today-ic.done{background:color-mix(in srgb,var(--green) 16%,var(--panel));color:var(--green)}
+.today-ic.done svg{stroke-width:3;width:16px;height:16px}
+.today-row .chev,.lib-head .chev{margin-left:auto;color:var(--muted);font-size:1.3rem;flex:none}
+.today-row>span:nth-child(2){min-width:0;line-height:1.3}
+/* weigh-in */
+.weigh-nums{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.weigh-nums b{display:block;font-family:var(--display);font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.weigh-nums span{font-size:.76rem;color:var(--muted)}
+.weigh-row{display:flex;gap:10px}.weigh-row input{flex:1;min-width:0}.weigh-row .btn{flex:none}
+/* the card deck */
+.daily{align-items:center;background:rgba(10,12,14,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:20px}
+.deck{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px}
+.deck-top{display:flex;justify-content:space-between;align-items:center;color:#fff}
+.deck-dots{display:flex;gap:6px;align-items:center}
+.deck-dots i{width:28px;height:5px;border-radius:5px;background:rgba(255,255,255,.28);transition:background .2s ease}
+.deck-dots i.done{background:#4fc38a}.deck-dots i.cur{background:#fff}
+.deck-dots span{font-size:.78rem;font-weight:600;margin-left:6px;opacity:.85}
+.deck-x{background:rgba(255,255,255,.16);border:0;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.25rem;line-height:1}
+.deck-stack{position:relative}
+.deck-stack.more::before,.deck-stack.more2::after{content:"";position:absolute;left:14px;right:14px;top:10px;bottom:-10px;border-radius:24px;background:var(--panel);opacity:.55;z-index:0}
+.deck-stack.more2::after{left:28px;right:28px;top:20px;bottom:-20px;opacity:.3}
+.deck-card{position:relative;z-index:1;background:var(--panel);color:var(--fg);border-radius:24px;padding:24px 22px;max-height:68vh;overflow:auto;-webkit-overflow-scrolling:touch;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);touch-action:pan-y;will-change:transform;-webkit-user-select:none;user-select:none}
+.deck-card.in{animation:deckIn .32s cubic-bezier(.2,.8,.2,1)}
+.deck-card.out-r{animation:deckOutR .2s ease-in forwards}
+.deck-card.out-l{animation:deckOutL .2s ease-in forwards}
+.deck-card .card{background:none;box-shadow:none;padding:0;margin:0;border-radius:0}
+.deck-card h3{font-size:1.3rem!important;letter-spacing:-.01em}
+.deck-card .lesson-body{font-size:1.05rem;line-height:1.6}
+.deck-card .btn.small{padding:12px 18px;font-size:.95rem;margin-top:6px}
+.deck-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;color:rgba(255,255,255,.75)}
+.deck-actions .btn{background:rgba(255,255,255,.14);border:0;color:#fff}
+/* library */
+.lib{padding:0;overflow:hidden}
+.lib-head{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;padding:16px 18px;color:inherit;transition:transform .12s ease}
+.lib-head>span:nth-child(2){line-height:1.3;min-width:0}
+.lib-num{width:36px;height:36px;border-radius:11px;background:var(--soft);display:grid;place-items:center;font-family:var(--display);font-weight:800;flex:none}
+.lib.open .lib-num{background:var(--accent);color:var(--accent-ink)}
+.lib-list{padding:0 18px 10px}
+.lib-list details.lib-lesson{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0;margin:0;background:none}
+.lib-lesson summary{justify-content:flex-start;gap:12px;font-weight:600}
+.lib-lesson summary::after,.lib-lesson[open] summary::after{content:""}
+.lib-lesson p{margin:8px 0 0 38px;color:var(--fg)}
+.tick{width:26px;height:26px;border-radius:50%;background:var(--soft);color:var(--muted);display:grid;place-items:center;font-size:.68rem;font-weight:700;flex:none;font-family:var(--body)}
+.tick.on{background:var(--green);color:#fff}.tick svg{width:12px;height:12px}
+.whybox{margin-top:24px;background:transparent;border:1px dashed var(--line)}
+.whybox summary{color:var(--muted)}
+.morebox{background:transparent;border:0;padding:0;margin-top:8px}
+.morebox>summary{padding:14px 2px;color:var(--muted)}
+.morebox>div{padding-top:4px}
+.recap-canvas{width:100%;height:auto;display:block;border-radius:16px;margin-bottom:14px;background:#15181b}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes bump{0%{transform:translateY(6px);opacity:.3}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
+@keyframes deckIn{from{transform:translateY(22px) scale(.95);opacity:0}to{transform:none;opacity:1}}
+@keyframes deckOutR{to{transform:translateX(120%) rotate(10deg);opacity:0}}
+@keyframes deckOutL{to{transform:translateX(-120%) rotate(-10deg);opacity:0}}
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 </style>
 </head>
 <body>
@@ -220,7 +336,7 @@ main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.13.0"></script>
+<script src="./beta-config.js?v=9.14.0"></script>
 <script>
 (function(){
 "use strict";
@@ -229,6 +345,14 @@ const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-w
 const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 
 /* =========================== PROGRAM CONTENT =========================== */
+const ICON={
+ book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
+ spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
+ dumb:'<svg viewBox="0 0 24 24"><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12"/></svg>',
+ plate:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>',
+ share:'<svg viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 12v8h14v-8"/></svg>',
+ cart:'<svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle cx="9.5" cy="19.5" r="1.2"/><circle cx="16.5" cy="19.5" r="1.2"/></svg>'
+};
 const PTS={main:5,mob:3,fin:2,meal:1,drink:1,supp:1,heat:2,cold:2,medit:1,roll:1,light:1,sleep:2,lesson:1};
 const SLEEP_GOAL=7;
 const DAY_GOAL=45; // minutes per day
@@ -645,12 +769,15 @@ function chart(points,{color="var(--accent)",fmtV=v=>v,baseline=null,height=90}=
 /* Home summarizes existing records; no additional tracking data is stored. */
 const TABS=[
  {id:"home",label:"Home",icon:'<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/></svg>',view:vHome},
- {id:"workout",label:"Workout",icon:'<svg viewBox="0 0 24 24"><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12"/></svg>',view:vWorkout},
- {id:"nutrition",label:"Nutrition",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c3 2 7 5 7 10a7 7 0 0 1-14 0c0-5 4-8 7-10zM12 3v18"/></svg>',view:vNutrition},
- {id:"benefits",label:"Benefits",icon:'<svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 14.5l5-5"/></svg>',view:vBenefits},
+ {id:"workout",label:"Workout",icon:'<svg viewBox="0 0 24 24"><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12"/></svg>',view:()=>vWorkout()+whyBlock("workout")},
+ {id:"nutrition",label:"Nutrition",icon:'<svg viewBox="0 0 24 24"><path d="M12 3c3 2 7 5 7 10a7 7 0 0 1-14 0c0-5 4-8 7-10zM12 3v18"/></svg>',view:()=>vNutrition()+whyBlock("nutrition")},
+ {id:"benefits",label:"Benefits",icon:'<svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M9.5 14.5l5-5"/></svg>',view:()=>vBenefits()+whyBlock("benefits")},
  {id:"coach",hidden:true,label:"Coach",icon:'<svg viewBox="0 0 24 24"><path d="M4 5h16v12H9l-5 4V5zM8 10h8M8 13h5"/></svg>',view:fCoachPanel},
  {id:"import",hidden:true,label:"Import Health",icon:"",view:vHealthImport},
- {id:"progress",label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()}
+ {id:"progress",label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()+whyBlock("progress")},
+ {id:"lessons",hidden:true,label:"Lessons",icon:"",view:()=>vLibrary()},
+ {id:"grocery",hidden:true,label:"Groceries",icon:"",view:()=>header("Groceries","Your weekly list")+groceryPanel()+`<button class="btn small ghost" type="button" data-go="nutrition">Back to Nutrition</button>`},
+ {id:"recap",hidden:true,label:"Recap",icon:"",view:()=>vRecap()}
 ];
 const tabAliases={track:"progress",supps:"benefits",perks:"benefits"};
 let benefitPane=location.hash==="#perks"?"perks":"supplements";
@@ -663,38 +790,22 @@ function checkBtn(on,label,sub,pts,data){ return `<button class="check" role="ch
 function minRow(k,id,choices,cur){ return `<div class="minrow">${choices.map(m=>`<button aria-pressed="${cur===m}" data-min-set="${id}" data-k="${k}" data-v="${m}">${m} min</button>`).join("")}</div>` }
 function optionsBlock(kind,label){ return `<details><summary>${esc(label||"Where to do it")}</summary><div class="opts">${OPTIONS[kind].map(([t,d])=>`<b>${esc(t)}</b>${esc(d)}`).join("")}</div></details>` }
 function scoreStrip(){ if(!S.profile) return ""; const k=ymd(today()), wn=weekNutrition(), [lab,cls]=ratioLabel(wn.pct), q=weekQuota(), streak=mobStreak();
-  return `<div class="scorestrip" role="group" aria-label="This week"><div><b>${dayPoints(k)}</b><span>today</span></div><div><b>${weekPoints()}</b><span>week pts</span></div><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${q.strengthDone}/${q.strength}</b><span>strength</span></div><div><b>${streak}</b><span>mobility streak</span></div></div>` }
-function header(title,sub){ return `<div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="row tight" style="gap:6px"><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach" style="width:auto;padding:0 10px;border-radius:999px;font-weight:800;font-size:.75rem">✦ Coach</button><button class="gear" data-go="why" aria-label="Why we do this" style="width:auto;padding:0 12px;border-radius:999px;font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase">Why</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>${scoreStrip()}` }
+  return `<div class="scorestrip" role="group" aria-label="This week"><div><b>${dayPoints(k)}</b><span>today</span></div><div><b>${weekPoints()}</b><span>week pts</span></div><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality</span></div><div><b>${q.strengthDone}/${q.strength}</b><span>strength</span></div><div><b>${streak}</b><span>streak</span></div></div>` }
+function header(title,sub){ return `<div class="apphead"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="headbtns"><button class="gear" data-go="lessons" aria-label="Lesson library" title="Lessons">${ICON.book}</button><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach">${ICON.spark}</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>${scoreStrip()}` }
 
 function vWhy(){
   return `<div class="onb"><div class="eyebrow">Momentum</div><h1>Why we do this</h1>
-  <p class="muted">A year-long program built by sports medicine physicians who want to train hard and stay healthy, for anyone who wants the same. Everything in it is literature-based and cheap. Nothing in it needs a syringe, a subscription or an influencer.</p>
+  <p class="muted" style="margin-top:10px">A year-long program built by sports medicine physicians who train and want to stay healthy, for anyone who wants the same. It follows the research, costs very little, and takes about a minute a day to log.</p>
   <div class="card hero"><div class="eyebrow">The idea</div><h2 style="margin:4px 0 8px;font-size:1.4rem">Inputs in, outputs out</h2>
-  <p style="opacity:.9">You control five inputs. The app scores them every week. Every two months you measure the outputs: fitness, muscle, body fat. Keep the input line high and the output lines follow. That's the whole program.</p></div>
-  <h2>The five habits</h2>
+  <p style="opacity:.9;margin:0">You control a handful of inputs: how you move, what you eat, how you sleep. The app scores those. Every two months you measure the outputs: fitness, muscle, body fat. Keep the inputs steady and the outputs follow.</p></div>
   <div class="card">
-   <p><b>1. Move 45 minutes a day.</b> Two strength days, two easy days, two hard days, one yoga day. Ten minutes of mobility every single day, because that's the part everyone skips and the part that keeps you lifting at 60.</p>
-   <p><b>When:</b> mornings work best, before the day gets a vote. But a session at 6 pm counts exactly the same as one at 6 am. Done beats early.</p>
-   <p><b>2. Protein and produce.</b> A palm of protein at every meal and five fists of fruit and veg a day. Hit that and the rest of your plate is your business.</p>
-   <p><b>3. Sleep.</b> Seven-plus hours, same wake time, morning light. Every other habit works better on sleep.</p>
-   <p><b>4. Heat and cold.</b> Three saunas and eleven minutes of cold a week. Optional, but the mortality data is hard to ignore.</p>
-   <p><b>5. Weigh in on Friday.</b> Once. Same scale, same conditions. The trend is the signal; one bad morning is noise.</p>
+   <p><b>Move.</b> Three strength days a week, cardio that is mostly easy with one or two hard sessions, and ten minutes of mobility every day.</p>
+   <p><b>Eat.</b> A palm of protein and half a plate of produce at most meals. Hit 70 percent quality and the rest is yours. 80 is the stretch.</p>
+   <p><b>Recover.</b> Seven hours of sleep with a steady wake time. Sauna and cold are optional extras.</p>
+   <p style="margin:0"><b>Measure.</b> One weigh-in a week, read as a four-week trend, and a fitness test every second month.</p>
   </div>
-  <h2>The rules</h2>
-  <div class="card">
-   <p><b>Majority rules.</b> 80/20. Eat right most of the time and the beer and dessert are earned. We don't count calories; we count whether the right things got done.</p>
-   <p><b>Muscle up, fat down beats pounds down.</b> Same weight with better composition is a win and the app shows it as one.</p>
-   <p><b>Cheap and proven.</b> Creatine, collagen, fish oil, a recovery drink. Vitamin D if a lab says so. No peptides, no GLP-1s unless a doctor prescribes them, no proprietary blends.</p>
-   <p><b>Fifteen seconds a day.</b> Tap what you did. If logging takes longer than that, we built it wrong.</p>
-  </div>
-  <h2>What to expect</h2>
-  <div class="card">
-   <p><b>Month 1:</b> the routine feels like work. Points are the only thing moving. That's normal.</p>
-   <p><b>Month 2:</b> the first test week. FTP or your mile time improves a few percent; weigh-ins start trending.</p>
-   <p><b>Month 6:</b> three test cycles in. Muscle mass up, body fat down, and the Wednesday ride that used to wreck you is just Wednesday.</p>
-   <p><b>Month 12:</b> a year of receipts, and a December DEXA that proves it.</p>
-  </div>
-  <div class="row tight" style="margin-top:8px"><button class="btn" data-go="${S.profile?"workout":"onboard"}">${S.profile?"Back":"Set up my profile →"}</button></div>
+  ${S.profile?`<h2>Go deeper</h2><p class="muted sm">Each month of lessons takes one part of the program.</p><div class="chips" style="margin-bottom:18px">${LESSON_MONTHS.map((x,i)=>`<button type="button" data-lib-go="${i+1}">${i+1} · ${esc(x)}</button>`).join("")}</div>`:""}
+  <div class="row tight" style="margin-top:8px"><button class="btn" data-go="${S.profile?"home":"onboard"}">${S.profile?"Back":"Set up my profile →"}</button></div>
   <p class="muted xs" style="margin-top:16px">Built on the evidence, not the algorithm. Questions and ideas go to Dan.</p></div>`;
 }
 function vOnboard(){
@@ -835,7 +946,7 @@ const m2=d.getMonth()%2===1;
 function vNutrition(){
   const key=nutDay, tk=ymd(today()), d=parseD(key), m=effectiveMeals(key), rw=S.rewards[key]||{}, dn=dayNutrition(key), wn=weekNutrition(d), [lab,cls]=ratioLabel(wn.pct), pr=proteinRange();
   const counter=(mealId,x)=>`<div class="counter">${FOOD.map(([f,name])=>`<div class="${(x[f]||0)>0?"on":""}"><div class="lab">${name}</div><div class="ctl"><button data-food="${f}" data-meal="${mealId}" data-dv="-1" aria-label="less">−</button><b>${x[f]||0}</b><button data-food="${f}" data-meal="${mealId}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>`;
-  return header("Nutrition","Tab 3")+`
+  return header("Nutrition","Protein and produce, most meals")+`
   <div class="card hero"><div class="row" style="justify-content:space-between"><div class="eyebrow">Week of ${fmt(weekKeys(d)[0])}</div><span class="${cls}">${lab}</span></div>
   <div class="stat"><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality · target ${S.profile?.nutritionTarget||70}</span></div><div><b>${wn.q+wn.mid+wn.n}</b><span>meals rated</span></div><div><b>${wn.alcohol}</b><span>drinks · line at 7</span></div></div>
   <p class="muted xs">${wn.q} quality · ${wn.mid} in-between (half credit) · ${wn.n} off plan. Snacks and the recovery drink count too, so one great meal plus a skipped breakfast doesn't read as a bad day. Drinks sit outside the ratio.${wn.protein==null?'':' About '+Math.round(wn.protein)+' g protein a day.'}</p></div>
@@ -878,6 +989,7 @@ function vNutrition(){
   <label>Weekly quality target<select id="nutritionTarget"><option value="70">70%</option><option value="80" ${S.profile?.nutritionTarget===80?'selected':''}>80%</option></select></label>
   </div></details>
   ${S.profile?.detailedNutrition?fNutritionPanel():''}
+  <button class="btn small ghost" type="button" data-go="grocery" style="margin-bottom:14px">${ICON.cart} Grocery list</button>
   <details id="nutrition-plan"><summary>Plan the week</summary><div>
   <div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div>
   ${groceryPanel()}
@@ -1470,6 +1582,22 @@ const LESSONS=[
  {"m": 12, "tag": "Long game", "t": "Day 365", "b": "A year ago you opened this app for the first time. You've now read all 365 of these, and you've done most of what they asked. Tomorrow the lessons start again from the top, and you'll read them as a different person. Well done. See you in the morning."}
 ];
 /* Lessons run on program days: day 1 is the day this person started (profile.start), whatever the calendar says. After day 365 the year repeats. */
+const LESSON_MONTHS=["The program in one month","Protein and the plate","Body composition","Strength","Mobility and joints","Cardio and fitness","Sleep","Eating in the real world","Habits and mindset","Supplements and shortcuts","Heat, cold and stress","The long game"];
+let libMonth=null;
+function lessonsRead(){ const s=new Set(); for(const k in (S.lessons||{})) if(S.lessons[k]) s.add(programDay(k)%LESSONS.length+1); return s }
+/* The library: every lesson, by month. The daily card is the drip; this is the shelf. */
+function vLibrary(){ const cur=lessonFor(ymd(today())), read=lessonsRead(); if(libMonth==null) libMonth=cur.m;
+  const months=LESSON_MONTHS.map((title,i)=>{ const m=i+1, ls=[]; LESSONS.forEach((x,j)=>{ if(x.m===m) ls.push({...x,n:j+1}) }); const done=ls.filter(x=>read.has(x.n)).length, open=libMonth===m;
+    return `<div class="card lib${open?" open":""}"><button type="button" class="lib-head" data-lib="${m}" aria-expanded="${open}"><span class="lib-num">${m}</span><span><b>${esc(title)}</b><br><span class="muted xs">Days ${ls[0].n}–${ls[ls.length-1].n} · ${done} of ${ls.length} read${cur.m===m?" · you are here":""}</span></span><span class="chev" aria-hidden="true">${open?"–":"+"}</span></button>
+    ${open?`<div class="lib-list">${ls.map(x=>`<details class="lib-lesson"${x.n===cur.n?" open":""}><summary><span class="tick${read.has(x.n)?" on":""}">${read.has(x.n)?CHECK:x.n}</span><span>${esc(x.t)}</span></summary><p>${esc(x.b)}</p></details>`).join("")}</div>`:""}</div>` }).join("");
+  return header("Lessons","Library")+`<p class="muted">One lesson a day for a year. All of them live here, to read ahead or look back.</p><button class="btn small ghost" type="button" data-go="why" style="margin:0 0 16px">The program on one page</button>`+months+`<button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
+const WHY={
+ workout:["Three strength days are the centre of the week, because muscle protects your joints, bones and blood sugar and nothing else replaces it. Cardio is mostly easy, with one or two hard sessions. Ten minutes of mobility a day keeps you training for decades. The app gives you the type of day and leaves the class to you.",[[4,"Strength"],[5,"Mobility"],[6,"Cardio"]]],
+ nutrition:["We count plates, not calories. A palm of protein and half a plate of produce at most meals covers what matters, and aiming for 70 percent quality leaves room for the rest of life. Drinks get their own line because they cost you sleep and recovery.",[[2,"Protein and the plate"],[8,"Eating in the real world"]]],
+ benefits:["Supplements and extras come last on purpose. A short list has decent evidence: creatine, protein powder when food falls short, vitamin D if a test shows you're low. Sauna has good long-term data and cold has less. None of it replaces training, food and sleep.",[[10,"Supplements"],[11,"Heat, cold and stress"],[7,"Sleep"]]],
+ progress:["Body weight can't tell muscle from fat, so we watch body composition, your waist and a fitness test, and we read the four-week trend instead of any single day. You control the inputs. The outputs follow, usually a few weeks later.",[[3,"Body composition"],[9,"Habits"],[12,"The long game"]]]
+};
+function whyBlock(id){ const [text,links]=WHY[id]; return `<details class="whybox"><summary>Why this works</summary><div><p class="sm">${text}</p><div class="chips">${links.map(([m,l])=>`<button type="button" data-lib-go="${m}">Month ${m} · ${l}</button>`).join("")}</div></div></details>` }
 function programDay(k){ const s=S.profile&&S.profile.start; if(!s) return 0; return Math.max(0,Math.round((parseD(k)-parseD(s))/864e5)) }
 function lessonFor(k){ const i=programDay(k)%LESSONS.length; return {...LESSONS[i],n:i+1} }
 function lessonRead(k){ return !!(S.lessons||{})[k] }
@@ -1482,30 +1610,72 @@ function lessonCard(k,compact){ const l=lessonFor(k), read=lessonRead(k);
 function dueMeals(k){ const h=new Date().getHours(), m=effectiveMeals(k); return MEALS.filter(([id])=>((id==="b"&&h>=5)||(id==="l"&&h>=11)||(id==="d"&&h>=17))&&!mealRating(m[id])) }
 function workoutOpen(k){ if(fusionActivities(k).length) return []; return dayDef(k).sessions.filter(x=>x.id!=="fin"&&!sessOf(k,x.id).done) }
 let dailyOpen=false, dailyHiddenAt=0;
-function dailyCards(){ const k=ymd(today()), cards=[];
-  if(!lessonRead(k)) cards.push(lessonCard(k,true));
+function dailyDeck(){ const k=ymd(today()), cards=[]; const add=(id,html)=>cards.push({id,html});
+  if(!lessonRead(k)) add("lesson",lessonCard(k,true));
   const open=workoutOpen(k), day=dayDef(k);
   const scheduled=workoutPlanForProgress(k)?.[parseD(k).getDay()]||[];
   const pending=scheduled.filter(session=>!weeklyPlanLog(k,session.id));
   if(scheduled.length){
-   if(pending.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout · My Plan</div>
+   if(pending.length) add("workout",`<div class="card"><div class="eyebrow">Today's workout · My Plan</div>
     ${pending.map(session=>`<h3 style="margin:6px 0 2px">${esc(session.name)}</h3><p class="muted sm">${session.minutes} min · ${WEEKLY_SESSION_TYPES[session.category]}</p>`).join("")}
     <button class="btn small" type="button" data-go="workout">Open my scheduled workouts</button></div>`);
-  }else if(open.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
+  }else if(open.length) add("workout",`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
    ${open.map(x=>checkBtn(false,x.title,x.range[0]===x.range[1]?x.range[0]+" min":x.range[0]+"–"+x.range[1]+" min",x.pts,`data-sess="${x.id}" data-k="${k}"`)).join("")}
    <button class="del xs" type="button" data-go="workout" style="text-decoration:underline;margin-top:8px">Did something else, or want to change the day</button></div>`);
   const due=dueMeals(k);
-  if(due.length) cards.push(`<div class="card"><div class="eyebrow">What you ate</div>
+  if(due.length) add("meals",`<div class="card"><div class="eyebrow">What you ate</div>
    ${due.map(([id,name])=>`<div class="meal"><b>${name}</b></div><div class="seg three"><button class="q" data-dmeal="${id}" data-v="q">Quality</button><button class="m" data-dmeal="${id}" data-v="m">In-between</button><button class="n" data-dmeal="${id}" data-v="n">Off plan</button></div><p class="muted xs" style="margin:4px 0 2px"><span style="color:var(--green)">●</span> ${esc(MEAL_EXAMPLES[id].q)}</p>`).join("")}
    <button class="del xs" type="button" data-go="nutrition" style="text-decoration:underline;margin-top:8px">Not sure? Ask in Nutrition</button></div>`);
   return cards }
+function dailyCards(){ return dailyDeck().map(c=>c.html) }
+const DECK_ORDER=["lesson","workout","meals"];
+let dailySkipped=new Set(), deckLast=null, deckFirst=null;
+/* Today's three as a deck: one card at a time. Answer it and the next one comes up; swipe or tap Skip to move on. */
 function renderDaily(){ const el=document.getElementById("daily"); if(!el) return;
   const blocked=!S.profile||tab==="why"||tab==="onboard"||!!accountScreen||!!consentRequest;
-  if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; return }
-  const cards=dailyCards();
-  if(!cards.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; if(el.dataset.had==="1"){ el.dataset.had=""; toast("That's today's three. Done.") } return }
+  if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; deckLast=null; return }
+  const all=dailyDeck(), deck=all.filter(c=>!dailySkipped.has(c.id));
+  if(deckFirst) deck.sort((a,b)=>(a.id===deckFirst?-1:0)-(b.id===deckFirst?-1:0));
+  if(!deck.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; deckLast=null; if(el.dataset.had==="1"){ el.dataset.had=""; toast(all.length?"Skipped for now. They're on Home when you're ready.":"That's today's three. Done.") } return }
   el.dataset.had="1"; el.hidden=false;
-  el.innerHTML=`<div class="daily-sheet"><div class="daily-head"><div><div class="eyebrow">${today().toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</div><h2>Today's three</h2></div><button class="btn small ghost" type="button" data-daily-close="1">Not now</button></div>${cards.join("")}<p class="muted xs" style="text-align:center;margin:6px 0 0">${cards.length} left. Under a minute, then you're done.</p></div>` }
+  const cur=deck[0], left=all.map(c=>c.id), fresh=deckLast!==cur.id; deckLast=cur.id;
+  const dots=DECK_ORDER.map(id=>`<i class="${!left.includes(id)?"done":id===cur.id?"cur":""}"></i>`).join("");
+  const keepScroll=fresh?0:(el.querySelector(".deck-card")||{}).scrollTop||0;
+  el.innerHTML=`<div class="deck"><div class="deck-top"><div class="deck-dots" aria-hidden="true">${dots}<span>Today's three</span></div><button class="deck-x" type="button" data-daily-close="1" aria-label="Close and go to the app">×</button></div>
+  <div class="deck-stack${deck.length>1?" more":""}${deck.length>2?" more2":""}"><div class="deck-card${fresh?" in":""}" data-deck-card="${cur.id}">${cur.html}</div></div>
+  <div class="deck-actions"><button class="btn small" type="button" data-deck-skip="${cur.id}">Skip</button><span class="xs">${deck.length} left · swipe to skip</span><button class="btn small" type="button" data-daily-close="1">Open app</button></div></div>`;
+  if(keepScroll) el.querySelector(".deck-card").scrollTop=keepScroll }
+function deckSkip(id,dir){ const card=document.querySelector(".deck-card"); const go=()=>{ dailySkipped.add(id); deckFirst=null; renderDaily() };
+  if(card){ card.style.transform=""; card.classList.remove("in"); card.classList.add(dir<0?"out-l":"out-r"); setTimeout(go,190) } else go() }
+/* swipe the top card sideways to skip it */
+{ let sw=null, swallow=false;
+  document.addEventListener("pointerdown",e=>{ const card=e.target.closest&&e.target.closest(".deck-card"); if(!card||e.target.closest("input,textarea,select")) return; sw={card,x:e.clientX,y:e.clientY,dx:0,on:false} });
+  document.addEventListener("pointermove",e=>{ if(!sw) return; const dx=e.clientX-sw.x, dy=e.clientY-sw.y; if(!sw.on){ if(Math.abs(dx)<12||Math.abs(dx)<Math.abs(dy)*1.4) return; sw.on=true; sw.card.classList.remove("in") } sw.dx=dx; sw.card.style.transform=`translateX(${dx}px) rotate(${dx/28}deg)`; sw.card.style.opacity=String(Math.max(.4,1-Math.abs(dx)/420)) });
+  const end=()=>{ if(!sw) return; const s=sw; sw=null; if(!s.on) return; swallow=true; setTimeout(()=>{swallow=false},60); s.card.style.opacity="";
+    if(Math.abs(s.dx)>90){ deckSkip(s.card.dataset.deckCard,s.dx) } else { s.card.style.transition="transform .2s ease"; s.card.style.transform=""; setTimeout(()=>{ s.card.style.transition="" },220) } };
+  document.addEventListener("pointerup",end); document.addEventListener("pointercancel",end);
+  document.addEventListener("click",e=>{ if(swallow&&e.target.closest&&e.target.closest(".deck-card")){ e.stopPropagation(); e.preventDefault() } },true);
+}
+/* Home, top card: the three things for today, each one tap away */
+function todayCard(k){ const ids=dailyDeck().map(c=>c.id), l=lessonFor(k), day=dayDef(k);
+  const row=(id,icon,label,sub,go)=>{ const open=ids.includes(id); return `<button type="button" class="today-row" ${open?`data-daily-open="1" data-only="${id}"`:`data-go="${go}"`}><span class="today-ic${open?"":" done"}">${open?icon:CHECK}</span><span><b>${label}</b><br><span class="muted sm">${sub}</span></span><span class="chev" aria-hidden="true">›</span></button>` };
+  return `<div class="card today"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Today's three</h2><span class="pill ${ids.length?"hot":"ok"}" style="flex:0 0 auto">${ids.length?ids.length+" left":"Done"}</span></div>
+  ${row("lesson",ICON.book,"Lesson",`Day ${l.n} · ${esc(l.t)}`,"lessons")}${row("workout",ICON.dumb,"Workout",esc(day.title),"workout")}${row("meals",ICON.plate,"Meals",ids.includes("meals")?"Rate what you've eaten so far":"Up to date","nutrition")}
+  ${ids.length?`<button class="btn" type="button" data-daily-open="1" style="width:100%;justify-content:center;margin-top:8px">Start</button>`:""}</div>` }
+/* One reading per Sunday–Saturday week: Friday's when there is one, otherwise the latest that week */
+function weeklyWeights(){ const by=new Map();
+  for(const r of bodyRows()){ const w=valueOrNull(r.wt); if(w==null||!r.d) continue; const wk=ymd(startOfWeek(parseD(r.d))), fri=parseD(r.d).getDay()===5, cur=by.get(wk);
+    if(!cur||fri||(!cur.fri&&r.d>=cur.d)) by.set(wk,{wk,d:r.d,w,fri}) }
+  return [...by.values()].sort((a,b)=>a.wk<b.wk?-1:1) }
+function fourWeekWeight(skip=0){ const cur=ymd(startOfWeek(today())), hi=shiftDate(cur,-7*skip), lo=shiftDate(cur,-7*(skip+3)); return avg(weeklyWeights().filter(x=>x.wk<=hi&&x.wk>=lo).map(x=>x.w)) }
+function weighCard(){ const k=ymd(today()), a4=fourWeekWeight(0), p4=fourWeekWeight(4), last=bodyRows().filter(x=>valueOrNull(x.wt)!=null).at(-1);
+  const isFri=today().getDay()===5, thisWeek=weeklyWeights().some(x=>x.wk===ymd(startOfWeek(today()))), todayLogged=!!last&&last.d===k;
+  const pill=todayLogged?["ok","Logged today"]:isFri?["hot","Due today"]:thisWeek?["ok","Logged this week"]:["","Fridays"], diff=a4!=null&&p4!=null?a4-p4:null;
+  return `<div class="card weigh"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Weigh-in</h2><span class="pill ${pill[0]}" style="flex:0 0 auto">${pill[1]}</span></div>
+  <div class="weigh-nums"><div><b>${a4==null?"–":a4.toFixed(1)}</b><span>4-week average, lb${diff==null?"":` · ${diff>0?"+":""}${diff.toFixed(1)} vs prior 4`}</span></div><div><b>${last?Number(last.wt).toFixed(1):"–"}</b><span>${last?"latest · "+fmt(last.d):"no weigh-ins yet"}</span></div></div>
+  <form id="fWeigh"><input type="hidden" name="d" value="${k}"><div class="weigh-row"><input type="number" step="0.1" min="30" max="1000" name="wt" inputmode="decimal" placeholder="This morning's weight, lb" aria-label="This morning's weight in pounds" required><button class="btn" type="submit">Log</button></div>
+  <details><summary>Add body fat and muscle</summary><div class="row"><div class="field"><label class="f">Body fat %</label><input type="number" step="0.1" min="0" max="80" name="bf" inputmode="decimal"></div><div class="field"><label class="f">Muscle (lb)</label><input type="number" step="0.1" min="0" max="1000" name="mm" inputmode="decimal"></div></div></details></form>
+  <p class="muted xs" style="margin:12px 0 0">Log any morning. The average uses one reading a week, Friday's when there is one.</p></div>` }
 function vHomeDashboard(){
  const now=today(), k=ymd(now), wk=weekKeys(now), nutrition=weekNutrition(now), points=pointTotals(now);
  const averages=dashboardPointAverages(points,now);
@@ -1525,21 +1695,21 @@ function vHomeDashboard(){
  const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
- return header('Momentum','Home')+lessonCard(k,false)+(dailyCards().length?`<button class="btn small ghost" type="button" data-daily-open="1" style="margin:-2px 0 12px">Open today's three · ${dailyCards().length} left</button>`:"")+`
+ return header('Momentum',now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))+todayCard(k)+weighCard()+`
  <section aria-labelledby="home-week-title">
  <h2 id="home-week-title">Your week</h2>
  <div class="card">
  <div class="home-week-days" role="group" aria-label="Day of the week">${wk.map((day,i)=>`<button type="button" data-home-day="${esc(weekdays[i]+' · '+dayLabel(day))}" aria-label="${esc(fmt(day))}" aria-pressed="${day===k}" ${day===k?'aria-current="date"':''}>${weekdays[i]}</button>`).join('')}</div>
- <p id="home-day-points" class="muted xs" aria-live="polite" style="margin:6px 0 0">${weekdays[now.getDay()]} · ${dayLabel(k)}</p>
- </div>
- <div class="card home-points-summary"><h2>Momentum Points</h2>
- <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
- </div>
- <div class="card"><h2>Weekly progress</h2>
+ <p id="home-day-points" class="muted xs" aria-live="polite" style="margin:6px 0 8px">${weekdays[now.getDay()]} · ${dayLabel(k)}</p>
  <div class="home-progress-row"><b>Strength days</b><span>${weekQuota(now).strengthDone} of ${weekQuota(now).strength}</span></div>
  <div class="home-progress-row"><b>Quality meals</b><span>${nutrition.pct==null?'—':nutrition.pct+'%'} · ${nutrition.q+nutrition.n} rated</span></div>
  <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
+ <button class="btn small ghost" type="button" data-go="recap" style="margin-top:16px">${ICON.share} Share my week</button>
  </div></section>
+ <details class="morebox"><summary>Points, activity and coach</summary><div>
+ <div class="card home-points-summary"><h2>Momentum Points</h2>
+ <div class="stat"><div><b>${pts}</b><span>Today</span></div><div><b>${points.weekly}</b><span>This week</span><span>${avgLabel(averages.weeklyDaily,'pts/day')}</span></div><div><b>${averages.lifetimeDaily===null?'—':averages.lifetimeDaily.toFixed(1)}</b><span>All-time daily average</span><span>pts/day</span></div></div>
+ </div>
  ${healthCard()}
  <div class="card"><h3>Activity</h3><p><b>${mins} min today</b> · ${workouts} logged session${workouts===1?'':'s'}</p>
  <p class="muted sm">${workoutNames.length?esc(workoutNames.slice(0,2).join(' · ')):'No workouts logged yet'}</p>
@@ -1564,8 +1734,9 @@ function vHomeDashboard(){
  <dt>Sleep</dt><dd>Logging at least 7 hours earns 2 points.</dd>
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
+ </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.13.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1922,12 +2093,17 @@ function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.d
 /* Weekly personal grocery planning; all data stays in this browser during beta. */
 function groceryWeek(){return ymd(startOfWeek(today()))}
 const FOUNDATION_GROCERIES={
- 'Meat & Seafood':['Chicken','Ground beef or turkey','Fish'],
- 'Dairy & Eggs':['Eggs','Greek yogurt','Cottage cheese','Milk or almond milk'],
- 'Produce':['Leafy greens','Bananas','Seasonal fruit','Fresh vegetables'],
- 'Frozen':['Frozen berries','Frozen mixed vegetables'],
- 'Pantry':['Oats','Rice or potatoes','Whole-grain bread','Whey or plant protein']
+ 'Meat & Seafood':['Chicken thighs or breasts','Ground turkey or lean beef','Salmon or canned tuna'],
+ 'Dairy & Eggs':['Eggs, two dozen','Greek yogurt, large tub','Cottage cheese','Cheese','Milk or almond milk'],
+ 'Produce':['Bananas','Berries','Apples','Spinach','Broccoli','Carrots','Bell peppers','Onions','Avocados'],
+ 'Frozen':['Frozen fruit for smoothies','Frozen mixed vegetables'],
+ 'Pantry':['Oats','Potatoes','Rice','Whole-grain bread','Beans','Olive oil','Nuts','Nut butter','Hummus','Whey or plant protein']
 };
+function groceryText(headers){ const g={}; for(const x of groceryState().items){ if(x.checked) continue; (g[x.category||'Other']||(g[x.category||'Other']=[])).push(x.name+(x.qty?' ('+x.qty+')':'')) }
+ return Object.entries(g).map(([c,xs])=>(headers?c.toUpperCase()+'\n':'')+xs.join('\n')).join(headers?'\n\n':'\n') }
+function groceryStarter(){ const f=groceryFoundation(), items=groceryState().items; let n=0;
+ for(const [category,names] of Object.entries(FOUNDATION_GROCERIES)) for(const name of names){ if(f.some(x=>x.name.toLowerCase()===name.toLowerCase())) continue; const it={id:'foundation-'+name,name,qty:'',category}; f.push(it); if(!items.some(x=>x.name.toLowerCase()===name.toLowerCase())) items.push({...it,foundationId:it.id,checked:false}); n++ }
+ return n }
 function groceryFoundation(){
  if(!Array.isArray(F.groceryFoundation)){
   F.groceryFoundation=Object.entries(FOUNDATION_GROCERIES).flatMap(([category,names])=>
@@ -1975,11 +2151,11 @@ function groceryPanel(){
  const total=state.items.length,done=state.items.filter(x=>x.checked).length;
  return `<h2>Sunday Grocery List</h2><div class="card"><h3>Week of ${esc(fmt(k))}</h3><p class="muted sm">Your recurring items reset each Sunday. Add extras for this week or save them to repeat. ${done}/${total} checked off.</p>
  <form id="groceryQuick"><div class="fgrid"><label>Item<input name="name" required maxlength="120" placeholder="Milk, bananas, paper towels…"></label><label>Quantity (optional)<input name="qty" maxlength="80" placeholder="2 cartons"></label></div><label>Department<select name="category">${['Produce','Meat & Seafood','Dairy & Eggs','Pantry','Frozen','Household','Other'].map(x=>`<option>${x}</option>`).join('')}</select></label><label><input type="checkbox" name="repeat" style="width:auto" checked> Repeat each week</label><button class="btn small" type="submit">+ Add to list</button></form>
- <div class="row" style="margin-top:12px"><button type="button" class="btn small ghost" data-grocery-clear>Clear this week</button></div></div>
+ <div class="row" style="margin-top:12px"><button type="button" class="btn small ghost" data-grocery-clear>Clear this week</button><button type="button" class="btn small ghost" data-grocery-starter>Add the starter list</button></div></div>
  <div class="card"><h3>Plan meals for this week</h3><p class="muted xs">Choose a favorite meal, enter its ingredients once, then add it to this week's plan. Ingredients are not inferred from macros.</p>
  ${favorites.length?favorites.map((x,i)=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${F.mealRecipes[x.description]?esc(F.mealRecipes[x.description].split('\n').filter(Boolean).length+' ingredients saved'):'Ingredients not yet saved'}</small></span><div class="row tight"><button type="button" class="btn small ghost" data-grocery-recipe="${i}">Ingredients</button><button type="button" class="btn small" data-grocery-plan="${i}">+ Plan</button></div></div>`).join(''):'<p class="muted sm">Save a meal as a favorite to see quick-add meal buttons here.</p>'}
  <h3 style="margin-top:16px">This week's planned meals</h3>${plan.length?plan.map(x=>`<div class="frow"><span><b>${esc(x.name)}</b><br><small class="muted">${x.servings} serving(s) · ${x.added?'Ingredients added':'Not added to groceries'}</small></span><div class="row tight"><button type="button" class="btn small" data-grocery-ingredients="${esc(x.id)}">+ Ingredients</button><button type="button" class="btn small ghost" data-grocery-unplan="${esc(x.id)}">×</button></div></div>`).join(''):'<p class="muted xs">No meals planned yet.</p>'}</div>
- <div class="card"><h3>Shopping checklist</h3>${total?Object.entries(grouped).map(([cat,items])=>`<h3 style="margin:14px 0 6px">${esc(cat)}</h3>${items.map(x=>`<div class="frow"><span><label style="display:flex;gap:9px;align-items:center"><input style="width:auto" type="checkbox" data-grocery-check="${esc(x.id)}" ${x.checked?'checked':''}><span style="${x.checked?'text-decoration:line-through;opacity:.65':''}">${esc(x.name)}${x.qty?' · '+esc(x.qty):''}</span></label></span>${x.foundationId?`<button type="button" class="btn small ghost" data-grocery-swap="${esc(x.id)}">Swap</button>`:''}<button type="button" class="btn small ghost" data-grocery-remove="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">×</button></div>`).join('')}`).join(''):'<p class="muted sm">Your list is empty. Add an item or plan a favorite meal.</p>'}</div>`;
+ <div class="card"><div class="row" style="justify-content:space-between"><h3>Shopping checklist</h3><div class="row tight" style="flex:0 0 auto"><button type="button" class="btn small" data-grocery-share>${ICON.share} Share</button><button type="button" class="btn small ghost" data-grocery-copy>Copy</button></div></div><p class="muted xs" style="margin-top:8px">Share sends what is still unchecked as text. For Reminders, tap Copy and paste into a list; each line becomes its own item.</p>${total?Object.entries(grouped).map(([cat,items])=>`<h3 style="margin:14px 0 6px">${esc(cat)}</h3>${items.map(x=>`<div class="frow"><span><label style="display:flex;gap:9px;align-items:center"><input style="width:auto" type="checkbox" data-grocery-check="${esc(x.id)}" ${x.checked?'checked':''}><span style="${x.checked?'text-decoration:line-through;opacity:.65':''}">${esc(x.name)}${x.qty?' · '+esc(x.qty):''}</span></label></span>${x.foundationId?`<button type="button" class="btn small ghost" data-grocery-swap="${esc(x.id)}">Swap</button>`:''}<button type="button" class="btn small ghost" data-grocery-remove="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">×</button></div>`).join('')}`).join(''):'<p class="muted sm">Your list is empty. Add an item or plan a favorite meal.</p>'}</div>`;
 }
 
 function momentumReminderStatus(message){
@@ -2850,7 +3026,55 @@ document.addEventListener('click',async e=>{
 });
 
 /* =========================== RENDER + EVENTS =========================== */
-let lastTab=null, altOther=null;
+let lastTab=null, altOther=null, lastScore=[];
+/* Weekly recap: a square image to post or send to the group, with an optional photo behind it */
+let recapPhoto=null, recapOffset=0;
+function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref);
+  const mob=wk.filter(k=>sessOf(k,"mob").done||(dayTypeFor(k)==="yoga"&&sessOf(k,"main").done)).length, drinks=wn.alcohol||0, pts=weekPoints(ref), need=q.strength||3;
+  const praise=q.strengthDone>=need?"All "+(need===3?"three":need)+" strength days done.":wn.pct!=null&&wn.pct>=80?wn.pct+" percent quality meals. That is the stretch goal.":wn.pct!=null&&wn.pct>=70?"Majority rules. "+wn.pct+" percent quality meals.":mob>=5?"Mobility on "+mob+" of seven days.":pts>0?"Showed up and logged it.":"A new week starts now.";
+  const nudge=q.strengthDone<need?(need-q.strengthDone)+" more strength day"+(need-q.strengthDone===1?"":"s")+" would have made the full week. Put them on the calendar first.":wn.pct!=null&&wn.pct<70?"Meals came in under 70 percent. Start with protein at breakfast.":drinks>7?"Drinks were over seven. Aim to come in under next week.":mob<5?"Mobility was light. Ten minutes after each workout covers it.":"Nothing to fix. Do the same again.";
+  return {wk,praise,nudge,tiles:[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Points"]]} }
+function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=recapData(), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial";
+  const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
+  x.fillStyle="#15181b"; x.fillRect(0,0,W,H);
+  if(recapPhoto){ const iw=recapPhoto.naturalWidth||recapPhoto.width, ih=recapPhoto.naturalHeight||recapPhoto.height, s=Math.max(W/iw,H/ih); x.drawImage(recapPhoto,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s);
+    const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(10,12,14,.72)"); g.addColorStop(.5,"rgba(10,12,14,.55)"); g.addColorStop(1,"rgba(10,12,14,.92)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
+  else{ const g=x.createRadialGradient(W*.85,H*.1,0,W*.85,H*.1,W*.9); g.addColorStop(0,"rgba(226,81,42,.55)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
+  x.textBaseline="alphabetic"; if(recapPhoto){ x.shadowColor="rgba(0,0,0,.55)"; x.shadowBlur=18 } x.fillStyle="#fff"; x.font="800 40px "+F1; x.fillText("MOMENTUM",80,120);
+  x.fillStyle="#e2512a"; x.fillRect(80,140,64,8);
+  x.fillStyle="rgba(255,255,255,.8)"; x.font="600 32px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-80,120); x.textAlign="left";
+  x.fillStyle="#fff"; x.font="800 84px "+F1; const words=d.praise.split(" "); let line="", y=330; const lines=[];
+  for(const w of words){ const test=line?line+" "+w:w; if(x.measureText(test).width>W-160&&line){ lines.push(line); line=w } else line=test } lines.push(line);
+  for(const l of lines.slice(0,3)){ x.fillText(l,80,y); y+=96 }
+  const cols=3, gap=28, tw=(W-160-gap*(cols-1))/cols, th=190, top=H-80-th*2-gap;
+  d.tiles.forEach(([v,lab],i)=>{ const px=80+(i%cols)*(tw+gap), py=top+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill();
+    x.fillStyle="#fff"; x.font="800 80px "+F1; x.fillText(v,px+28,py+104); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 28px "+F2; x.fillText(lab,px+28,py+154) });
+  return c }
+function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return; try{ drawRecap(c); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) }catch(e){} }
+function vRecap(){ const d=recapData();
+  return header("Your week","Recap")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas" width="1080" height="1080" role="img" aria-label="Weekly recap image"></canvas>
+  <div class="seg" style="grid-template-columns:repeat(2,1fr);margin:0 0 12px"><button type="button" data-recap-week="0" aria-pressed="${recapOffset===0}">This week</button><button type="button" data-recap-week="1" aria-pressed="${recapOffset===1}">Last week</button></div>
+  <div class="row"><label class="btn ghost" style="justify-content:center;cursor:pointer">${recapPhoto?"Change photo":"Add a photo"}<input id="recapPhoto" type="file" accept="image/*" hidden></label>${recapPhoto?`<button class="btn ghost" type="button" data-recap-clear style="justify-content:center">Remove photo</button>`:""}</div>
+  <button class="btn" type="button" data-recap-share style="width:100%;justify-content:center;margin-top:10px">${ICON.share} Share</button>
+  <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(d.nudge)} This line stays here and is not on the image.</p></div>
+  <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
+async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; drawRecap(c);
+  c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"momentum-week.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"My Momentum week"}) }catch(e){} }
+    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="momentum-week.png"; a.click(); toast("Image saved") } },"image/png") }
+document.addEventListener("change",e=>{ if(!e.target||e.target.id!=="recapPhoto") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
+document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-week],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
+  if(ds.deckSkip!==undefined){ deckSkip(ds.deckSkip,1); return }
+  if(ds.lib!==undefined){ libMonth=libMonth===+ds.lib?0:+ds.lib; render(); return }
+  if(ds.libGo!==undefined){ libMonth=+ds.libGo; lastTab=null; dailyOpen=false; tab="lessons"; location.hash="lessons"; render(); window.scrollTo(0,0); return }
+  if(ds.recapWeek!==undefined){ recapOffset=+ds.recapWeek; render(); return }
+  if(ds.recapClear!==undefined){ recapPhoto=null; render(); return }
+  if(ds.recapShare!==undefined){ shareRecap(); return }
+  if(ds.groceryStarter!==undefined){ const n=groceryStarter(); fsave(); render(); toast(n?n+" starter items added":"The starter list is already in"); return }
+  if(ds.groceryShare!==undefined||ds.groceryCopy!==undefined){ const share=ds.groceryShare!==undefined, text=groceryText(share); if(!text) return toast("Nothing left on the list");
+    if(share&&navigator.share){ try{ await navigator.share({title:"Grocery list",text}) }catch(e){} return }
+    try{ await navigator.clipboard.writeText(text); toast("List copied") }catch(e){ toast("Copy is not available here") } return }
+});
 function render(){
   const keep=lastTab===tab?window.scrollY:0; lastTab=tab;
   { const dl=document.getElementById("daily"); if(dl&&(!S.profile||tab==="why"||tab==="onboard"||accountScreen)) dl.hidden=true }
@@ -2867,6 +3091,8 @@ function render(){
   for(const id of openDetails){const details=document.getElementById(id);if(details)details.open=true}
   $("#tabbar").innerHTML=TABS.filter(t=>!t.hidden).map(t=>`<button role="tab" aria-selected="${t.id===resolveTab(tab)}" data-tab="${t.id}">${t.icon}${t.label}</button>`).join("");
   window.scrollTo(0,keep);
+  { const nums=[...document.querySelectorAll("#main .scorestrip b")]; nums.forEach((b,i)=>{ if(lastScore[i]!==undefined&&lastScore[i]!==b.textContent) b.classList.add("bump") }); if(nums.length) lastScore=nums.map(b=>b.textContent) }
+  if(tab==="recap") paintRecap();
   renderDaily();
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
@@ -2880,7 +3106,7 @@ document.addEventListener("click",e=>{
   if(ds.lessonRead!==undefined){ S.lessons=S.lessons||{}; S.lessons[ds.lessonRead]=true; save(); render(); toast("Lesson done · +"+PTS.lesson); return }
   if(ds.dmeal!==undefined){ setMealRating(ymd(today()),ds.dmeal,ds.v); render(); toast(ds.v==="q"?"Quality +"+PTS.meal:ds.v==="m"?"In-between · half credit":"Logged"); return }
   if(ds.dailyClose!==undefined){ dailyOpen=false; renderDaily(); return }
-  if(ds.dailyOpen!==undefined){ dailyOpen=true; renderDaily(); return }
+  if(ds.dailyOpen!==undefined){ dailySkipped.clear(); deckFirst=ds.only||null; deckLast=null; dailyOpen=true; renderDaily(); return }
   if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
   if(ds.checkClear!==undefined){ mealCheck=null; render(); return }
   if(ds.unswap!==undefined){ delete (S.swaps||{})[ds.unswap]; save(); render(); return }
@@ -2988,7 +3214,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.13.0';
+ const VERSION='9.14.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

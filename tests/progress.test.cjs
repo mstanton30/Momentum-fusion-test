@@ -75,7 +75,7 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  assert.match(document.querySelector('main').textContent,/Post-workout recovery drink/);
  click('[data-benefit="perks"]');
  assert.match(document.querySelector('main').textContent,/Sauna/);
- for(const [tab,heading] of [['home','Momentum'],['workout','Momentum'],['nutrition','Nutrition'],['progress','Progress']]){
+ for(const [tab,heading] of [['home','SD Health Stack'],['workout','SD Health Stack'],['nutrition','Nutrition'],['progress','Progress']]){
   click(`[data-tab="${tab}"]`);
   assert.match(document.querySelector('main h1').textContent,new RegExp(heading,'i'));
  }

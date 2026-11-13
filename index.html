@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Momentum">
-<title>Momentum — Beta v9.11.1</title>
+<title>Momentum — Beta v9.12.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -123,7 +123,7 @@ td.r,th.r{text-align:right}
 .meter i{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .3s}
 [hidden]{display:none!important}
 .home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.home-grid .card{min-width:0}.home-progress{height:7px;border-radius:6px;background:var(--line);overflow:hidden;margin:10px 0}.home-progress>div{height:100%;background:var(--green);border-radius:6px}@media(max-width:350px){.home-grid{grid-template-columns:1fr}}
-.tabbar{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:100%;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;max-width:100%;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabbar button{min-width:0;width:100%;background:none;border:0;padding:9px 2px 7px;color:var(--muted);font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-family:var(--display);display:flex;flex-direction:column;align-items:center;gap:3px}
 .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .tabbar button[aria-selected="true"]{color:var(--accent)}
@@ -168,6 +168,17 @@ details>div{padding-top:8px}
 .altrow{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 2px 36px}.altrow button{background:transparent;border:1px dashed var(--line);color:var(--muted);border-radius:999px;padding:3px 9px;font-size:.72rem;font-family:var(--display);font-weight:700}.altrow button[aria-pressed="true"]{background:var(--green);color:#fff;border-style:solid;border-color:var(--green)}
 .hero .altrow button{border-color:color-mix(in srgb,var(--bg) 40%,transparent);color:inherit}
 .seg.three{grid-template-columns:repeat(3,1fr)}.seg button.m[aria-pressed="true"]{color:var(--amber)}
+/* The tab bar is fixed to the viewport, so the page needs room underneath it. */
+main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.daily{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.daily-sheet{background:var(--bg);color:var(--fg);width:100%;max-width:560px;max-height:88vh;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:18px 18px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.daily-sheet .card{margin-bottom:10px}
+.daily-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.daily-head h2{margin:0;font-size:1.2rem}
+.lesson-body{font-size:1rem;line-height:1.55;margin:6px 0 10px}
+.verdict{border-radius:12px;padding:12px;margin-top:10px;background:var(--soft)}
+.extable{width:100%;border-collapse:collapse;font-size:.82rem}.extable th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 4px 2px}.extable td{padding:4px;border-bottom:1px solid var(--line);vertical-align:top}
+.fAlt{display:flex;gap:6px;margin:6px 0 2px 36px}.fAlt input{flex:1;padding:6px 10px;font-size:.85rem}
 .goalbar{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;font-size:.85rem}
 
 .fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
@@ -203,12 +214,13 @@ details>div{padding-top:8px}
 <body>
 <main id="main"></main>
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<div class="daily" id="daily" role="dialog" aria-modal="true" aria-label="Today's three" hidden></div>
 <div class="toast" id="toast" role="status"></div>
 <canvas class="sharecard" id="shareCanvas" width="1080" height="1350"></canvas>
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.11.1"></script>
+<script src="./beta-config.js?v=9.12.0"></script>
 <script>
 (function(){
 "use strict";
@@ -217,7 +229,7 @@ const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-w
 const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 
 /* =========================== PROGRAM CONTENT =========================== */
-const PTS={main:5,mob:3,fin:2,meal:1,drink:1,supp:1,heat:2,cold:2,medit:1,roll:1,light:1,sleep:2};
+const PTS={main:5,mob:3,fin:2,meal:1,drink:1,supp:1,heat:2,cold:2,medit:1,roll:1,light:1,sleep:2,lesson:1};
 const SLEEP_GOAL=7;
 const DAY_GOAL=45; // minutes per day
 /* Each day is a set of sessions. Each session is checked and timed on its own. */
@@ -293,6 +305,15 @@ const MEAL_EXAMPLES={
  d:{q:"Steak, potatoes and two vegetables · salmon and roasted veg",m:"Pasta with meat sauce, no salad · burger, no veg",n:"Takeout and dessert · cereal"},
  s:{q:"Greek yogurt · jerky and fruit · the recovery drink",m:"Granola bar · crackers and cheese",n:"Chips · cookies"}
 };
+/* Wider examples, by situation. [where, quality, in-between, off plan] */
+const NUTRITION_EXAMPLES=[
+ ["Breakfast","Smoothie with protein and fruit · eggs, toast and berries · Greek yogurt, fruit and oats","Oatmeal and a banana · egg sandwich · toast with peanut butter","Bagel and cream cheese · pastry and a latte · cereal"],
+ ["Lunch","Chicken or tuna salad · turkey sandwich with an apple · burrito bowl with chicken and veg","Sandwich and chips · soup and bread · leftover pasta","Drive-through burger and fries · vending machine"],
+ ["Dinner","Steak or salmon, potato and vegetables · stir-fry with chicken · chili with a salad","Pasta with meat sauce · burger with no veg · big salad with no protein","Pizza and wings · takeout noodles and dessert"],
+ ["Snack","Greek yogurt · jerky and an apple · cottage cheese and fruit · the recovery drink","Granola bar · cheese and crackers · a piece of fruit alone · nuts","Chips · cookies · candy"],
+ ["Eating out","Grilled protein with a vegetable side · fajitas · sushi with edamame","Burger with a side salad · sub with meat and lettuce","Fried appetizers as the meal · pasta alfredo and bread"],
+ ["At a game or party","Burger or chicken sandwich, skip the fries, grab the veggie tray","Hot dog or brat on a bun · pulled pork sandwich","Nachos, pretzel and beer for dinner"]
+];
 const DEFAULT_DRINK="1 scoop whey (Wegmans whey, or a plant protein with minimal ingredients)\n5 g creatine monohydrate (BulkSupplements)\n½ tsp sodium bicarbonate\n¼ tsp potassium chloride (BulkSupplements)\n200 mg magnesium glycinate (BulkSupplements)\n10–15 g collagen peptides (BiOptimal)\n12–16 oz water or milk";
 const DEFAULT_SMOOTHIE="1 scoop whey (Wegmans) or plant protein\n1 cup coconut water, almond milk or milk\n½ cup Bob's Red Mill oats\n1 cup frozen fruit (berries, mango, banana)\nHandful of frozen veg (spinach, kale or riced cauliflower)\n1 tbsp peanut or almond butter";
 const BUY={drink:"https://www.amazon.com/s?k=bulksupplements+potassium+chloride+magnesium+glycinate",creatine:"https://www.amazon.com/s?k=bulksupplements+creatine+monohydrate",collagen:"https://www.amazon.com/s?k=bioptimal+collagen+peptides",fish:"https://www.amazon.com/s?k=nordic+naturals+ultimate+omega",vitd:"https://www.amazon.com/s?k=vitamin+d3+2000+iu+usp+verified"};
@@ -311,6 +332,7 @@ const DEFAULT={
  profile:null, links:{}, drink:DEFAULT_DRINK, plans:{}, strength:[],
  sess:{},            // per date: {main:{done,min,alt},mob:{...},fin:{...}}
  swaps:{},           // per date: day type override for that date only
+ lessons:{},         // per date: true once that day's lesson is read
  meals:{},rewards:{},supps:{},
  weigh:[],tests:[],heat:[],cold:[],medit:[],roll:[],light:[],sleep:{},extras:[]
 };
@@ -429,6 +451,7 @@ function pointBreakdown(k){
   for(const key of ['heat','cold','medit','roll','light']){
     benefits+=S[key].filter(entry=>entry.d===k).length*PTS[key];
   }
+  if((S.lessons||{})[k])benefits+=PTS.lesson; // the daily lesson scores with the habit/benefit points
   const hours=sleepHours(k);
   const sleep=hours!=null&&hours>=SLEEP_GOAL?PTS.sleep:0;
   return {activity,nutrition,benefits,sleep,total:activity+nutrition+benefits+sleep};
@@ -782,7 +805,7 @@ function vWorkout(){
     <p style="opacity:.85">${esc(day.blurb)}</p>${!future&&isStrengthDay(key)===false&&q.strengthDone<q.strength&&["intervals","easy","yoga","rest"].includes(dayTypeFor(key))&&!sessOf(key,"main").done?`<p class="xs" style="opacity:.8;margin:-4px 0 8px">Strength this week: ${q.strengthDone}/${q.strength}. Sport and cardio never fill a strength day; swap one in below if you'd rather lift today.</p>`:""}
     ${fusionReplacements(key).length?`<div class="note"><b>↔ Logged instead:</b> ${fusionReplacements(key).map(x=>esc(x.description)+' · '+x.minutes+' min').join(', ')}.</div>`:''}<div class="plan">${esc(plan.text)}</div>
     ${plan.link?`<a class="btn" style="margin-top:10px" href="${esc(plan.link)}" target="_blank" rel="noopener">Start →</a>`:""}
-    ${future?`<p class="muted xs" style="margin-top:10px">You can log this once the day arrives.</p>`:day.sessions.map(s=>{ const st=sessOf(key,s.id); const sub=s.id==="fin"?muscle+" · 2 hard sets":(st.alt?st.alt+" · ":"")+(s.range[0]===s.range[1]?s.range[0]+" min":s.range[0]+"–"+s.range[1]+" min"); return checkBtn(!!st.done,s.title,sub,s.pts,`data-sess="${s.id}" data-k="${key}"`)+(st.done?minRow(key,s.id,s.mins,st.min):"")+(ALT[s.kind].length?`<div class="altrow" aria-label="Or something else">${ALT[s.kind].map(a=>`<button aria-pressed="${st.alt===a}" data-alt="${esc(a)}" data-sid="${s.id}" data-k="${key}">${esc(a)}</button>`).join("")}</div>`:"") }).join("")}
+    ${future?`<p class="muted xs" style="margin-top:10px">You can log this once the day arrives.</p>`:day.sessions.map(s=>{ const st=sessOf(key,s.id); const sub=s.id==="fin"?muscle+" · 2 hard sets":(st.alt?st.alt+" · ":"")+(s.range[0]===s.range[1]?s.range[0]+" min":s.range[0]+"–"+s.range[1]+" min"); return checkBtn(!!st.done,s.title,sub,s.pts,`data-sess="${s.id}" data-k="${key}"`)+(st.done?minRow(key,s.id,s.mins,st.min):"")+(ALT[s.kind].length?`<div class="altrow" aria-label="Or something else">${ALT[s.kind].map(a=>`<button aria-pressed="${st.alt===a}" data-alt="${esc(a)}" data-sid="${s.id}" data-k="${key}">${esc(a)}</button>`).join("")}<button aria-pressed="${!!st.alt&&!ALT[s.kind].includes(st.alt)}" data-alt-other="${s.id}" data-k="${key}">${st.alt&&!ALT[s.kind].includes(st.alt)?esc(st.alt):"Other"}</button></div>${altOther===key+"|"+s.id?`<form class="fAlt" data-sid="${s.id}" data-k="${key}"><input name="what" maxlength="40" autocomplete="off" placeholder="${s.kind==="lift"||s.kind==="boot"?"Which strength work?":"What did you do?"}" value="${st.alt&&!ALT[s.kind].includes(st.alt)?esc(st.alt):""}"><button class="btn small" type="submit">Save</button></form>`:""}`:"") }).join("")}
     ${(S.swaps||{})[key]?`<p class="muted xs" style="margin-top:8px">Swapped for today only. <button class="del" data-unswap="${key}" style="text-decoration:underline">Undo</button></p>`:""}
     ${future?"":`<div class="goalbar"><span class="muted">Minutes today</span><span><b style="font-family:var(--display);font-size:1.2rem">${mins}</b> <span class="muted">/ ${DAY_GOAL}</span></span></div><div class="meter"><i style="width:${Math.min(100,mins/DAY_GOAL*100)}%;background:${mins>=DAY_GOAL?"var(--green)":"var(--accent)"}"></i></div>`}
   </div>`;
@@ -817,6 +840,10 @@ function vNutrition(){
   <div class="card">
   <h2>Rate each meal</h2>
   <p class="muted sm"><b>Quality</b> = a palm of protein and fruit or veg on the plate. <b>In-between</b> = real food, but one of those is missing. <b>Off plan</b> = neither, or nothing. Examples under each one.</p>
+  <details id="nutrition-examples" class="xs"><summary>What counts as what? More examples</summary><div>
+  <table class="extable"><tr><th style="color:var(--green)">Quality</th><th style="color:var(--amber)">In-between</th><th style="color:var(--red)">Off plan</th></tr>
+  ${NUTRITION_EXAMPLES.map(([where,q,m,n])=>`<tr><td colspan="3" style="border:0;padding-top:8px"><b>${esc(where)}</b></td></tr><tr><td>${esc(q)}</td><td>${esc(m)}</td><td>${esc(n)}</td></tr>`).join("")}</table>
+  <p class="muted xs" style="margin-top:8px">The test is always the same two questions: is there a palm of protein, and is there fruit or veg? Both = quality. One = in-between. Neither = off plan. When in doubt, pick in-between and move on.</p></div></details>
   <button class="btn small" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button>
   ${MEALS.map(([id,name])=>{
    const x=m[id]||{},state=mealRating(x);
@@ -833,10 +860,12 @@ function vNutrition(){
   }).join("")}
   ${checkBtn(dn.drink,"Post-workout recovery drink","+"+DRINK_PROTEIN+" g protein · logs in Benefits too, with creatine and collagen",PTS.drink,`data-supp="drink" data-k="${key}"`)}
   </div>
-  <h2>Say what you ate</h2>
-  <div class="card"><p class="muted sm" style="margin-top:0">Type it or tap the mic and talk: "eggs and toast with berries for breakfast, chicken salad for lunch, two beers." It suggests a rating from the foods it recognizes. Review the rating above.</p>
-  <form id="fSay"><div class="row tight" style="gap:6px"><input name="text" placeholder="chicken, rice and broccoli for dinner, one beer" style="flex:1"><button type="button" class="gear" data-say="1" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button class="btn small" type="submit" style="margin-top:8px">Log food and drinks</button></form>
-  <p class="muted xs" id="sayOut" style="margin-top:8px"></p></div>
+  <h2>Not sure? Ask.</h2>
+  <div class="card"><p class="muted sm" style="margin-top:0">At a restaurant, a friend's house, a football game: type or say what you had and get a straight answer. You decide whether to log it.</p>
+  <form id="fCheck"><div class="row tight" style="gap:6px"><input name="text" maxlength="300" autocomplete="off" placeholder="two slices of pizza and a side salad" value="${mealCheck?esc(mealCheck.text):""}" style="flex:1"><button type="button" class="gear" data-say="1" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button class="btn small" type="submit" style="margin-top:8px" ${mealCheck&&mealCheck.busy?"disabled":""}>${mealCheck&&mealCheck.busy?"Checking…":"Is this quality?"}</button></form>
+  ${mealCheckHtml()}
+  <p class="muted xs" id="sayOut" style="margin-top:8px"></p>
+  <p class="muted xs" style="margin-top:6px">Only the words you type are sent for the check. Nothing is logged until you tap a meal.</p></div>
   <h2>Rewards${key===tk?" today":""}</h2>
   <div class="card"><div class="counter">${REWARDS.map(([id,name])=>`<div class="${(rw[id]||0)>0?"on":""}" style="background:${(rw[id]||0)>0?"color-mix(in srgb,var(--amber) 22%,var(--panel))":"var(--soft)"}"><div class="lab">${name}</div><div class="ctl"><button data-reward="${id}" data-dv="-1" aria-label="less">−</button><b>${rw[id]||0}</b><button data-reward="${id}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>
   <p class="muted xs" style="margin-top:10px">One tap per serving: a beer, a glass of wine, a scoop of ice cream, a handful of chips. Nothing here is a penalty; it just moves the ratio.</p></div>
@@ -1067,6 +1096,69 @@ function saveHealthImport(d){
  F.healthImports.push(record);fsave();return null;
 }
 
+/* =========================== DAILY LESSON + TODAY'S THREE ===========================
+   One short lesson a day. This starter set (four weeks) repeats until the full 365 are written;
+   each entry is {t: title, b: body (~50 words), tag}. Lessons are picked by day of year, so
+   everyone sees the same lesson on the same day. */
+const LESSONS=[
+ {"tag": "Why", "t": "Inputs in, outputs out", "b": "You control a handful of inputs: moving, eating, sleeping. The app scores those. Every couple of months you measure the outputs: fitness, muscle, body fat. Keep the inputs steady and the outputs follow. Today's only job is today's inputs."},
+ {"tag": "Why", "t": "Fifteen seconds", "b": "Logging should take seconds. Tap what you did and close the app. If you catch yourself typing paragraphs or doing math, stop; that's the old way. A rough record kept every day beats a perfect one kept for a week."},
+ {"tag": "Why", "t": "Majority rules", "b": "You don't need a perfect week. Eat well about 70 percent of the time and the rest is yours: the beer, the dessert, pizza night. Aim for most, not all. People who chase perfect usually quit by week three."},
+ {"tag": "Why", "t": "Why we don't count calories", "b": "Counting works on paper and fails in kitchens. Labels are off, portions are guesses, and almost nobody keeps it up. Counting plates is easier: protein and produce on the plate, most meals. Do that and the calories tend to sort themselves out."},
+ {"tag": "Why", "t": "The scale is the wrong scoreboard", "b": "Body weight can't tell muscle from fat. Lose five pounds of fat and gain five of muscle and the scale says nothing happened, while everything changed. We watch body composition and fitness. Weight is one number among several."},
+ {"tag": "Why", "t": "One weigh-in a week", "b": "Weigh once a week, same morning, same conditions. Daily weight swings two or three pounds on water and salt alone. One reading is noise; the four-week trend is the signal. Friday morning, after the bathroom, before coffee."},
+ {"tag": "Why", "t": "Small steps", "b": "Nobody changes ten habits at once. Pick the one that feels easiest this week and do it daily. Ten minutes of stretching counts. Next week, add another. A year of small steps covers a lot of ground."},
+ {"tag": "Nutrition", "t": "The plate", "b": "Picture a plate. A palm of protein. Half of it fruit, vegetables or unprocessed food. The last quarter is yours. Three plates like that a day gets most people to their protein and produce without measuring anything."},
+ {"tag": "Nutrition", "t": "Protein first", "b": "Protein builds and keeps muscle, and it keeps you full. Most adults eat too little of it, especially at breakfast. Aim for a palm-size serving at every meal: eggs, yogurt, chicken, fish, beans. If you change one thing this week, change breakfast."},
+ {"tag": "Nutrition", "t": "Quality, in-between, off plan", "b": "Quality means protein plus fruit or veg. In-between means real food that's missing one of those. Off plan means neither. Don't agonize over it; pick the closest and move on. In-between still counts for half."},
+ {"tag": "Nutrition", "t": "About 800 grams of produce", "b": "Research on fruit and vegetables keeps landing near the same number: roughly 800 grams a day, about five fist-size servings. Fresh and frozen both count. Fill half your plate at each meal and you're most of the way there."},
+ {"tag": "Nutrition", "t": "Earn the beer", "b": "Nothing is banned here. Eat well most of the week and the drinks and dessert fit. The app counts them so you can see your ratio, not to scold you. Alcohol gets its own line because it costs you sleep and recovery."},
+ {"tag": "Nutrition", "t": "Stock the house", "b": "Most plans fail at the grocery store, not at the table. If the food isn't in the house, the plan is over by Wednesday. Buy the same foundation every Sunday: proteins, eggs, yogurt, frozen fruit and veg, greens, oats."},
+ {"tag": "Nutrition", "t": "Eating out", "b": "At a restaurant or a game, find the protein, add a vegetable or salad if you can, and enjoy the rest. A burger with a side salad is in-between at worst. One off-plan meal doesn't change your week."},
+ {"tag": "Movement", "t": "Strength is the big one", "b": "If you only do one kind of exercise, lift. Muscle protects your joints, bones and blood sugar, and it keeps people independent late in life. Two to three sessions a week is enough. Walking is good for you, and it doesn't replace this."},
+ {"tag": "Movement", "t": "Do the part you avoid", "b": "Many women default to walking and yoga and skip strength. Many men lift and never stretch. The program asks each for the part they tend to avoid: strength if you mostly walk, mobility if you mostly lift."},
+ {"tag": "Movement", "t": "Ten minutes of mobility", "b": "Stretching, yoga, Pilates. It's the part everyone skips and the part that keeps you training ten years from now. Ten minutes a day, the same routine if you like. It earns points for a reason."},
+ {"tag": "Movement", "t": "Easy days should be easy", "b": "Most of your cardio belongs at a pace where you can hold a conversation. Easy days build the engine and leave you fresh for the hard ones. If every session is medium-hard, you get tired without getting fitter."},
+ {"tag": "Movement", "t": "Hard days should be hard", "b": "Once or twice a week, go hard: intervals, hills, a tough class. Short efforts near your limit raise your fitness ceiling more than anything else. Then recover. Hard days and easy days, with very little in the mushy middle."},
+ {"tag": "Movement", "t": "Sport counts", "b": "Pickleball, basketball, a long hike: each counts as your cardio for the day. Tap it and move on. What sport can't do is stand in for a strength day. Play the game and still lift."},
+ {"tag": "Movement", "t": "Steps have a ceiling", "b": "More steps help, up to about seven or eight thousand a day. Past that the benefit flattens out. If you're already there, thirty minutes of lifting does more for you than another hour of walking."},
+ {"tag": "Recovery", "t": "Sleep", "b": "Seven-plus hours, with the same wake time every day. Sleep is when muscle repairs and appetite resets. A short night leaves you hungrier and weaker the next day. Protect the wake time first; the bedtime follows."},
+ {"tag": "Recovery", "t": "Morning light", "b": "Get outside within an hour of waking for ten minutes, no sunglasses. Morning light sets your body clock, which makes it easier to fall asleep that night. It's free, and it's one of the more reliable sleep habits there is."},
+ {"tag": "Recovery", "t": "Sauna", "b": "In long-term studies from Finland, regular sauna use is linked to lower heart disease risk. Three sessions of about twenty minutes a week is a reasonable target. Treat it as a bonus, not a requirement, and drink water afterward."},
+ {"tag": "Recovery", "t": "Supplements, briefly", "b": "A short list has real evidence: creatine, protein powder when food falls short, fish oil, and vitamin D if a blood test shows you're low. Buy plain, single-ingredient, third-party tested products. Most of what gets marketed isn't on this list."},
+ {"tag": "Recovery", "t": "What we skip", "b": "Peptides, fat burners and most trending products have little human evidence behind them. GLP-1 drugs are real medicine for people who need them, prescribed by a doctor; without protein and strength work they cost muscle. None of it replaces the basics."},
+ {"tag": "Mindset", "t": "Don't miss twice", "b": "You'll miss days. Everyone does. The rule is simple: don't miss twice. One skipped workout is a rest day; two is the start of a new habit. Open the app tomorrow, tap one thing, and you're back."},
+ {"tag": "Mindset", "t": "Check the trend", "b": "Every few weeks, look at Progress. Weight flat with muscle up and body fat down is a win. So is the same workout feeling easier. If nothing has moved after two months, look at protein and strength days first."}
+];
+function lessonFor(k){ const d=parseD(k); const doy=Math.floor((d-new Date(d.getFullYear(),0,1))/864e5); const i=doy%LESSONS.length; return {...LESSONS[i],n:i+1} }
+function lessonRead(k){ return !!(S.lessons||{})[k] }
+function lessonCard(k,compact){ const l=lessonFor(k), read=lessonRead(k);
+  return `<div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow" style="flex:1">Today's lesson · ${esc(l.tag)}</div><span class="${read?"pill ok":"pill"}" style="flex:0 0 auto">${read?"Read":"+"+PTS.lesson}</span></div>
+  <h3 style="margin:6px 0 0;font-size:1.15rem">${esc(l.t)}</h3><p class="lesson-body">${esc(l.b)}</p>
+  ${read?"":`<button class="btn small" type="button" data-lesson-read="${k}">Got it</button>`}
+  ${compact?"":`<details class="xs" style="margin-top:10px"><summary>Earlier this week</summary><div>${[1,2,3,4,5,6].map(n=>{ const kk=shiftDate(k,-n), x=lessonFor(kk); return `<p class="sm" style="margin:0 0 8px"><b>${esc(x.t)}.</b> ${esc(x.b)}</p>` }).join("")}</div></details>`}</div>` }
+/* Meals that are due by this time of day and not yet rated */
+function dueMeals(k){ const h=new Date().getHours(), m=effectiveMeals(k); return MEALS.filter(([id])=>((id==="b"&&h>=5)||(id==="l"&&h>=11)||(id==="d"&&h>=17))&&!mealRating(m[id])) }
+function workoutOpen(k){ if(fusionActivities(k).length) return []; return dayDef(k).sessions.filter(x=>x.id!=="fin"&&!sessOf(k,x.id).done) }
+let dailyOpen=false, dailyHiddenAt=0;
+function dailyCards(){ const k=ymd(today()), cards=[];
+  if(!lessonRead(k)) cards.push(lessonCard(k,true));
+  const open=workoutOpen(k), day=dayDef(k);
+  if(open.length) cards.push(`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
+   ${open.map(x=>checkBtn(false,x.title,x.range[0]===x.range[1]?x.range[0]+" min":x.range[0]+"–"+x.range[1]+" min",x.pts,`data-sess="${x.id}" data-k="${k}"`)).join("")}
+   <button class="del xs" type="button" data-go="workout" style="text-decoration:underline;margin-top:8px">Did something else, or want to change the day</button></div>`);
+  const due=dueMeals(k);
+  if(due.length) cards.push(`<div class="card"><div class="eyebrow">What you ate</div>
+   ${due.map(([id,name])=>`<div class="meal"><b>${name}</b></div><div class="seg three"><button class="q" data-dmeal="${id}" data-v="q">Quality</button><button class="m" data-dmeal="${id}" data-v="m">In-between</button><button class="n" data-dmeal="${id}" data-v="n">Off plan</button></div><p class="muted xs" style="margin:4px 0 2px"><span style="color:var(--green)">●</span> ${esc(MEAL_EXAMPLES[id].q)}</p>`).join("")}
+   <button class="del xs" type="button" data-go="nutrition" style="text-decoration:underline;margin-top:8px">Not sure? Ask in Nutrition</button></div>`);
+  return cards }
+function renderDaily(){ const el=document.getElementById("daily"); if(!el) return;
+  const blocked=!S.profile||tab==="why"||tab==="onboard"||!!accountScreen||!!consentRequest;
+  if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; return }
+  const cards=dailyCards();
+  if(!cards.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; if(el.dataset.had==="1"){ el.dataset.had=""; toast("That's today's three. Done.") } return }
+  el.dataset.had="1"; el.hidden=false;
+  el.innerHTML=`<div class="daily-sheet"><div class="daily-head"><div><div class="eyebrow">${today().toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</div><h2>Today's three</h2></div><button class="btn small ghost" type="button" data-daily-close="1">Not now</button></div>${cards.join("")}<p class="muted xs" style="text-align:center;margin:6px 0 0">${cards.length} left. Under a minute, then you're done.</p></div>` }
 function vHomeDashboard(){
  const now=today(), k=ymd(now), wk=weekKeys(now), nutrition=weekNutrition(now), points=pointTotals(now);
  const averages=dashboardPointAverages(points,now);
@@ -1086,7 +1178,7 @@ function vHomeDashboard(){
  const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
- return header('Momentum','Home')+`
+ return header('Momentum','Home')+lessonCard(k,false)+(dailyCards().length?`<button class="btn small ghost" type="button" data-daily-open="1" style="margin:-2px 0 12px">Open today's three · ${dailyCards().length} left</button>`:"")+`
  <section aria-labelledby="home-week-title">
  <h2 id="home-week-title">Your week</h2>
  <div class="card">
@@ -1120,13 +1212,13 @@ function vHomeDashboard(){
  <details class="card home-points-guide"><summary>How Momentum Points work</summary>
  <dl class="sm">
  <dt>Activity</dt><dd>Scheduled main workouts earn 5 points. Custom workouts of at least 15 minutes earn 2–5 based on duration and intensity. These share a 5-point daily cap. Scheduled mobility adds 3 and a scheduled finisher adds 2.</dd>
- <dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day. In-between earns half credit toward the weekly quality ratio, not points.</dd>
+ <dt>Lesson</dt><dd>Reading the day's lesson earns 1 point.</dd><dt>Nutrition</dt><dd>Each meal rated Quality earns 1 point, up to 4 per day. In-between earns half credit toward the weekly quality ratio, not points.</dd>
  <dt>Benefits</dt><dd>Sauna, hot tub, and cold sessions earn 2 each. Meditation, foam rolling, and light sessions earn 1 each. Recovery drink, creatine, collagen, and omega-3 each earn 1. Logging the drink also checks creatine and collagen.</dd>
  <dt>Sleep</dt><dd>Logging at least 7 hours earns 2 points.</dd>
  </dl>
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.11.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.12.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1337,6 +1429,27 @@ function parseMeal(text){
   let smoothie=null; for(const [meal,seg] of segs){ if(/smoothie/.test(seg)){ smoothie=meal==="s"&&!/snack/.test(seg)?"b":meal } }
   return {meals:out,rewards,smoothie,drink};
 }
+let mealCheck=null; // {text,busy,result:{rating,protein,produce,drinks,why,fix,src}}
+function localMealCheck(text){ const res=parseMeal(text); let p=0,prod=0,carb=0; for(const id in res.meals){ const m=res.meals[id]; p+=m.p||0; prod+=(m.f||0)+(m.v||0); carb+=m.c||0 } if(res.smoothie){ p+=2; prod+=2 } if(res.drink) p+=1;
+  const drinks=res.rewards.alc||0, junk=(res.rewards.dessert||0)+(res.rewards.snack||0);
+  if(!p&&!prod&&!carb&&!junk&&!drinks) return {rating:null,why:"I couldn't tell what that was. Try naming the foods: chicken, salad, rice, a beer.",src:"local"};
+  if(!p&&!prod&&!carb&&!junk) return {rating:null,drinks,why:"That's "+drinks+" drink"+(drinks>1?"s":"")+" and no food. Drinks are counted on their own line.",src:"local"};
+  const rating=p&&prod?"q":(p||prod)?"m":"n";
+  const why=rating==="q"?"Protein and produce are both there.":rating==="m"?(p?"There's protein, but no fruit or veg.":"There's fruit or veg, but no real protein."):"No protein and no fruit or veg in that.";
+  const fix=rating==="q"?null:rating==="m"?(p?"Add a vegetable or a piece of fruit and it's quality.":"Add a palm of protein and it's quality."):"Next time start with the protein and add a vegetable.";
+  return {rating,protein:!!p,produce:!!prod,drinks,why,fix,src:"local"} }
+async function checkMeal(text){
+  try{ const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),9000);
+    const res=await fetch(HEALTH_SUPABASE_URL+'/functions/v1/momentum-extract-health',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meal:text.slice(0,300)}),signal:ctl.signal}); clearTimeout(timer);
+    const r=await res.json(); if(!res.ok||!["q","m","n"].includes(r.rating)) throw Error("no rating");
+    return {rating:r.rating,protein:!!r.protein,produce:!!r.produce,drinks:Math.max(0,Math.min(20,Math.round(Number(r.drinks)||0))),why:String(r.why||"").slice(0,200),fix:r.fix?String(r.fix).slice(0,200):null,src:"ai"};
+  }catch(e){ return localMealCheck(text) } }
+function mealCheckHtml(){ if(!mealCheck||mealCheck.busy||!mealCheck.result) return ""; const r=mealCheck.result;
+  if(!r.rating) return `<div class="verdict" id="checkVerdict"><p class="sm" style="margin:0">${esc(r.why)}</p><button class="del xs" data-check-clear="1" style="text-decoration:underline;margin-top:6px">Clear</button></div>`;
+  const lab=r.rating==="q"?["Quality","pill ok"]:r.rating==="m"?["In-between · half credit","pill warn"]:["Off plan","pill bad"];
+  return `<div class="verdict" id="checkVerdict"><div class="row" style="justify-content:space-between"><span class="${lab[1]}">${lab[0]}</span><span class="muted xs" style="flex:0 0 auto">${r.src==="ai"?"AI check":"Quick check"}</span></div>
+  <p class="sm" style="margin:8px 0 4px">${esc(r.why)}</p>${r.fix?`<p class="muted xs" style="margin:0 0 6px">${esc(r.fix)}</p>`:""}${r.drinks>0?`<p class="muted xs" style="margin:0 0 6px">Plus ${r.drinks} drink${r.drinks>1?"s":""}, counted on the drinks line.</p>`:""}
+  <div class="eyebrow" style="margin-top:8px">Log it as</div><div class="chips">${MEALS.map(([id,name])=>`<button type="button" data-check-log="${id}">${name}</button>`).join("")}<button type="button" data-check-clear="1" style="background:transparent;border:1px solid var(--line)">Don't log</button></div></div>` }
 function applyParsed(k,res){ S.meals[k]=S.meals[k]||{}; S.rewards[k]=S.rewards[k]||{}; const touched=[];
   if(res.drink){ S.supps[k]=S.supps[k]||{}; S.supps[k].drink=true; for(const x of IN_DRINK) S.supps[k][x]=true; touched.push("Recovery drink (+"+DRINK_PROTEIN+" g)") }
   if(res.smoothie){ const id=res.smoothie; const m=S.meals[k][id]||{p:0,f:0,v:0,c:0}; delete m.q; delete m.n; m.p+=2; m.f+=1; m.v+=1; m.c+=1; S.meals[k][id]=m; touched.push("Smoothie → "+MEALS.find(x=>x[0]===id)[1]+" P2 F1 V1 C1") }
@@ -1349,8 +1462,8 @@ function applyParsed(k,res){ S.meals[k]=S.meals[k]||{}; S.rewards[k]=S.rewards[k
   for(const [id,name] of REWARDS){ if(res.rewards[id]){ S.rewards[k][id]=(S.rewards[k][id]||0)+res.rewards[id]; touched.push(name+" ×"+res.rewards[id]) } }
   return touched; }
 let recog=null;
-function startSpeech(){ const SR=window.SpeechRecognition||window.webkitSpeechRecognition; const input=$("#fSay [name=text]"); if(!SR){ toast("No mic here: tap the keyboard mic instead"); input.focus(); return }
-  try{ recog=new SR(); recog.lang="en-US"; recog.interimResults=false; recog.onresult=e=>{ input.value=(input.value?input.value+" ":"")+e.results[0][0].transcript; $("#sayOut").textContent="Heard: "+e.results[0][0].transcript+" — tap Add to today."; }; recog.onerror=()=>toast("Mic didn't work: use the keyboard mic"); recog.start(); $("#sayOut").textContent="Listening…"; }catch(e){ toast("Mic didn't work: use the keyboard mic"); input.focus() } }
+function startSpeech(){ const SR=window.SpeechRecognition||window.webkitSpeechRecognition; const input=$("#fCheck [name=text]")||$("#fSay [name=text]"); if(!SR){ toast("No mic here: tap the keyboard mic instead"); input.focus(); return }
+  try{ recog=new SR(); recog.lang="en-US"; recog.interimResults=false; recog.onresult=e=>{ input.value=(input.value?input.value+" ":"")+e.results[0][0].transcript; $("#sayOut").textContent="Heard: "+e.results[0][0].transcript+" — tap Is this quality?"; }; recog.onerror=()=>toast("Mic didn't work: use the keyboard mic"); recog.start(); $("#sayOut").textContent="Listening…"; }catch(e){ toast("Mic didn't work: use the keyboard mic"); input.focus() } }
 
 /* =========================== SHARE CARD =========================== */
 function drawShareCard(){
@@ -2388,9 +2501,10 @@ document.addEventListener('click',async e=>{
 });
 
 /* =========================== RENDER + EVENTS =========================== */
-let lastTab=null;
+let lastTab=null, altOther=null;
 function render(){
   const keep=lastTab===tab?window.scrollY:0; lastTab=tab;
+  { const dl=document.getElementById("daily"); if(dl&&(!S.profile||tab==="why"||tab==="onboard"||accountScreen)) dl.hidden=true }
   if(accountScreen){$("#main").innerHTML=accountScreenHtml();$("#tabbar").hidden=true;return}
   if(consentRequest&&!S.profile&&tab==="progress"){
    $("#main").innerHTML=`<h1>Connect Momentum Beta</h1>${accountConnections()}`;
@@ -2404,14 +2518,22 @@ function render(){
   for(const id of openDetails){const details=document.getElementById(id);if(details)details.open=true}
   $("#tabbar").innerHTML=TABS.filter(t=>!t.hidden).map(t=>`<button role="tab" aria-selected="${t.id===resolveTab(tab)}" data-tab="${t.id}">${t.icon}${t.label}</button>`).join("");
   window.scrollTo(0,keep);
+  renderDaily();
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tab],[data-go],[data-sess],[data-alt],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export"); if(!t) return;
+  const t=e.target.closest("[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export"); if(!t) return;
   const ds=t.dataset;
-  if(ds.tab||ds.go){ lastTab=null; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
+  if(ds.tab||ds.go){ lastTab=null; if(S.profile) dailyOpen=false; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
   if(ds.alt!==undefined){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sid]||{}; if(s.alt===ds.alt){ delete s.alt; s.done=false } else { s.alt=ds.alt; s.done=true; if(!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sid); s.min=def.range[1] } } S.sess[k][ds.sid]=s; save(); render(); if(s.done) toast(ds.alt+" counts · +"+dayDef(k).sessions.find(x=>x.id===ds.sid).pts); return }
+  if(ds.altOther!==undefined){ const id=ds.k+"|"+ds.altOther; altOther=altOther===id?null:id; render(); const inp=document.querySelector(".fAlt input"); if(inp) inp.focus(); return }
+  if(ds.lessonRead!==undefined){ S.lessons=S.lessons||{}; S.lessons[ds.lessonRead]=true; save(); render(); toast("Lesson done · +"+PTS.lesson); return }
+  if(ds.dmeal!==undefined){ setMealRating(ymd(today()),ds.dmeal,ds.v); render(); toast(ds.v==="q"?"Quality +"+PTS.meal:ds.v==="m"?"In-between · half credit":"Logged"); return }
+  if(ds.dailyClose!==undefined){ dailyOpen=false; renderDaily(); return }
+  if(ds.dailyOpen!==undefined){ dailyOpen=true; renderDaily(); return }
+  if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
+  if(ds.checkClear!==undefined){ mealCheck=null; render(); return }
   if(ds.unswap!==undefined){ delete (S.swaps||{})[ds.unswap]; save(); render(); return }
   if(ds.minSet){ const k=ds.k; S.sess[k]=S.sess[k]||{}; S.sess[k][ds.minSet]=S.sess[k][ds.minSet]||{done:true}; S.sess[k][ds.minSet].min=+ds.v; save(); render(); return }
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
@@ -2476,6 +2598,8 @@ document.addEventListener("submit",async e=>{
    setMealRating(nutDay,f.dataset.mealGuide,d.protein==='yes'&&d.produce==='yes'?'q':(d.protein==='yes'||d.produce==='yes')?'m':'n',d.protein==='yes');
    render();return;
   }
+  if(f.classList.contains("fAlt")){ const k=f.dataset.k, sid=f.dataset.sid, what=(d.what||"").trim().slice(0,40); S.sess[k]=S.sess[k]||{}; const st=S.sess[k][sid]||{}; if(what){ st.alt=what; st.done=true; if(!st.min){ const def=dayDef(k).sessions.find(x=>x.id===sid); st.min=def.range[1] } } else { delete st.alt; st.done=false } S.sess[k][sid]=st; altOther=null; save(); render(); if(what) toast(what+" counts"); return }
+  if(f.id==="fCheck"){ const txt=(d.text||"").trim(); if(!txt) return; mealCheck={text:txt,busy:true,result:null}; render(); const result=await checkMeal(txt); if(mealCheck&&mealCheck.text===txt){ mealCheck={text:txt,busy:false,result}; render(); const v=document.getElementById("checkVerdict"); if(v&&v.scrollIntoView) v.scrollIntoView({block:"nearest"}) } return }
   if(f.id==="fSay"){ const txt=d.text.trim(); if(!txt) return; const res=parseMeal(txt); const touched=applyParsed(nutDay,res); save(); render(); const out=$("#sayOut"); if(out) out.textContent=touched.length?"Added: "+touched.join(" · ")+". Review the meal ratings above.":"Didn't recognize any food words in that. Try naming the foods: eggs, chicken, salad, rice, a beer."; return }
   if(f.id==="fDexa"){
    if(!validLogDate(d.d))return toast("Choose a valid scan date");
@@ -2497,7 +2621,12 @@ document.addEventListener("submit",async e=>{
   save(); render();
 });
 window.addEventListener("hashchange",()=>{ const previous=benefitPane,h=resolveTab(location.hash.slice(1)); if(TABS.find(t=>t.id===h)&&(h!==tab||previous!==benefitPane)){ tab=h; render() } });
+dailyOpen=true;
 render();
+/* Reopen the three when the app comes back after a while (a push notification, the next morning). */
+document.addEventListener("visibilitychange",()=>{ if(document.hidden){ dailyHiddenAt=Date.now(); return } if(dailyHiddenAt&&Date.now()-dailyHiddenAt>20*60*1000){ dailyOpen=true; render() } });
+document.addEventListener("click",e=>{ if(e.target&&e.target.id==="daily"){ dailyOpen=false; renderDaily() } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&dailyOpen){ dailyOpen=false; renderDaily() } });
 if(cloudClient&&authCode)void finishCloudAuthCallback(authCode);
 })();
 </script>
@@ -2510,7 +2639,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* Momentum PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.11.1';
+ const VERSION='9.12.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

@@ -1,6 +1,6 @@
 /* Static shell only. Never cache API responses or user records. */
-const CACHE='momentum-beta-shell-9.15.2-reviewed';
-const ASSETS=['./backup.js','./index.html','./beta-config.js?v=9.15.2','./vendor/supabase-2.49.10.js','./manifest.json','./version.json','./sd-icon-180.png','./sd-icon-192.png','./sd-icon-512.png','./sd-logo.svg','./sd-icon-192.png?v=9.15.2','./sd-icon-180.png?v=9.15.2','./sd-icon-512.png?v=9.15.2'];
+const CACHE='momentum-beta-shell-9.15.3-reviewed';
+const ASSETS=['./backup.js','./index.html','./beta-config.js?v=9.15.3','./vendor/supabase-2.49.10.js','./manifest.json','./version.json','./sd-icon-180.png','./sd-icon-192.png','./sd-icon-512.png','./sd-logo.svg','./sd-icon-192.png?v=9.15.3','./sd-icon-180.png?v=9.15.3','./sd-icon-512.png?v=9.15.3'];
 const root=new URL('./',self.registration.scope);
 const shell=new URL('./index.html',root).href;
 const assetURLs=new Set(ASSETS.map(path=>new URL(path,root).href));

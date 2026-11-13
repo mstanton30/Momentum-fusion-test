@@ -1,20 +1,20 @@
 {
-  "name": "Momentum",
-  "short_name": "Momentum",
+  "name": "SD Health Stack",
+  "short_name": "Health Stack",
   "id": "/Momentum-fusion-test/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#111820",
-  "theme_color": "#111820",
+  "background_color": "#12244a",
+  "theme_color": "#12244a",
   "icons": [
     {
-      "src": "./momentum-icon-192-v91010.png",
+      "src": "./sd-icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./momentum-icon-512-v91010.png",
+      "src": "./sd-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

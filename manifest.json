@@ -1,12 +1,12 @@
 {
-  "name": "SD Health Lab",
-  "short_name": "SD Health",
+  "name": "SD Health Stack",
+  "short_name": "Health Stack",
   "id": "/Momentum-fusion-test/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#15181b",
-  "theme_color": "#15181b",
+  "background_color": "#12244a",
+  "theme_color": "#12244a",
   "icons": [
     {
       "src": "./sd-icon-192.png",

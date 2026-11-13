@@ -6,16 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SD Health Lab">
+<meta name="apple-mobile-web-app-title" content="Health Stack">
 <meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="./sd-icon-192.png">
-<link rel="manifest" href="./manifest.json?v=sd-1">
+<link rel="manifest" href="./manifest.json?v=sd-2">
 <link rel="apple-touch-icon" href="./sd-icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SD Health Lab">
-<title>SD Health Lab — Beta v9.14.1</title>
+<meta name="apple-mobile-web-app-title" content="Health Stack">
+<title>SD Health Stack — Beta v9.14.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -318,15 +318,15 @@ summary::-webkit-details-marker{display:none}
 .morebox{background:transparent;border:0;padding:0;margin-top:8px}
 .morebox>summary{padding:14px 2px;color:var(--muted)}
 .morebox>div{padding-top:4px}
-.recap-canvas{width:100%;height:auto;display:block;border-radius:16px;margin-bottom:14px;background:#15181b}
+.recap-canvas{width:100%;height:auto;display:block;border-radius:16px;margin-bottom:14px;background:#0c1730}
 @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes bump{0%{transform:translateY(6px);opacity:.3}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
 @keyframes deckIn{from{transform:translateY(22px) scale(.95);opacity:0}to{transform:none;opacity:1}}
 @keyframes deckOutR{to{transform:translateX(120%) rotate(10deg);opacity:0}}
 @keyframes deckOutL{to{transform:translateX(-120%) rotate(-10deg);opacity:0}}
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
-.brand{display:inline-flex;align-items:center;gap:10px}.brandmark{width:34px;height:34px;flex:none;border-radius:9px}.apphead h1:has(.brand){font-size:1.5rem}
-@media (prefers-color-scheme: dark){.brandmark rect{fill:#2a2f34}}
+.brand{display:inline-flex;align-items:center;gap:10px}.brandmark{width:34px;height:34px;flex:none;border-radius:9px}.apphead h1:has(.brand){font-size:1.3rem;letter-spacing:-.02em}.brand>span{white-space:nowrap}.apphead>div:first-child{min-width:0}
+.scorestrip,.card.hero{background:#12244a;color:#fff}.card.hero .eyebrow,.card.hero .muted,.hero .stat span{color:rgba(255,255,255,.72)}.hero .stat>div,.hero .check,.hero .plan{background:rgba(255,255,255,.12)}.hero .check{color:#fff}
 </style>
 </head>
 <body>
@@ -338,7 +338,7 @@ summary::-webkit-details-marker{display:none}
 
 
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.14.1"></script>
+<script src="./beta-config.js?v=9.14.2"></script>
 <script>
 (function(){
 "use strict";
@@ -347,8 +347,8 @@ const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-w
 const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 
 /* =========================== PROGRAM CONTENT =========================== */
-/* Temporary name (SD = Stanton and Day). Storage keys and file names keep the old name so nobody loses data. */
-const BRAND='<span class="brand"><svg class="brandmark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#15181b"/><path d="M18 12h14a20 20 0 0 1 0 40H18z" fill="#e2512a"/><path d="M36.5 23.5C33.5 18 22.5 18.5 22.5 25.5 22.5 33 37 30 37 38.5 37 45.5 26 46 22 41" fill="none" stroke="#15181b" stroke-width="5.5" stroke-linecap="round"/></svg><span>SD Health Lab</span></span>';
+/* Temporary name (SD = Stanton and Day; navy is the brand colour, orange stays the one accent). Storage keys and file names keep the old name so nobody loses data. */
+const BRAND='<span class="brand"><svg class="brandmark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#12244a"/><g transform="translate(-1,-1)"><path d="M29.5 17.5C27 11.5 11.5 11.5 11.5 19.5 11.5 28.5 30 24 30 33 30 41 14.5 41.5 11 35" fill="none" stroke="#fff" stroke-width="7.5"/><path d="M38.2 13.2h5.3a12.6 12.6 0 0 1 0 25.2h-5.3z" fill="none" stroke="#fff" stroke-width="7.5"/></g><rect x="9.5" y="46" width="45" height="3.6" rx="1.8" fill="#e2512a"/><rect x="9.5" y="51.6" width="45" height="3.6" rx="1.8" fill="#fff" opacity=".55"/><rect x="9.5" y="57.2" width="45" height="3.6" rx="1.8" fill="#fff" opacity=".28"/></svg><span>SD Health Stack</span></span>';
 const ICON={
  book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
@@ -750,7 +750,7 @@ function healthWeekly(ref=today()){
  return {cardio,strength,score:cardio+strength,aerobic:Math.round(aerobic),strengthDays:dailyStrength.length,goal,coverageComplete:coverage.has('upper')&&coverage.has('lower')};
 }
 function healthCard(ref=today()){const h=healthWeekly(ref);return `<div class="card" style="border:2px solid var(--green)"><div class="eyebrow">Weekly Activity Score</div><h2 style="margin:5px 0">${h.score}<span class="muted sm"> / 100 · activity goal</span></h2><div class="meter"><i style="width:${h.score}%"></i></div><div class="stat two"><div><b>${h.cardio}/70</b><span>Aerobic · ${h.aerobic}/${h.goal.minutes} equivalent min</span></div><div><b>${h.strength}/30</b><span>Strength · ${h.strengthDays} day(s)</span></div></div><p class="muted xs" style="margin-top:10px">${esc(h.goal.name)} · ${h.coverageComplete?'Upper and lower body covered':'Full strength credit needs upper- and lower-body coverage'} · 100 means weekly activity prescription completed, not perfect health.</p><button class="btn small ghost" data-go="workout">View workouts & scoring</button></div>`}
-function healthReading(){return `<details><summary>The science behind your Activity Score</summary><div class="sm"><p><b>Aerobic:</b> 70 points × logged moderate-equivalent minutes ÷ your selected weekly target (capped at 70). Vigorous aerobic minutes count double; light activity does not count toward moderate-equivalent minutes.</p><p><b>Strength:</b> Up to 30 points from your two highest-scoring resistance-training days. Each day earns 5 for limited/light work, 10 for meaningful partial work, or 15 for challenging, multiple-set full-body or upper/lower split training. Unassessed logged resistance work gets provisional 5 points. Full 30 points also requires both upper and lower body to be covered over the week. Several workouts on the same day count as one strength day; their muscle-group coverage is combined across the week. Without upper and lower coverage, strength is capped at 25.</p><p><b>Mixed workouts:</b> A bootcamp is split approximately half aerobic and half resistance, rather than counting all minutes twice. Custom mixed workouts use the same approximation. Review the category and assessment before saving.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes moderate aerobic activity weekly (or 75–150 vigorous) plus major-muscle-group strengthening on at least two days. The 70/30 weighting, 5/10/15 rubric, and 225-minute weight-management option are SD Health Lab design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html" target="_blank" rel="noopener">CDC adult recommendations</a></p><p class="muted xs">This is an activity-adherence score. Nutrition, sleep, and perks remain separate while an overall health score is developed.</p></div></details>`}
+function healthReading(){return `<details><summary>The science behind your Activity Score</summary><div class="sm"><p><b>Aerobic:</b> 70 points × logged moderate-equivalent minutes ÷ your selected weekly target (capped at 70). Vigorous aerobic minutes count double; light activity does not count toward moderate-equivalent minutes.</p><p><b>Strength:</b> Up to 30 points from your two highest-scoring resistance-training days. Each day earns 5 for limited/light work, 10 for meaningful partial work, or 15 for challenging, multiple-set full-body or upper/lower split training. Unassessed logged resistance work gets provisional 5 points. Full 30 points also requires both upper and lower body to be covered over the week. Several workouts on the same day count as one strength day; their muscle-group coverage is combined across the week. Without upper and lower coverage, strength is capped at 25.</p><p><b>Mixed workouts:</b> A bootcamp is split approximately half aerobic and half resistance, rather than counting all minutes twice. Custom mixed workouts use the same approximation. Review the category and assessment before saving.</p><p><b>Evidence:</b> WHO recommends 150–300 minutes moderate aerobic activity weekly (or 75–150 vigorous) plus major-muscle-group strengthening on at least two days. The 70/30 weighting, 5/10/15 rubric, and 225-minute weight-management option are SD Health Stack design choices, not validated clinical thresholds.</p><p><a href="https://www.who.int/publications/i/item/9789240015128" target="_blank" rel="noopener">WHO physical activity guidelines</a> · <a href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html" target="_blank" rel="noopener">CDC adult recommendations</a></p><p class="muted xs">This is an activity-adherence score. Nutrition, sleep, and perks remain separate while an overall health score is developed.</p></div></details>`}
 
 /* =========================== CHARTS =========================== */
 function chart(points,{color="var(--accent)",fmtV=v=>v,baseline=null,height=90}={}){
@@ -798,7 +798,7 @@ function scoreStrip(){ if(!S.profile) return ""; const k=ymd(today()), wn=weekNu
 function header(title,sub){ return `<div class="apphead"><div><div class="eyebrow">${sub}</div><h1>${title}</h1></div><div class="headbtns"><button class="gear" data-go="lessons" aria-label="Lesson library" title="Lessons">${ICON.book}</button><button class="gear coach-shortcut" data-go="coach" aria-label="Open Coach" title="Open Coach">${ICON.spark}</button><button class="gear" data-go="onboard" aria-label="Edit profile">${GEAR}</button></div></div>${scoreStrip()}` }
 
 function vWhy(){
-  return `<div class="onb"><div class="eyebrow">SD Health Lab</div><h1>Why we do this</h1>
+  return `<div class="onb"><div class="eyebrow">SD Health Stack</div><h1>Why we do this</h1>
   <p class="muted" style="margin-top:10px">A year-long program built by sports medicine physicians who train and want to stay healthy, for anyone who wants the same. It follows the research, costs very little, and takes about a minute a day to log.</p>
   <div class="card hero"><div class="eyebrow">The idea</div><h2 style="margin:4px 0 8px;font-size:1.4rem">Inputs in, outputs out</h2>
   <p style="opacity:.9;margin:0">You control a handful of inputs: how you move, what you eat, how you sleep. The app scores those. Every two months you measure the outputs: fitness, muscle, body fat. Keep the inputs steady and the outputs follow.</p></div>
@@ -814,7 +814,7 @@ function vWhy(){
 }
 function vOnboard(){
   const p=S.profile||{};
-  return `<div class="onb"><div class="eyebrow">${S.profile?"Your profile":"Welcome"}</div><h1>SD Health Lab</h1>
+  return `<div class="onb"><div class="eyebrow">${S.profile?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
   <p class="muted">${S.profile?"Change anything here any time. Weight updates from your Friday weigh-ins automatically.":"One screen, then it lives behind the gear icon. This sets your protein target, your VO2 estimate and your baseline for the year. Everything stays on this phone."}</p>
   <form id="fOnboard" class="card">
     <div class="row"><div class="field"><label class="f">First name</label><input name="name" required value="${esc(p.name||"")}"></div><div class="field"><label class="f">Age</label><input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}"></div></div>
@@ -1116,7 +1116,7 @@ const HEALTH_API_KEY='momentumfusion.health.api.v1';
 function vHealthImport(){
  const recent=[...F.healthImports].reverse().slice(0,8);
  return header('Import Health Data','Photo and screenshot recognition')+`
- <div class="card"><h3>Scan a scale photo or health screenshot</h3><p class="muted sm">Take a photo of the scale display or choose a screenshot from RENPHO, Apple Fitness, or WHOOP. For the most scale readings, choose the RENPHO results screen with all metrics visible. Your image is sent for analysis and isn’t saved in SD Health Lab.</p>
+ <div class="card"><h3>Scan a scale photo or health screenshot</h3><p class="muted sm">Take a photo of the scale display or choose a screenshot from RENPHO, Apple Fitness, or WHOOP. For the most scale readings, choose the RENPHO results screen with all metrics visible. Your image is sent for analysis and isn’t saved in SD Health Stack.</p>
  <p class="muted xs">Beta shares a daily limit of 10 image analyses.</p>
  <input id="healthScreenshot" type="file" accept="image/*" aria-label="Choose a scale photo or health screenshot"><div id="healthPreview" style="margin-top:12px"></div><p id="healthImportMessage" class="muted sm" role="status">Choose an image, then tap Scan image.</p><button class="btn" type="button" data-health-analyze>Scan image</button></div>
  <div id="healthExtractResult"></div>
@@ -1740,7 +1740,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.1</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.14.2</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1993,7 +1993,7 @@ function drawShareCard(){
   const p=S.profile||{}, wp=weekPoints(), wk=weekKeys(), sessions=wk.filter(k=>sessOf(k,"main").done||fusionReplacements(k).length).length, mobs=wk.filter(k=>sessOf(k,"mob").done).length, wn=weekNutrition();
   const rw=rolling("wt"), rf=rolling("bf"), rm=rolling("mm"); const prev={wt:rolling("wt",4,4),bf:rolling("bf",4,4),mm:rolling("mm",4,4)};
   x.fillStyle="#161718"; x.fillRect(0,0,W,H); x.fillStyle="#d6451f"; x.fillRect(0,0,W,22);
-  x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("SD Health Lab · WEEK OF "+fmt(wk[0]).toUpperCase(),80,120);
+  x.fillStyle="#9aa3ab"; x.font="600 34px Archivo, Helvetica, Arial"; x.fillText("SD Health Stack · WEEK OF "+fmt(wk[0]).toUpperCase(),80,120);
   x.fillStyle="#f4f1ea"; x.font="900 120px Archivo, Helvetica, Arial"; x.fillText(String(wp),80,260); const nw=x.measureText(String(wp)).width; x.font="700 44px Archivo, Helvetica, Arial"; x.fillText("points",80+nw+24,260);
   x.font="600 40px Inter, Helvetica, Arial";
   const rows=[["Sessions",sessions+" / 7"],["Mobility days",mobs+" / 7"],["Training minutes",wk.reduce((a,k)=>a+totalTrainingMinutes(k),0)+""],["Quality eating",wn.pct==null?"–":wn.pct+"%"],["Heat · cold",weekMinutes(S.heat)+" · "+weekMinutes(S.cold)+" min"],["Sleep avg",weekSleep()!=null?weekSleep().toFixed(1)+" h":"–"]];
@@ -2008,9 +2008,9 @@ function drawShareCard(){
   return c;
 }
 async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=drawShareCard();
-  c.toBlob(async blob=>{ const file=new File([blob],"sd-health-lab-week.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"SD Health Lab week"}) }catch(e){} }
-    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-lab-week.png"; a.click(); toast("Card saved") } },"image/png"); }
+  c.toBlob(async blob=>{ const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"SD Health Stack week"}) }catch(e){} }
+    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Card saved") } },"image/png"); }
 function exportData(){ const blob=new Blob([JSON.stringify({...S,fusion:F},null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="get-ripped-"+ymd(today())+".json"; a.click(); toast("Exported") }
 function shrinkImage(file,maxSide=480,quality=.7){
  return new Promise(resolve=>{
@@ -2029,7 +2029,7 @@ function shrinkImage(file,maxSide=480,quality=.7){
 }
 
 
-/* SD Health Lab v9: AI Preview uses deterministic sample responses; no external AI service. */
+/* SD Health Stack v9: AI Preview uses deterministic sample responses; no external AI service. */
 const FKEY="momentumfusion.beta.extra.v1",LEGACY_FKEY="momentumfusion.extra.v1";
 let F=(()=>{try{return JSON.parse(localStorage.getItem(FKEY)??localStorage.getItem(LEGACY_FKEY))||{}}catch{return {}}})();
 F.entries=F.entries||[];F.healthImports=F.healthImports||[];F.favorites=F.favorites||[];F.targets=F.targets||{p:160,c:220,f:70};
@@ -2166,7 +2166,7 @@ function momentumReminderStatus(message){
  try{localStorage.setItem('momentum.reminder.syncstatus',message)}catch{}
  const el=document.getElementById('momentumReminderSyncStatus');if(el)el.textContent=message;
 }
-document.addEventListener('click',e=>{if(e.target.closest('[data-momentum-sync-now]')){if(typeof window.momentumSyncReminders==='function')window.momentumSyncReminders();else momentumReminderStatus('Sync service not ready. Reopen SD Health Lab and retry.')}});
+document.addEventListener('click',e=>{if(e.target.closest('[data-momentum-sync-now]')){if(typeof window.momentumSyncReminders==='function')window.momentumSyncReminders();else momentumReminderStatus('Sync service not ready. Reopen SD Health Stack and retry.')}});
 function momentumCustomReminderPanel(){
  const xs=F.customReminders||[];
  const rows=xs.map(x=>`<div class="frow"><span><b>${esc(x.title)}</b><br><small class="muted">${esc(x.time)} · ${x.repeat==='once'?esc(x.date):x.repeat==='daily'?'Daily':(x.days||[]).map(i=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]).join(', ')} · ${x.on?'On':'Paused'}</small></span><div class="row tight"><button class="btn small ghost" data-custom-toggle="${esc(x.id)}">${x.on?'Pause':'Resume'}</button><button class="btn small ghost" data-custom-edit="${esc(x.id)}">Edit</button><button class="btn small ghost" data-custom-remove="${esc(x.id)}">Remove</button></div></div>`).join('');
@@ -2214,7 +2214,7 @@ function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
  <label>Custom coaching instructions<textarea name="instructions" maxlength="500" rows="3" placeholder="Focus on consistency, protein, and recovery…">${esc(p.instructions||'')}</textarea></label>
  ${Object.entries(labels).map(([k,label])=>`<div class="frow"><label style="flex:1"><input style="width:auto" type="checkbox" name="on_${k}" ${rem[k]?.on?'checked':''}> ${label}</label><input style="max-width:130px" aria-label="${label} time" type="time" name="time_${k}" value="${esc(rem[k]?.time||'09:00')}"></div>`).join('')}
  <div class="fgrid"><label>Quiet hours start<input type="time" name="quietStart" value="${esc(p.quietStart)}"></label><label>Quiet hours end<input type="time" name="quietEnd" value="${esc(p.quietEnd)}"></label></div><button class="btn" type="submit">Save coaching preferences</button></form>
- <p class="note"><b>Reminder delivery:</b> Push delivery and scheduling are in testing. Keep this app installed and open it after changing settings to synchronize. iPhone web push also requires installing SD Health Lab to the Home Screen and granting notification permission.</p></div>`;
+ <p class="note"><b>Reminder delivery:</b> Push delivery and scheduling are in testing. Keep this app installed and open it after changing settings to synchronize. iPhone web push also requires installing SD Health Stack to the Home Screen and granting notification permission.</p></div>`;
 }
 
 function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
@@ -2309,7 +2309,7 @@ function fWorkoutPanel(){
 const selected=sel,sub=F.substitutions[selected],future=selected>ymd(today());
 const templates=F.workoutTemplates.map((t,i)=>`<div class="workout-tile"><button type="button" class="workout-tile-main" data-ftemplate="${i}"><span class="workout-tile-icon">${/basketball/i.test(t.name)?'🏀':/pickleball/i.test(t.name)?'🏓':/trainer/i.test(t.name)?'🏋️':/strength|lift/i.test(t.name)?'💪':'🏃'}</span><span>${esc(t.name)}</span></button><button type="button" class="workout-tile-edit" data-ftemplate-edit="${i}" aria-label="Edit ${esc(t.name)}">✎</button></div>`).join(' ');
 return `<h2>Log an activity</h2><div class="card"><h3>Log a workout</h3>
-<p class="muted sm">Keep SD Health Lab's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
+<p class="muted sm">Keep SD Health Stack's plan or log what you actually did. A substitution does not automatically complete the original strength session.</p>
 ${F.rescheduled[selected]?`<p class="note">${esc(F.rescheduled[selected])}</p>`:''}
 ${sub?`<div class="note"><b>Substituted:</b> ${esc(sub.description)} · ${sub.minutes} min · ${esc(F.planChoices[selected]||'')} · +${customWorkoutPoints(fusionActivities(selected).find(x=>x.id===sub.id)||sub)} points <button class="btn small ghost" data-fclear="${selected}">Undo</button></div>`:''}
 <p class="muted xs">Quick workout buttons — tap to load and edit. Workouts contribute to the weekly 100-point Activity Score based on activity type, duration, and intensity. Review category before logging.</p><div class="workout-tile-grid">${templates}</div>
@@ -2552,7 +2552,7 @@ document.addEventListener('submit',e=>{if(!['fMeal','fActivity','fTargets','fFee
   }
   syncSubstitution(x.date);toast(old?'Activity updated':'Activity logged');
  }
- if(form.id==='fFeedback'){const blob=new Blob([`SD Health Lab beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
+ if(form.id==='fFeedback'){const blob=new Blob([`SD Health Stack beta feedback\n${new Date().toISOString()}\n\n${d.feedback}`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='momentum-feedback.txt';a.click();URL.revokeObjectURL(a.href);toast('Feedback downloaded')}
  fsave();render();});
 
 document.addEventListener('change',e=>{
@@ -2642,7 +2642,7 @@ try{
  if(aiConnectionsEnabled)consentRequest=JSON.parse(sessionStorage.getItem('momentumfusion.beta.consent')||'null');
 }catch{}
 function connectedHtml(){
- const signin=`<p class="muted sm">Sign in to your SD Health Lab Beta account${consentRequest?' to review this assistant’s request':aiConnectionsEnabled?' to connect ChatGPT or Claude':''}.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
+ const signin=`<p class="muted sm">Sign in to your SD Health Stack Beta account${consentRequest?' to review this assistant’s request':aiConnectionsEnabled?' to connect ChatGPT or Claude':''}.</p><form id="fCloudSignIn"><label class="f">Email<input name="email" type="email" autocomplete="email" required></label>
  <label class="f">Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
  <div class="row"><button class="btn small" type="submit" value="signin">Sign in</button><button class="btn small ghost" type="submit" value="signup">Create account</button></div>
  <p class="muted sm"><a href="./?beta-account=reset" target="_blank" rel="noopener">Forgot password?</a></p></form>`;
@@ -2652,13 +2652,13 @@ function connectedHtml(){
  const status=`<p class="muted sm" id="cloudStatus" role="status">${esc(cloudStatus)}</p>`;
  if(!cloudClient)return `<p class="muted sm">AI connections need a configured Beta server. Scale photo uploads, manual entries, and CSV imports are available.</p>`;
  if(!cloudSession)return signin+status;
- return `<p class="muted sm">Signed in as ${esc(cloudSession.user.email||'SD Health Lab account')}. <button class="btn small ghost" data-cloud="signout">Sign out</button></p>
+ return `<p class="muted sm">Signed in as ${esc(cloudSession.user.email||'SD Health Stack account')}. <button class="btn small ghost" data-cloud="signout">Sign out</button></p>
  ${aiConnectionsEnabled?`<h3>External AI</h3><p class="muted sm">AI sharing syncs your meals, activities, supplement checklist, saved buttons and progress summaries with this Beta account. An authorized assistant can read that data and log entries. You can revoke its access here.</p>
  ${activeWorkspace?`<label class="f">ChatGPT and Claude connector URL<input readonly value="${esc(connectionConfig.apiUrl.replace(/\/$/,'')+'/mcp')}"></label>`:
  '<button class="btn small" data-cloud="enroll">Set up AI sharing</button>'}
  ${cloudConflict?`<div class="note">The same record was changed here and in the cloud. Choose which version to keep for the conflicting records.
  <div class="row"><button class="btn small" data-cloud="local">Keep this device’s changes</button><button class="btn small ghost" data-cloud="remote">Keep the cloud changes</button></div></div>`:''}
- ${consentRequest?`<div class="note"><p>${consentRequest.redirect_uri==='https://claude.ai/api/mcp/auth_callback'?'Claude':'ChatGPT'} is requesting permission to read shared SD Health Lab data and log or edit entries.</p>
+ ${consentRequest?`<div class="note"><p>${consentRequest.redirect_uri==='https://claude.ai/api/mcp/auth_callback'?'Claude':'ChatGPT'} is requesting permission to read shared SD Health Stack data and log or edit entries.</p>
  <div class="row"><button class="btn small" data-cloud="consent" ${activeWorkspace?'':'disabled'}>Allow connection</button><button class="btn small ghost" data-cloud="deny">Decline</button></div></div>`:''}`:'<p class="muted xs">External AI connections are pending setup.</p>'}
  ${cloudDevices.length?`<h3>Connected apps and devices</h3>${cloudDevices.map(x=>`<div class="frow"><span>${esc(x.label)} · expires ${esc(new Date(x.refresh_expires_at||x.expires_at).toLocaleDateString())}</span>
  <button class="btn small ghost" data-cloud="revoke" data-id="${esc(x.id)}">Revoke</button></div>`).join('')}`:''}
@@ -2674,10 +2674,10 @@ function recoveryAccount(value){
  return null;
 }
 function accountScreenHtml(){
- const back='<a href="./#progress">Return to SD Health Lab Beta</a>';
+ const back='<a href="./#progress">Return to SD Health Stack Beta</a>';
  const reset='<a href="./?beta-account=reset">Request a new password reset link</a>';
  const status=`<p class="muted sm" id="cloudStatus" role="status">${esc(cloudStatus)}</p>`;
- if(!cloudClient)return `<h1>SD Health Lab Beta account</h1><p>Account sign-in is temporarily unavailable.</p>${back}`;
+ if(!cloudClient)return `<h1>SD Health Stack Beta account</h1><p>Account sign-in is temporarily unavailable.</p>${back}`;
  if(accountScreen==='done')return `<h1>Password updated</h1><p>Use your new password the next time you sign in to the Home Screen app.</p>${back}`;
  if(accountScreen==='update'&&cloudSession)return `<h1>Set a new password</h1><div class="card"><form id="fCloudResetUpdate">
  <label class="f">New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
@@ -2687,7 +2687,7 @@ function accountScreenHtml(){
  <p class="muted sm">Request the reset in Safari and open the newest email link in Safari on the same iPhone.</p>
  <form id="fCloudResetRequest"><label class="f">Beta account email<input name="email" type="email" autocomplete="email" required></label>
  <button class="btn small" type="submit">Send reset email</button></form>${status}</div>${back}`;
- return `<h1>SD Health Lab Beta account</h1><p>If you confirmed your email, return to Beta and sign in with the password from your original signup.</p>
+ return `<h1>SD Health Stack Beta account</h1><p>If you confirmed your email, return to Beta and sign in with the password from your original signup.</p>
  <p>If this was a password reset, open the newest link in the same Safari browser where you requested it.</p><p>${reset}</p>${back}`;
 }
 function accountConnections(){
@@ -3040,13 +3040,13 @@ function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset
   return {wk,praise,nudge,tiles:[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Points"]]} }
 function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=recapData(), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial";
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
-  x.fillStyle="#15181b"; x.fillRect(0,0,W,H);
+  x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
   if(recapPhoto){ const iw=recapPhoto.naturalWidth||recapPhoto.width, ih=recapPhoto.naturalHeight||recapPhoto.height, s=Math.max(W/iw,H/ih); x.drawImage(recapPhoto,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s);
     const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(10,12,14,.72)"); g.addColorStop(.5,"rgba(10,12,14,.55)"); g.addColorStop(1,"rgba(10,12,14,.92)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
   else{ const g=x.createRadialGradient(W*.85,H*.1,0,W*.85,H*.1,W*.9); g.addColorStop(0,"rgba(226,81,42,.55)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
   x.textBaseline="alphabetic"; if(recapPhoto){ x.shadowColor="rgba(0,0,0,.55)"; x.shadowBlur=18 } x.fillStyle="#fff"; x.font="800 40px "+F1;
-  { x.save(); x.shadowColor="transparent"; x.translate(80,66); x.scale(72/64,72/64); x.fillStyle="#e2512a"; x.fill(new Path2D("M18 12h14a20 20 0 0 1 0 40H18z")); x.strokeStyle="#15181b"; x.lineWidth=5.5; x.lineCap="round"; x.stroke(new Path2D("M36.5 23.5C33.5 18 22.5 18.5 22.5 25.5 22.5 33 37 30 37 38.5 37 45.5 26 46 22 41")); x.restore() }
-  x.fillStyle="#fff"; x.fillText("SD HEALTH LAB",150,117);
+  { x.save(); x.shadowColor="transparent"; x.translate(80,66); x.scale(72/64,72/64); x.fillStyle="#12244a"; rr(0,0,64,64,15); x.fill(); x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=1.2; x.stroke(); x.translate(-1,-1); x.strokeStyle="#fff"; x.lineWidth=7.5; x.stroke(new Path2D("M29.5 17.5C27 11.5 11.5 11.5 11.5 19.5 11.5 28.5 30 24 30 33 30 41 14.5 41.5 11 35")); x.stroke(new Path2D("M38.2 13.2h5.3a12.6 12.6 0 0 1 0 25.2h-5.3z")); x.translate(1,1); [["#e2512a",46],["rgba(255,255,255,.55)",51.6],["rgba(255,255,255,.28)",57.2]].forEach(([c,y])=>{ x.fillStyle=c; rr(9.5,y,45,3.6,1.8); x.fill() }); x.restore() }
+  x.fillStyle="#fff"; x.fillText("SD HEALTH STACK",170,117);
   x.fillStyle="rgba(255,255,255,.8)"; x.font="600 32px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-80,120); x.textAlign="left";
   x.fillStyle="#fff"; x.font="800 84px "+F1; const words=d.praise.split(" "); let line="", y=330; const lines=[];
   for(const w of words){ const test=line?line+" "+w:w; if(x.measureText(test).width>W-160&&line){ lines.push(line); line=w } else line=test } lines.push(line);
@@ -3064,9 +3064,9 @@ function vRecap(){ const d=recapData();
   <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(d.nudge)} This line stays here and is not on the image.</p></div>
   <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
 async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; drawRecap(c);
-  c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-lab-week.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"My SD Health Lab week"}) }catch(e){} }
-    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-lab-week.png"; a.click(); toast("Image saved") } },"image/png") }
+  c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"My SD Health Stack week"}) }catch(e){} }
+    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Image saved") } },"image/png") }
 document.addEventListener("change",e=>{ if(!e.target||e.target.id!=="recapPhoto") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
 document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-week],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
   if(ds.deckSkip!==undefined){ deckSkip(ds.deckSkip,1); return }
@@ -3085,7 +3085,7 @@ function render(){
   { const dl=document.getElementById("daily"); if(dl&&(!S.profile||tab==="why"||tab==="onboard"||accountScreen)) dl.hidden=true }
   if(accountScreen){$("#main").innerHTML=accountScreenHtml();$("#tabbar").hidden=true;return}
   if(consentRequest&&!S.profile&&tab==="progress"){
-   $("#main").innerHTML=`<h1>Connect SD Health Lab Beta</h1>${accountConnections()}`;
+   $("#main").innerHTML=`<h1>Connect SD Health Stack Beta</h1>${accountConnections()}`;
    $("#tabbar").hidden=true;return;
   }
   if(tab==="why"||(!S.profile&&!S.seenWhy)){ $("#main").innerHTML=vWhy(); $("#tabbar").hidden=true; window.scrollTo(0,0); return }
@@ -3217,9 +3217,9 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script>
-/* SD Health Lab PWA update manager. App data stays in browser storage; never clear storage to update. */
+/* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.14.1';
+ const VERSION='9.14.2';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');
@@ -3248,7 +3248,7 @@ if ('serviceWorker' in navigator) {
         const newer=(a,b)=>{const aa=a.split('.').map(Number),bb=b.split('.').map(Number);for(let i=0;i<Math.max(aa.length,bb.length);i++){if((aa[i]||0)!==(bb[i]||0))return (aa[i]||0)>(bb[i]||0)}return false};
         if(newer(remote.version,VERSION)){
           pending=true;
-          if(button){button.textContent='Install SD Health Lab v'+remote.version;button.onclick=activateUpdate;}
+          if(button){button.textContent='Install SD Health Stack v'+remote.version;button.onclick=activateUpdate;}
           if(status){status.style.display='inline';status.textContent='New version available';}
         }else if(showResult&&status){status.style.display='inline';status.textContent='Installed version is newer than update metadata.';}
       }else if(showResult&&status){status.style.display='inline';status.textContent='You have the latest version';setTimeout(()=>{if(!pending)status.style.display='none'},3500);}
@@ -3283,7 +3283,7 @@ if ('serviceWorker' in navigator) {
     const secret=localStorage.getItem('momentum.push.device.secret.v1');
     if(!secret)throw Error('No registered push device. Enable push notifications first.');
     const bridge=window.momentumReminderBridge;
-    if(!bridge?.snapshot)throw Error('App data bridge unavailable; reopen SD Health Lab.');
+    if(!bridge?.snapshot)throw Error('App data bridge unavailable; reopen SD Health Stack.');
     const snapshot=await withDeadline(Promise.resolve().then(()=>bridge.snapshot()),3000);
     const payload={action:'sync',deviceSecret:secret,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York',
      preferences:snapshot.preferences,customReminders:snapshot.customReminders,dailyState:snapshot.dailyState};

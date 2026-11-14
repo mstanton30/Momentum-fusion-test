@@ -3259,7 +3259,7 @@ function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.f
   if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
   return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
 const OWN_HINT="Type what you are proud of";
-function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
+function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
   const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
   const cover=(img,px,py,w,h)=>{ const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, s=Math.max(w/iw,h/ih); x.drawImage(img,px+(w-iw*s)/2,py+(h-ih*s)/2,iw*s,ih*s) };
@@ -3277,7 +3277,8 @@ function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story",
   shadow(true); x.fillStyle="#fff"; x.font="800 40px "+F1; x.fillText("SD HEALTH STACK",M+90,top+42); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.fillText("Stack the day.",M+91,top+80);
   x.font="600 30px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-M,top+54); x.textAlign="left";
   const strip=(yTop)=>{ shadow(false); const gap=24, tw=(W-2*M-gap*2)/3, th=150; d.top.forEach(([v,lab],i)=>{ const px=M+i*(tw+gap); rr(px,yTop,tw,th,26); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.font="800 64px "+F1; x.fillText(v,px+24,yTop+78); x.fillStyle="rgba(255,255,255,.78)"; x.font="600 26px "+F2; x.fillText(lab,px+24,yTop+122) }) };
-  const dim=st.own&&!String(st.head).trim(), headText=dim?OWN_HINT:st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?OWN_HINT:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
+  /* their own words are optional: the prompt shows in the preview only, never on the shared image */
+  const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
   if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
     shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-th*rows-gap*(rows-1);
     d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
@@ -3303,7 +3304,7 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
   return header("What's your stack?","Share your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
   <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your week and your month. Tap another if you like it better.</p>
   <div class="chips" style="margin:10px 0 14px">${st.hs.map((h,i)=>`<button type="button" data-recap-pick="${h.id}" aria-pressed="${h.id===st.pick.id}">${i===0?"★ ":""}${esc(h.label)}</button>`).join("")}</div>
-  ${st.own?`<label class="f" for="recapHead">What are you proud of?</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="First pull-up. Ran the whole 5K. Down a belt notch.">
+  ${st.own?`<label class="f" for="recapHead">What are you proud of? (optional)</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="First pull-up. Ran the whole 5K. Down a belt notch.">
   <label class="f" for="recapBig" style="margin-top:10px">A number to feature (optional)</label><input id="recapBig" maxlength="8" value="${esc(recapOwnBig||"")}" autocomplete="off" placeholder="225, 5K, 1st" style="max-width:10em">
   <p class="muted xs" style="margin:6px 0 0">With a number, the Big number look puts it front and centre with your words underneath.</p>`:recapLayout==="big"&&st.pick.big!=null?`<label class="f" for="recapSub">Line under the big number</label><input id="recapSub" maxlength="60" value="${esc(st.sub)}" autocomplete="off">`:`<label class="f" for="recapHead">Headline on the image</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off">`}
   <h3 style="margin-top:22px">2. Add a photo</h3><p class="muted sm">Posts with a real photo get noticed. A few that work:</p>
@@ -3319,7 +3320,7 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
   ${seg("recap-week",String(recapOffset),[["0","This week"],["1","Last week"]]).replace('margin:0 0 14px','margin:18px 0 0')}
   <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(st.d.nudge)} This line stays here and is not on the image.</p></div>
   <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
-async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; const st0=recapState(); if(st0.own&&!String(st0.head).trim()){ toast("Type what you are proud of first"); const f=document.getElementById("recapHead"); if(f) f.focus(); return } drawRecap(c); const text=st0.cap;
+async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; const st0=recapState(); drawRecap(c,true); const text=st0.cap;
   c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text}) }catch(e){} }
     else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Image saved") } },"image/png") }

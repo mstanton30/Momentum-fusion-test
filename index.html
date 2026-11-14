@@ -358,6 +358,7 @@ details.phow p{margin:0 0 8px}
 .hm-bar{height:8px;border-radius:8px;background:var(--soft);overflow:hidden;margin-top:6px}.hm-bar i{display:block;height:100%;border-radius:8px;background:var(--green);transition:width .3s ease}
 .mealcard .seg button{font-size:.8rem;padding:10px 2px}
 .mealcard label.f{display:block;margin:0 0 6px}
+.tally{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}.tally>div{display:flex;align-items:baseline;gap:8px}.tally b{font-family:var(--display);font-size:1.7rem;font-weight:800;line-height:1}.tally span{color:var(--muted);font-size:.86rem}.tally-minus{width:44px;height:44px;border-radius:12px;border:1px solid var(--line,rgba(0,0,0,.14));background:transparent;color:var(--fg);font-size:1.3rem;font-weight:700}.tally-minus:disabled,.tally .btn:disabled{opacity:.35}
 </style>
 </head>
 <body>
@@ -532,7 +533,7 @@ function bmiLabel(b){ if(b==null) return ""; return b<18.5?"underweight":b<25?"n
 function idealWeightLb(){ const p=S.profile||{}, h=+p.heightIn||0; if(!h) return null; const over=h-60; return Math.round(p.sex==="f"?100+5*over:106+6*over) }
 function proteinRange(){ const w=idealWeightLb(); return w?[Math.round(w*0.75),Math.round(w)]:null }
 /* The whole plan in hands: a palm of protein is about 30 g, a fist of fruit or veg about 130 g, so 6 fists is roughly 800 g. */
-const FIST_GOAL=6, FIST_GRAMS=130;
+const SNACK_MAX=6, EXTRA_MAX=2, FIST_GOAL=6, FIST_GRAMS=130;
 function palmGoal(){ const w=idealWeightLb(); return w?Math.min(7,Math.max(3,Math.round(w*0.875/PROTEIN_PER_SERVING))):((S.profile||{}).sex==="f"?4:5) }
 /* A plate, answered in three taps: palms of protein, fists of produce, and whether the rest of the plate is about a fist or more.
    Quality needs a palm, a fist, and the rest kept to about a fist. One piece missing, or a heaped rest, is in-between. Nothing is off plan. */
@@ -626,7 +627,7 @@ function pointBreakdown(k){
   const supplements=S.supps[k]||{};
   for(const item of SUPPS)if(supplements[item.k])benefits+=item.pts;
   for(const key of ['heat','cold','medit','roll','light']){
-    benefits+=S[key].filter(entry=>entry.d===k).length*PTS[key];
+    if(S[key].some(entry=>entry.d===k))benefits+=PTS[key]; // once a day, however many sessions are logged
   }
   if((S.lessons||{})[k])benefits+=PTS.lesson; // the daily lesson scores with the habit/benefit points
   const hours=sleepHours(k);
@@ -1084,6 +1085,13 @@ function vNutrition(){
   <div class="card"><div class="hmeters">${meter(palms,pg,"high fives 🙌")}${meter(fists,FIST_GOAL,"fist bumps 👊")}</div></div>
   ${MEALS.map(([id,name])=>{
    const x=m[id]||{}, state=mealRating(x), touched=!!x.plate, p=touched?(+x.p||0):"", f=touched?Math.min(2,(+x.f||0)+(+x.v||0)):"", rest=touched?(x.rest||""):"";
+   /* Snacks add up through the day, so they tally one at a time instead of picking a size */
+   if(id==="s"){ const sp=+x.p||0, sf=(+x.f||0)+(+x.v||0), tally=(field,n,one,many,emoji)=>`<div class="tally"><button type="button" class="tally-minus" data-plate-add="s" data-f="${field}" data-v="-1" aria-label="Remove one ${one}" ${n>0?"":"disabled"}>−</button><div><b>${n}</b><span>${n===1?one:many}</span></div><button type="button" class="btn small" data-plate-add="s" data-f="${field}" data-v="1" ${n>=SNACK_MAX?"disabled":""}>+1 ${one} ${emoji}</button></div>`;
+    return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}s</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
+    <p class="muted sm" style="margin:6px 0 12px">Tap once for each one you have through the day.</p>
+    <label class="f">Protein</label>${tally("p",sp,"palm","palms","🙌")}
+    <label class="f" style="margin-top:12px">Fruit and veg</label>${tally("f",sf,"fist","fists","👊")}
+    ${state?`<button class="del xs" data-mealset="${id}" data-v="" style="text-decoration:underline;margin-top:10px">Clear</button>`:""}</div>` }
    return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
    <button class="btn small ${state==="q"&&touched&&x.p==1&&f==2&&rest!=="more"?"":"ghost"}" type="button" data-plate-plan="${id}" style="width:100%;justify-content:center;margin:10px 0 12px">✋ ✊✊ On plan: a palm and two fists</button>
    <label class="f">Protein</label>${pick(id,"p",p,[[0,"None"],[1,"1 palm"],[2,"2 palms"]])}
@@ -1152,7 +1160,7 @@ function vPerks(){
   const recent=l=>[...l].sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
   const tbl=(l,k)=>recent(l).length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent(l).map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:"";
   return `
-  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat} a session; the rest are +1.</p>
+  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat}; the rest are +1. Each scores once a day, and you can log up to two sessions.</p>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Sauna</h3><span class="pill ${hm>=60?"ok":""}">${hm} / 60 min this week</span></div>
   <div class="meter"><i style="width:${Math.min(100,hm/60*100)}%"></i></div>
   <p style="margin-top:10px"><b>Target:</b> 3 sessions of ~20 minutes a week, 170–200°F.</p>
@@ -3315,8 +3323,8 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   /* recovery */
   const slept=d.wk.filter(k=>{ const h=sleepHours(k); return h!=null&&h>=7 }).length;
   if(slept>=5) add("sleep","Sleep","Seven hours or more, "+slept+" nights.","Seven-plus hours of sleep on "+slept+" nights this week. Sleep is when the work pays off.",slept+"/7","nights of 7+ hours");
-  const saunas=(S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).length;
-  if(saunas>=3) add("sauna","Sauna",saunas+" sauna sessions this week.",saunas+" sauna sessions this week, on top of the training.",saunas,"sauna sessions this week");
+  const saunas=new Set((S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).map(x=>x.d)).size;
+  if(saunas>=3) add("sauna","Sauna","Sauna on "+saunas+" days this week.","Sauna on "+saunas+" days this week, on top of the training.",saunas,"sauna days this week");
   const streak=d.per==="last"?0:mobStreak();
   if(streak>=7) add("streak","Days stacked",streak+" days stacked.",streak+" days in a row with mobility done. Ten minutes a day is the whole trick.",streak,"days stacked");
   else if(d.mob>=5) add("mob","Mobility","Mobility "+d.mob+" of 7 days.","Stretched on "+d.mob+" of seven days this week. It is the part everyone skips.",d.mob+"/7","days of mobility");
@@ -3521,7 +3529,7 @@ function render(){
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-plate],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
+  const t=e.target.closest("[data-plate],[data-plate-add],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
   const ds=t.dataset;
   if(ds.tab||ds.go){ lastTab=null; if(S.profile) dailyOpen=false; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
@@ -3538,6 +3546,9 @@ document.addEventListener("click",e=>{
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
   if(ds.week){ sel=shiftDate(sel,7*+ds.week); lastTab=null; render(); return }
   if(ds.nut){ const n=shiftDate(nutDay,+ds.nut); if(n<=ymd(today())) nutDay=n; render(); return }
+  if(ds.plateAdd!==undefined){ const cur=(S.meals[nutDay]||{})[ds.plateAdd]||{}, f=ds.f==="p"?"p":"f", now=f==="p"?(+cur.p||0):(+cur.f||0)+(+cur.v||0), n=Math.max(0,Math.min(SNACK_MAX,now+(+ds.v)));
+    if(n===now){ return } if(n===0&&!(f==="p"?(+cur.f||0)+(+cur.v||0):(+cur.p||0))){ const day=S.meals[nutDay]; if(day){ delete day[ds.plateAdd]; save() } render(); return }
+    setPlate(nutDay,ds.plateAdd,{[f]:n}); render(); if(+ds.v>0) toast(f==="p"?"+1 high five 🙌":"+1 fist bump 👊"); return }
   if(ds.platePlan!==undefined){ setPlate(nutDay,ds.platePlan,{p:1,f:2,rest:"ok"}); render(); toast("Quality +"+PTS.meal); return }
   if(ds.plate!==undefined){ const r=setPlate(nutDay,ds.plate,{[ds.f]:ds.f==="rest"?ds.v:+ds.v}); render(); return }
   if(ds.mealset!==undefined){ if(ds.v===""){ const day=S.meals[nutDay]; if(day){ delete day[ds.mealset]; save() } } else setMealRating(nutDay,ds.mealset,ds.v); render(); return }
@@ -3545,7 +3556,9 @@ document.addEventListener("click",e=>{
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
   if(ds.vitd){ S.profile.vitd=!S.profile.vitd; save(); render(); return }
   if(ds.planReset){ const f=$("#fPlan"); const mk=f.dataset.mk, day=f.dataset.day; if(S.plans[mk]) delete S.plans[mk][day]; save(); render(); toast("Back to the default plan"); return }
-  if(ds.log){ S[ds.log].push({id:Date.now(),d:ymd(today()),min:+ds.min,...(ds.log==="heat"&&ds.kind==="soak"?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":"")); return }
+  if(ds.log){ const kd=ymd(today()), soak=ds.log==="heat"&&ds.kind==="soak", same=S[ds.log].filter(x=>x.d===kd&&(ds.log!=="heat"||(x.kind==="soak")===soak)).length, scored=S[ds.log].some(x=>x.d===kd);
+    if(same>=EXTRA_MAX){ toast("Already logged "+(EXTRA_MAX===2?"twice":EXTRA_MAX+" times")+" today"); return }
+    S[ds.log].push({id:Date.now(),d:kd,min:+ds.min,...(soak?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min"+(scored?" · points count once a day":" · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":""))); return }
   if(ds.del){ S[ds.del]=S[ds.del].filter(x=>String(x.id)!==ds.id); save(); render(); return }
   if(ds.say){ startSpeech(); return }
   if(t.id==="share"){ shareCard(); return }

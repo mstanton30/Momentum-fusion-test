@@ -537,12 +537,12 @@ function palmGoal(){ const w=idealWeightLb(); return w?Math.min(7,Math.max(3,Mat
    Quality needs a palm, a fist, and the rest kept to about a fist. One piece missing, or a heaped rest, is in-between. Nothing is off plan. */
 function plateRating(m){ const p=+m.p||0, f=(+m.f||0)+(+m.v||0); if(p>0&&f>0) return m.rest==="more"?"m":"q"; return p>0||f>0?"m":"n" }
 function setPlate(date,slot,patch){ const meals=S.meals[date]||(S.meals[date]={}), cur={...(meals[slot]||{})}; delete cur.q; delete cur.n; delete cur.suggestion; delete cur.unrated;
-  const m={p:0,f:0,v:0,...cur,...patch}; if(patch.p!==undefined||patch.f!==undefined) m.v=0; m.plate=true; m.guideProtein=m.p>0; m.rating=plateRating(m); meals[slot]=m; save(); return m.rating }
+  const m={p:0,f:0,v:0,...cur,...patch}; if(patch.p!==undefined||patch.f!==undefined){ if(patch.f===undefined) m.f=(+m.f||0)+(+m.v||0); m.v=0; } m.plate=true; m.guideProtein=m.p>0; m.rating=plateRating(m); meals[slot]=m; save(); return m.rating }
 /* The quiet check on overeating: it reads body fat or waist, never weight alone, because muscle weighs something too. */
 function trendNote(){ const end=ymd(today()), from=shiftDate(end,-42), rows=bodyRows().filter(r=>r.d>=from), span=key=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
   const bf=span("bf"), wt=span("wt"), ws=(S.extras||[]).filter(x=>/^waist/i.test(x.kind)&&valueOrNull(x.v)!=null).sort((a,b)=>a.d<b.d?-1:1), waist=ws.length>=2&&ws[ws.length-1].d>=from?valueOrNull(ws[ws.length-1].v)-valueOrNull(ws[ws.length-2].v):null;
   if((bf!=null&&bf>=0.7)||(waist!=null&&waist>=0.5)) return ["warn",(bf!=null&&bf>=0.7?"Body fat":"Your waist")+" is trending up. Keep the palms and fists, and trim the rest of the plate and the rewards."];
-  if(wt!=null&&wt>=2&&((bf!=null&&bf<=0)||(waist!=null&&waist<=0))) return ["ok","Weight is up and "+(bf!=null&&bf<=0?"body fat":"your waist")+" is not. That is muscle. Keep going."];
+  if(wt!=null&&wt>=2&&((bf!=null&&bf<=0)||(waist!=null&&waist<=0))) return ["ok","Weight is up and "+(bf!=null&&bf<=0?"body fat":"your waist")+" is not. That may reflect muscle gain, but these readings alone cannot confirm it. Keep watching the trend."];
   if(wt!=null&&wt>=3&&bf==null&&waist==null) return ["","Weight is trending up. A body fat or waist reading would show whether that is muscle."];
   return null }
 function avg(a){ const v=a.filter(n=>n!=null&&!isNaN(n)); return v.length?v.reduce((x,y)=>x+y,0)/v.length:null }
@@ -687,9 +687,11 @@ function mealRating(m){
 }
 function mealQuality(m){return mealRating(m)==='q'}
 function mealCredit(m){ const r=mealRating(m); return r==='q'?1:r==='m'?0.5:0 }
-function setMealRating(date,slot,rating,guideProtein){
+function setMealRating(date,slot,rating,guideProtein,guideProduce){
  const meals=S.meals[date]||(S.meals[date]={});
  const hands=rating==="q"?{p:1,f:2,v:0,rest:"ok",plate:true}:rating==="n"?{p:0,f:0,v:0,rest:"more",plate:true}:{p:guideProtein?1:0,f:guideProtein?0:1,v:0,plate:false};
+ // Ask reports both food groups even when an oversized remainder lowers the rating.
+ if(guideProduce!==undefined){ hands.p=guideProtein?1:0; hands.f=guideProduce?(rating==="q"?2:1):0; hands.v=0; hands.rest=rating==="m"&&guideProtein&&guideProduce?"more":"ok"; hands.plate=true; }
  meals[slot]={...meals[slot],...hands,rating,guideProtein:rating==="q"||!!guideProtein};
  save();
 }
@@ -2114,9 +2116,11 @@ function localMealCheck(text){ const res=parseMeal(text); let p=0,prod=0,carb=0;
   const drinks=res.rewards.alc||0, junk=(res.rewards.dessert||0)+(res.rewards.snack||0);
   if(!p&&!prod&&!carb&&!junk&&!drinks) return {rating:null,why:"I couldn't tell what that was. Try naming the foods: chicken, salad, rice, a beer.",src:"local"};
   if(!p&&!prod&&!carb&&!junk) return {rating:null,drinks,why:"That's "+drinks+" drink"+(drinks>1?"s":"")+" and no food. Drinks are counted on their own line.",src:"local"};
-  const rating=p&&prod?"q":(p||prod)?"m":"n";
-  const why=rating==="q"?"Protein and produce are both there.":rating==="m"?(p?"There's protein, but no fruit or veg.":"There's fruit or veg, but no real protein."):"No protein and no fruit or veg in that.";
-  const fix=rating==="q"?null:rating==="m"?(p?"Add a vegetable or a piece of fruit and it's quality.":"Add a palm of protein and it's quality."):"Next time start with the protein and add a vegetable.";
+  // A quick check cannot measure portions: only downgrade explicit oversized descriptions.
+  const oversized=/(?:more than (?:about )?(?:a|one|1) fist|(?:several|[2-9]|two|three|four|five|six) cups? of (?:pasta|rice|noodles|mac(?:aroni)?|potatoes)|(?:large|huge|big) (?:pile|plate|bowl|portion|serving) of (?:fries|chips|pasta|rice|noodles|mac(?:aroni)?|potatoes)|mountain of (?:mac|pasta|rice|fries)|heaped (?:pasta|rice|fries))/i.test(text);
+  const rating=p&&prod?(oversized?"m":"q"):(p||prod)?"m":"n";
+  const why=p&&prod&&oversized?"Protein and produce are there, but the rest of the plate sounds oversized.":rating==="q"?"Protein and produce are both there. Keep the rest to about a fist.":rating==="m"?(p?"There's protein, but no fruit or veg.":"There's fruit or veg, but no real protein."):"No protein and no fruit or veg in that.";
+  const fix=p&&prod&&oversized?"Keep the protein and produce; bring the rest closer to a fist.":rating==="q"?null:rating==="m"?(p?"Add a vegetable or a piece of fruit and it's quality.":"Add a palm of protein and it's quality."):"Next time start with the protein and add a vegetable.";
   return {rating,protein:!!p,produce:!!prod,drinks,why,fix,src:"local"} }
 async function checkMeal(text){
   try{ const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),9000);
@@ -3422,7 +3426,7 @@ document.addEventListener("click",e=>{
   if(ds.dmeal!==undefined){ setMealRating(ymd(today()),ds.dmeal,ds.v); render(); toast(ds.v==="q"?"Quality +"+PTS.meal:ds.v==="m"?"In-between · half credit":"Logged"); return }
   if(ds.dailyClose!==undefined){ dailyOpen=false; renderDaily(); return }
   if(ds.dailyOpen!==undefined){ dailySkipped.clear(); deckFirst=ds.only||null; deckLast=null; dailyOpen=true; renderDaily(); return }
-  if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
+  if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein,!!r.produce); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
   if(ds.checkClear!==undefined){ mealCheck=null; render(); return }
   if(ds.unswap!==undefined){ delete (S.swaps||{})[ds.unswap]; save(); render(); return }
   if(ds.minSet){ const k=ds.k; S.sess[k]=S.sess[k]||{}; S.sess[k][ds.minSet]=S.sess[k][ds.minSet]||{done:true}; S.sess[k][ds.minSet].min=+ds.v; save(); render(); return }

@@ -32,8 +32,8 @@
   --bg:#0f1113; --panel:#191c1f; --fg:#eef0f2; --muted:#9aa3ab; --line:#2a2f34; --soft:#22272c;
   --accent:#ff6a3d; --accent-ink:#1a0b05; --green:#4fc38a; --amber:#e7b046; --blue:#6f9ae8; --red:#f28b82; color-scheme:dark }
 *{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;display:flex;flex-direction:column;min-height:100%}
+html{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 main{flex:1;padding:14px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));max-width:560px;width:100%;margin:0 auto}
 h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance}
@@ -263,6 +263,9 @@ summary::-webkit-details-marker{display:none}
 .tabbar button{padding:10px 2px 8px;font-size:.66rem;font-weight:600;letter-spacing:0;text-transform:none;gap:4px;position:relative;transition:color .15s ease}
 .tabbar button[aria-selected="true"]::before{content:"";position:absolute;top:0;left:50%;width:22px;height:3px;border-radius:0 0 3px 3px;background:var(--accent);transform:translateX(-50%)}
 .tabbar svg{width:23px;height:23px}
+/* Keep the bar pinned on iPhone: its own layer, and out of the way while the keyboard is up (a fixed bar rides up with the keyboard and can stay there) */
+.tabbar{transform:translateZ(0);-webkit-transform:translateZ(0)}
+body.typing .tabbar{display:none}
 /* Home: today's three */
 .today-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 0;color:inherit;transition:transform .12s ease}
 .today-row:first-of-type{border-top:0;margin-top:8px}
@@ -3507,6 +3510,13 @@ document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.
     if(share&&navigator.share){ try{ await navigator.share({title:"Grocery list",text}) }catch(e){} return }
     try{ await navigator.clipboard.writeText(text); toast("List copied") }catch(e){ toast("Copy is not available here") } return }
 });
+/* While a text field has focus the bar is hidden; when the keyboard goes away the page is nudged so the bar re-pins to the bottom edge */
+(function(){ const field=el=>el&&el.matches&&el.matches("textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=button]):not([type=submit]):not([type=range])");
+  const repin=()=>{ if(field(document.activeElement)) return; document.body.classList.remove("typing"); try{ window.scrollTo(window.scrollX||0,window.scrollY||0) }catch(e){} };
+  document.addEventListener("focusin",e=>{ if(field(e.target)) document.body.classList.add("typing") });
+  document.addEventListener("focusout",()=>setTimeout(repin,150));
+  window.addEventListener("pageshow",repin); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) repin() });
+  if(window.visualViewport&&window.visualViewport.addEventListener) window.visualViewport.addEventListener("resize",()=>setTimeout(repin,150)) })();
 function render(){
   const keep=lastTab===tab?window.scrollY:0; lastTab=tab;
   { const dl=document.getElementById("daily"); if(dl&&(!S.profile||tab==="why"||tab==="onboard"||accountScreen)) dl.hidden=true }

@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="Health Stack">
 <meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.16.0">
+<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.17.0">
 <link rel="manifest" href="./manifest.json?v=sd-3">
-<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.16.0">
+<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.17.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.16.0</title>
+<title>SD Health Stack — Beta v9.17.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -349,6 +349,14 @@ details.phow p{margin:0 0 8px}
 .ptip{align-self:start;margin-top:-4px;background:color-mix(in srgb,var(--accent) 8%,var(--panel));border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:10px 12px;font-size:.84rem;line-height:1.45;animation:deckIn .2s ease}
 .ptip p{margin:0}.ptip p+p{margin-top:6px}
 .pgrid [data-ptip].on label.f{color:var(--accent)}
+.plate-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.plate-row>div{background:var(--soft);border-radius:14px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.plate-row .hand{font-size:1.5rem;line-height:1.2}.plate-row b{font-family:var(--display);font-size:1rem}.plate-row span:last-child{font-size:.74rem;color:var(--muted)}
+.hmeters{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.hm-top{display:flex;align-items:baseline;gap:6px}.hm-top b{font-family:var(--display);font-size:1.7rem;font-weight:800;letter-spacing:-.02em}.hm-top span{font-size:.8rem;color:var(--muted)}
+.hm-bar{height:8px;border-radius:8px;background:var(--soft);overflow:hidden;margin-top:6px}.hm-bar i{display:block;height:100%;border-radius:8px;background:var(--green);transition:width .3s ease}
+.mealcard .seg button{font-size:.8rem;padding:10px 2px}
+.mealcard label.f{display:block;margin:0 0 6px}
 </style>
 </head>
 <body>
@@ -361,7 +369,7 @@ details.phow p{margin:0 0 8px}
 
 <script src="./backup.js"></script>
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.16.0"></script>
+<script src="./beta-config.js?v=9.17.0"></script>
 <script>
 (function(){
 "use strict";
@@ -371,7 +379,7 @@ const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19
 
 /* =========================== PROGRAM CONTENT =========================== */
 /* Temporary name (SD = Stanton and Day; navy is the brand colour, orange stays the one accent). Storage keys and file names keep the old name so nobody loses data. */
-const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.16.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
+const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.17.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
 const ICON={
  book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
@@ -518,7 +526,25 @@ function kgNow(){ const w=latestWeight(); return w?w/2.2046:null }
 function latestWeight(){ const w=bodyRows().filter(x=>Number(x.wt)>0).at(-1); return w?parseFloat(w.wt):(S.profile&&parseFloat(S.profile.weightLb))||null }
 function bmi(){ const w=latestWeight(), h=S.profile&&S.profile.heightIn; if(!w||!h) return null; return Math.round(703*w/(h*h)*10)/10 }
 function bmiLabel(b){ if(b==null) return ""; return b<18.5?"underweight":b<25?"normal":b<30?"overweight":"obese" }
-function proteinRange(){ const w=latestWeight(); return w?[Math.round(w*0.75),Math.round(w)]:null }
+/* Protein is set from IDEAL body weight, not current weight: 0.75 to 1 g per pound of the weight a person of this height would carry at a healthy build.
+   Ideal weight uses the Hamwi formula (men 106 lb at 5 ft + 6 lb per inch; women 100 lb + 5 lb per inch). */
+function idealWeightLb(){ const p=S.profile||{}, h=+p.heightIn||0; if(!h) return null; const over=h-60; return Math.round(p.sex==="f"?100+5*over:106+6*over) }
+function proteinRange(){ const w=idealWeightLb(); return w?[Math.round(w*0.75),Math.round(w)]:null }
+/* The whole plan in hands: a palm of protein is about 30 g, a fist of fruit or veg about 130 g, so 6 fists is roughly 800 g. */
+const FIST_GOAL=6, FIST_GRAMS=130;
+function palmGoal(){ const w=idealWeightLb(); return w?Math.min(7,Math.max(3,Math.round(w*0.875/PROTEIN_PER_SERVING))):((S.profile||{}).sex==="f"?4:5) }
+/* A plate, answered in three taps: palms of protein, fists of produce, and whether the rest of the plate is about a fist or more.
+   Quality needs a palm, a fist, and the rest kept to about a fist. One piece missing, or a heaped rest, is in-between. Nothing is off plan. */
+function plateRating(m){ const p=+m.p||0, f=(+m.f||0)+(+m.v||0); if(p>0&&f>0) return m.rest==="more"?"m":"q"; return p>0||f>0?"m":"n" }
+function setPlate(date,slot,patch){ const meals=S.meals[date]||(S.meals[date]={}), cur={...(meals[slot]||{})}; delete cur.q; delete cur.n; delete cur.suggestion; delete cur.unrated;
+  const m={p:0,f:0,v:0,...cur,...patch}; if(patch.p!==undefined||patch.f!==undefined){ if(patch.f===undefined) m.f=(+m.f||0)+(+m.v||0); m.v=0; } m.plate=true; m.guideProtein=m.p>0; m.rating=plateRating(m); meals[slot]=m; save(); return m.rating }
+/* The quiet check on overeating: it reads body fat or waist, never weight alone, because muscle weighs something too. */
+function trendNote(){ const end=ymd(today()), from=shiftDate(end,-42), rows=bodyRows().filter(r=>r.d>=from), span=key=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
+  const bf=span("bf"), wt=span("wt"), ws=(S.extras||[]).filter(x=>/^waist/i.test(x.kind)&&valueOrNull(x.v)!=null).sort((a,b)=>a.d<b.d?-1:1), waist=ws.length>=2&&ws[ws.length-1].d>=from?valueOrNull(ws[ws.length-1].v)-valueOrNull(ws[ws.length-2].v):null;
+  if((bf!=null&&bf>=0.7)||(waist!=null&&waist>=0.5)) return ["warn",(bf!=null&&bf>=0.7?"Body fat":"Your waist")+" is trending up. Keep the palms and fists, and trim the rest of the plate and the rewards."];
+  if(wt!=null&&wt>=2&&((bf!=null&&bf<=0)||(waist!=null&&waist<=0))) return ["ok","Weight is up and "+(bf!=null&&bf<=0?"body fat":"your waist")+" is not. That may reflect muscle gain, but these readings alone cannot confirm it. Keep watching the trend."];
+  if(wt!=null&&wt>=3&&bf==null&&waist==null) return ["","Weight is trending up. A body fat or waist reading would show whether that is muscle."];
+  return null }
 function avg(a){ const v=a.filter(n=>n!=null&&!isNaN(n)); return v.length?v.reduce((x,y)=>x+y,0)/v.length:null }
 function rolling(key,n=4,skip=0){
  const recent=bodyRows().map(x=>valueOrNull(x[key])).filter(x=>x!=null).reverse();
@@ -569,7 +595,6 @@ function effectiveMeals(k){
  }
  return result;
 }
-function fusionWeeklyMacros(d){return weekKeys(d).map(k=>({date:k,...fTotalsFor(k)}))}
 // Custom activity points: capped at five exercise points per day across planned and custom main sessions.
 // Mobility remains a separate category. A replacement never earns both scheduled and substitute points.
 function customWorkoutPoints(x){
@@ -662,9 +687,12 @@ function mealRating(m){
 }
 function mealQuality(m){return mealRating(m)==='q'}
 function mealCredit(m){ const r=mealRating(m); return r==='q'?1:r==='m'?0.5:0 }
-function setMealRating(date,slot,rating,guideProtein){
+function setMealRating(date,slot,rating,guideProtein,guideProduce){
  const meals=S.meals[date]||(S.meals[date]={});
- meals[slot]={...meals[slot],rating,guideProtein};
+ const hands=rating==="q"?{p:1,f:2,v:0,rest:"ok",plate:true}:rating==="n"?{p:0,f:0,v:0,rest:"more",plate:true}:{p:guideProtein?1:0,f:guideProtein?0:1,v:0,plate:false};
+ // Ask reports both food groups even when an oversized remainder lowers the rating.
+ if(guideProduce!==undefined){ hands.p=guideProtein?1:0; hands.f=guideProduce?(rating==="q"?2:1):0; hands.v=0; hands.rest=rating==="m"&&guideProtein&&guideProduce?"more":"ok"; hands.plate=true; }
+ meals[slot]={...meals[slot],...hands,rating,guideProtein:rating==="q"||!!guideProtein};
  save();
 }
 function dayNutrition(k){
@@ -1031,79 +1059,53 @@ const m2=d.getMonth()%2===1;
 }
 
 function vNutrition(){
-  const key=nutDay, tk=ymd(today()), d=parseD(key), m=effectiveMeals(key), rw=S.rewards[key]||{}, dn=dayNutrition(key), wn=weekNutrition(d), [lab,cls]=ratioLabel(wn.pct), pr=proteinRange();
-  const counter=(mealId,x)=>`<div class="counter">${FOOD.map(([f,name])=>`<div class="${(x[f]||0)>0?"on":""}"><div class="lab">${name}</div><div class="ctl"><button data-food="${f}" data-meal="${mealId}" data-dv="-1" aria-label="less">−</button><b>${x[f]||0}</b><button data-food="${f}" data-meal="${mealId}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>`;
-  return header("Nutrition","Protein and produce, most meals")+`
+  const key=nutDay, tk=ymd(today()), d=parseD(key), m=effectiveMeals(key), rw=S.rewards[key]||{}, dn=dayNutrition(key), wn=weekNutrition(d), [lab,cls]=ratioLabel(wn.pct), pr=proteinRange(), iw=idealWeightLb();
+  const pg=palmGoal(), palms=dn.p+(dn.drink?1:0), fists=dn.produce, note=trendNote();
+  const meter=(n,goal,word)=>`<div class="hmeter"><div class="hm-top"><b>${n}</b><span>of ${goal} ${word}</span></div><div class="hm-bar"><i style="width:${Math.min(100,Math.round(n/goal*100))}%"></i></div></div>`;
+  const pick=(id,field,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(([v,l])=>`<button type="button" data-plate="${id}" data-f="${field}" data-v="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join("")}</div>`;
+  return header("Nutrition","A palm and two fists")+`
   <div class="card hero"><div class="row" style="justify-content:space-between"><div class="eyebrow">Week of ${fmt(weekKeys(d)[0])}</div><span class="${cls}">${lab}</span></div>
   <div class="stat"><div><b>${wn.pct==null?"–":wn.pct+"%"}</b><span>quality · target ${S.profile?.nutritionTarget||70}</span></div><div><b>${wn.q+wn.mid+wn.n}</b><span>meals rated</span></div><div><b>${wn.alcohol}</b><span>drinks · line at 7</span></div></div>
-  <p class="muted xs">${wn.q} quality · ${wn.mid} in-between (half credit) · ${wn.n} off plan. Snacks and the recovery drink count too, so one great meal plus a skipped breakfast doesn't read as a bad day. Drinks sit outside the ratio.${wn.protein==null?'':' About '+Math.round(wn.protein)+' g protein a day.'}</p></div>
-  <div class="navrow"><button data-nut="-1" aria-label="Previous day">‹</button><h2 style="margin:0">${key===tk?"Today":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2><button data-nut="1" aria-label="Next day" ${key>=tk?"disabled":""}>›</button></div>
-  <div class="card">
-  <h2>Rate each meal</h2>
-  <p class="muted sm"><b>Quality</b> = a palm of protein and fruit or veg on the plate. <b>In-between</b> = real food, but one of those is missing. <b>Off plan</b> = neither, or nothing. Examples under each one.</p>
-  <details id="nutrition-examples" class="xs"><summary>What counts as what? More examples</summary><div>
-  <table class="extable"><tr><th style="color:var(--green)">Quality</th><th style="color:var(--amber)">In-between</th><th style="color:var(--red)">Off plan</th></tr>
-  ${NUTRITION_EXAMPLES.map(([where,q,m,n])=>`<tr><td colspan="3" style="border:0;padding-top:8px"><b>${esc(where)}</b></td></tr><tr><td>${esc(q)}</td><td>${esc(m)}</td><td>${esc(n)}</td></tr>`).join("")}</table>
-  <p class="muted xs" style="margin-top:8px">The test is always the same two questions: is there a palm of protein, and is there fruit or veg? Both = quality. One = in-between. Neither = off plan. When in doubt, pick in-between and move on.</p></div></details>
-  <button class="btn small" type="button" data-log-smoothie="1">+ Log breakfast smoothie</button>
-  ${MEALS.map(([id,name])=>{
-   const x=m[id]||{},state=mealRating(x);
-   const ex=MEAL_EXAMPLES[id];
-   return `<div class="meal"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Skipped"}</span></div>
-   <div class="seg three"><button class="q" aria-pressed="${state==="q"}" data-mealset="${id}" data-v="q">Quality</button><button class="m" aria-pressed="${state==="m"}" data-mealset="${id}" data-v="m">In-between</button><button class="n" aria-pressed="${state==="n"}" data-mealset="${id}" data-v="n">Off plan</button></div>
-   <p class="muted xs" style="margin:4px 0 2px"><span style="color:var(--green)">●</span> ${esc(ex.q)} &nbsp;<span style="color:var(--amber)">●</span> ${esc(ex.m)} &nbsp;<span style="color:var(--red)">●</span> ${esc(ex.n)}</p>
-   ${state?`<button class="del xs" data-mealset="${id}" data-v="" style="text-decoration:underline">Mark skipped</button>`:''}
-   <details class="xs"><summary>Help me rate ${name.toLowerCase()}</summary><div><form class="fgrid" data-meal-guide="${id}">
-   <label>A palm of protein?<select name="protein" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-   <label>Fruit or vegetables on the plate?<select name="produce" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-   <button type="submit" class="btn small">Save rating</button></form></div></details>
-   ${S.profile?.detailedNutrition?`<details class="xs"><summary>Servings · P${x.p||0} F${x.f||0} V${x.v||0} C${x.c||0}</summary><div>${counter(id,x)}</div></details>`:''}`;
-  }).join("")}
-  ${checkBtn(dn.drink,"Post-workout recovery drink","+"+DRINK_PROTEIN+" g protein · logs in Benefits too, with creatine and collagen",PTS.drink,`data-supp="drink" data-k="${key}"`)}
+  ${note?`<p class="xs" style="margin:10px 0 0;opacity:.92">${esc(note[1])}</p>`:""}</div>
+  <div class="card platecard">
+   <h2 style="margin:0 0 6px">The plate</h2>
+   <div class="plate-row"><div><span class="hand">✋</span><b>1 palm</b><span>protein</span></div><div><span class="hand">✊✊</span><b>2 fists</b><span>fruit or veg</span></div><div><span class="hand">✊</span><b>1 fist</b><span>everything else</span></div></div>
+   <p class="muted sm" style="margin:10px 0 0">Build most meals like that and the day takes care of itself: <b>${pg} palms</b> of protein and <b>${FIST_GOAL} fists</b> of produce. No counting, no weighing.</p>
+   <details class="xs"><summary>Where those numbers come from</summary><div>
+    <p><b>Protein:</b> 0.75 to 1 gram per pound of your <b>ideal</b> body weight, the weight a healthy build carries at your height. It is not your current weight.${iw&&pr?` For you that is about ${iw} lb, so ${pr[0]} to ${pr[1]} g a day. A palm is about ${PROTEIN_PER_SERVING} g, which makes ${pg} palms.`:` Add your height in your profile to see yours.`}</p>
+    <p><b>Produce:</b> the research keeps landing near 800 grams of fruit and vegetables a day. A fist is roughly ${FIST_GRAMS} g, so ${FIST_GOAL} fists gets you there.</p>
+    <p><b>A palm is</b> a chicken breast or fish fillet, four eggs, a cup and a half of Greek yogurt, or a scoop of protein powder in milk.</p>
+    <p style="margin:0"><b>A fist is</b> an apple, a banana, a cup of berries, a cup of cooked vegetables, or two big handfuls of salad.</p></div></details>
   </div>
+  <div class="navrow"><button data-nut="-1" aria-label="Previous day">‹</button><h2 style="margin:0">${key===tk?"Today":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2><button data-nut="1" aria-label="Next day" ${key>=tk?"disabled":""}>›</button></div>
+  <div class="card"><div class="hmeters">${meter(palms,pg,"palms")}${meter(fists,FIST_GOAL,"fists")}</div></div>
+  ${MEALS.map(([id,name])=>{
+   const x=m[id]||{}, state=mealRating(x), touched=!!x.plate, p=touched?(+x.p||0):"", f=touched?Math.min(2,(+x.f||0)+(+x.v||0)):"", rest=touched?(x.rest||""):"";
+   return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
+   <button class="btn small ${state==="q"&&touched&&x.p==1&&f==2&&rest!=="more"?"":"ghost"}" type="button" data-plate-plan="${id}" style="width:100%;justify-content:center;margin:10px 0 12px">✋ ✊✊ On plan: a palm and two fists</button>
+   <label class="f">Protein</label>${pick(id,"p",p,[[0,"None"],[1,"1 palm"],[2,"2 palms"]])}
+   <label class="f" style="margin-top:10px">Fruit and veg</label>${pick(id,"f",f,[[0,"None"],[1,"1 fist"],[2,"2+ fists"]])}
+   <label class="f" style="margin-top:10px">The rest of the plate</label>${pick(id,"rest",rest,[["ok","About a fist or less"],["more","More than that"]])}
+   ${state?`<button class="del xs" data-mealset="${id}" data-v="" style="text-decoration:underline;margin-top:8px">Clear</button>`:""}</div>`;
+  }).join("")}
+  <div class="card">${checkBtn(dn.drink,"Post-workout recovery drink","Counts as a palm of protein · logs in Benefits too",PTS.drink,`data-supp="drink" data-k="${key}"`)}</div>
+  <h2>Rewards${key===tk?" today":""}</h2>
+  <div class="card"><div class="counter">${REWARDS.map(([id,name])=>`<div class="${(rw[id]||0)>0?"on":""}" style="background:${(rw[id]||0)>0?"color-mix(in srgb,var(--amber) 22%,var(--panel))":"var(--soft)"}"><div class="lab">${name}</div><div class="ctl"><button data-reward="${id}" data-dv="-1" aria-label="less">−</button><b>${rw[id]||0}</b><button data-reward="${id}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>
+  <p class="muted xs" style="margin-top:10px">One tap per serving: a beer, a glass of wine, a scoop of ice cream. It is not a penalty; it just moves the ratio.</p></div>
   <h2>Not sure? Ask.</h2>
-  <div class="card"><p class="muted sm" style="margin-top:0">At a restaurant, a friend's house, a football game: type or say what you had and get a straight answer. You decide whether to log it.</p>
+  <div class="card"><p class="muted sm" style="margin-top:0">At a restaurant, a friend's house, a football game: type or say what you had and get a straight answer.</p>
   <form id="fCheck"><div class="row tight" style="gap:6px"><input name="text" maxlength="300" autocomplete="off" placeholder="two slices of pizza and a side salad" value="${mealCheck?esc(mealCheck.text):""}" style="flex:1"><button type="button" class="gear" data-say="1" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div><button class="btn small" type="submit" style="margin-top:8px" ${mealCheck&&mealCheck.busy?"disabled":""}>${mealCheck&&mealCheck.busy?"Checking…":"Is this quality?"}</button></form>
   ${mealCheckHtml()}
   <p class="muted xs" id="sayOut" style="margin-top:8px"></p>
   <p class="muted xs" style="margin-top:6px">Only the words you type are sent for the check. Nothing is logged until you tap a meal.</p></div>
-  <h2>Rewards${key===tk?" today":""}</h2>
-  <div class="card"><div class="counter">${REWARDS.map(([id,name])=>`<div class="${(rw[id]||0)>0?"on":""}" style="background:${(rw[id]||0)>0?"color-mix(in srgb,var(--amber) 22%,var(--panel))":"var(--soft)"}"><div class="lab">${name}</div><div class="ctl"><button data-reward="${id}" data-dv="-1" aria-label="less">−</button><b>${rw[id]||0}</b><button data-reward="${id}" data-dv="1" aria-label="more">+</button></div></div>`).join("")}</div>
-  <p class="muted xs" style="margin-top:10px">One tap per serving: a beer, a glass of wine, a scoop of ice cream, a handful of chips. Nothing here is a penalty; it just moves the ratio.</p></div>
-
-  <details id="nutrition-settings"><summary>Nutrition settings</summary><div>
-  <label><input type="checkbox" id="detailedNutrition" style="width:auto" ${S.profile?.detailedNutrition?'checked':''}> Detailed tracking</label>
-  <label>Weekly quality target<select id="nutritionTarget"><option value="70">70%</option><option value="80" ${S.profile?.nutritionTarget===80?'selected':''}>80%</option></select></label>
-  </div></details>
-  ${S.profile?.detailedNutrition?fNutritionPanel():''}
-  <button class="btn small ghost" type="button" data-go="grocery" style="margin-bottom:14px">${ICON.cart} Grocery list</button>
-  <details id="nutrition-plan"><summary>Plan the week</summary><div>
-  <div class="card"><h3>Saved meals</h3>${fFavoriteRows('meal')}</div>
-  ${groceryPanel()}
-  <h3>Breakfast smoothie recipe</h3>
-  <form id="fSmoothie"><textarea name="smoothie" aria-label="Breakfast smoothie recipe">${esc(S.smoothie||DEFAULT_SMOOTHIE)}</textarea><button class="btn small">Save recipe</button></form>
-  </div></details>
-  <details id="nutrition-education"><summary>Meal examples and nutrition guide</summary><div>
-  <h2>The base, every day</h2>
-  <div class="card">
-    <div class="stat"><div><b>${pr?pr[0]+"–"+pr[1]+" g":"–"}</b><span>protein / day</span></div><div><b>${PRODUCE_GOAL}</b><span>fist-size fruit + veg (~800 g)</span></div><div><b>Yes</b><span>grains are fine</span></div></div>
-    <ul style="margin-top:12px">
-      <li><b>Protein:</b> 0.75–1 g per pound of bodyweight. A palm-size serving is about 30 g, so you need 5–6 of them a day, 1–2 per meal.</li>
-      <li><b>Fruit and vegetables:</b> five fist-size servings, any mix, any meal. That's roughly 800 g.</li>
-      <li><b>Carbs:</b> included, not restricted. Whole grain, potatoes, rice, oats. A cupped hand per meal is plenty for most.</li>
-      <li><b>Everything else:</b> free choice once the base is met.</li>
-    </ul>
-  </div>
-  <h2>What quality looks like</h2>
-  <details><summary>Breakfast</summary><div><ul><li>4 eggs + 2 egg whites, spinach, toast, berries <span class="muted xs">(P2 F1 V1 C1)</span></li><li>Greek yogurt (1 cup) + whey scoop + banana + granola <span class="muted xs">(P2 F1 C1)</span></li><li>Bob's Red Mill oats in milk, whey stirred in, blueberries, walnuts <span class="muted xs">(P1 F1 C1)</span></li></ul></div></details>
-  <details><summary>Lunch</summary><div><ul><li>Chicken thighs (8 oz), rice, big salad <span class="muted xs">(P2 V2 C1)</span></li><li>Turkey sandwich, apple, carrots <span class="muted xs">(P1 F1 V1 C1)</span></li><li>Leftover dinner protein over greens, fruit on the side <span class="muted xs">(P2 F1 V1)</span></li></ul></div></details>
-  <details><summary>Dinner</summary><div><ul><li>Steak or salmon (8 oz), potatoes, two vegetables <span class="muted xs">(P2 V2 C1)</span></li><li>Ground beef bowl, rice, roasted veg, avocado <span class="muted xs">(P2 V1 C1)</span></li><li>Pasta with meat sauce and a side salad <span class="muted xs">(P1 V1 C2)</span></li></ul></div></details>
-  <details><summary>Snacks that count as quality</summary><div><ul><li>Greek yogurt, cottage cheese, jerky, hard-boiled eggs + a piece of fruit</li><li>Protein shake or the recovery drink + fruit</li></ul></div></details>
-  <details><summary>What 150 g of protein actually looks like</summary><div><p>Eggs and yogurt at breakfast (40 g), chicken at lunch (50 g), steak at dinner (50 g), one shake (25 g). Most guys who think they eat enough protein are at 90 g.</p></div></details>
-  <h2>Body composition</h2>
-  <div class="card"><p><b>Weigh in once a week. Friday morning.</b> After the bathroom, before coffee, same scale. Bioimpedance scales are fine for trends; the absolute number is off by a few percent, the direction is real.</p>
-  <p><b>Muscle up, fat down beats pounds down.</b> Same weight with better composition is a win, and Track shows it as one.</p>
-  <button class="btn small" data-go="progress">Log a weigh-in</button></div></div></details>`;
+  <div class="row" style="margin-bottom:14px"><button class="btn ghost" type="button" data-go="grocery" style="justify-content:center">${ICON.cart} Grocery list</button><label class="btn ghost" style="justify-content:center;gap:8px">Target<select id="nutritionTarget" style="width:auto;height:auto;padding:2px 6px;border:0;background:transparent;font:inherit;color:inherit"><option value="70">70%</option><option value="80" ${S.profile?.nutritionTarget===80?"selected":""}>80%</option></select></label></div>
+  <details id="nutrition-examples"><summary>What counts as what</summary><div>
+  <table class="extable"><tr><th style="color:var(--green)">Quality</th><th style="color:var(--amber)">In-between</th><th style="color:var(--red)">Off plan</th></tr>
+  ${NUTRITION_EXAMPLES.map(([where,q,mm,n])=>`<tr><td colspan="3" style="border:0;padding-top:8px"><b>${esc(where)}</b></td></tr><tr><td>${esc(q)}</td><td>${esc(mm)}</td><td>${esc(n)}</td></tr>`).join("")}</table>
+  <p class="muted xs" style="margin-top:8px">Three questions every time: a palm of protein? A fist or two of fruit or veg? Is the rest about a fist? Yes to all three is quality. A chicken breast and broccoli next to a mountain of mac and cheese is in-between.</p></div></details>
+  <details id="nutrition-plan"><summary>Breakfast smoothie recipe</summary><div>
+  <form id="fSmoothie"><textarea name="smoothie" aria-label="Breakfast smoothie recipe">${esc(S.smoothie||DEFAULT_SMOOTHIE)}</textarea><div class="row tight"><button class="btn small">Save recipe</button><button class="btn small ghost" type="button" data-log-smoothie="1">Log it as today's breakfast</button></div></form>
+  </div></details>`;
 }
 
 function vBenefits(){
@@ -1334,7 +1336,7 @@ const LESSONS=[
  {"m": 1, "tag": "Start here", "t": "Read your trend", "b": "Open Progress today. After one month, don't expect much from the scale. Look at the inputs: how many strength days, how many quality meals, how many nights of seven hours. Those are the numbers you controlled. If they're climbing, the body numbers will follow over the next few months."},
  {"m": 1, "tag": "Start here", "t": "One month in", "b": "You've now seen the whole program: the plate, three strength days, easy and hard cardio, mobility, sleep. Starting tomorrow each month takes one of those and goes deeper, beginning with protein. Pick the one habit that was hardest this month and make it next month's focus. Just that one."},
  {"m": 2, "tag": "Protein", "t": "Why a whole month on protein", "b": "Of everything on the plate, protein is the piece most people miss and the one that pays back fastest. It's what muscle is built from, and it's the most filling food you eat. This month has one goal: a palm-size serving at every meal. Get that right and a lot of the rest gets easier."},
- {"m": 2, "tag": "Protein", "t": "How much", "b": "The target is 0.75 to 1 gram per pound of body weight each day. For a 180-pound person that's about 135 to 180 grams. You don't need to count it. Three meals with a real serving of protein, plus a shake or a snack, lands most people in range. The app estimates it from your taps."},
+ {"m": 2, "tag": "Protein", "t": "How much", "b": "The target is 0.75 to 1 gram per pound of your ideal body weight each day. Ideal means the weight a healthy build carries at your height, not what the scale says now. For an ideal weight of 170 pounds that's about 130 to 170 grams. You don't need to count it. A palm of protein at each meal, plus a shake or a snack, lands most people in range."},
  {"m": 2, "tag": "Protein", "t": "What a palm looks like", "b": "One serving is a piece of meat or fish the size and thickness of your palm. That's about 30 grams of protein. So are four or five eggs, a cup and a half of Greek yogurt, or a scoop of powder in a glass of milk. Bigger people have bigger palms, which is why the method works."},
  {"m": 2, "tag": "Protein", "t": "Protein keeps you full", "b": "Calorie for calorie, protein is the most filling thing you can eat. A breakfast with eggs or yogurt holds you until lunch in a way a bagel doesn't. That's a big part of why this plan works without counting: when protein comes first, there's less room and less appetite for the rest."},
  {"m": 2, "tag": "Protein", "t": "Protein and muscle", "b": "Lifting gives your muscles the signal to grow. Protein supplies the material. With the signal and no material, progress is slow. With material and no signal, not much happens either. When researchers pooled 49 training studies, extra protein helped up to roughly 0.75 grams per pound a day, and then the benefit leveled off."},
@@ -1823,7 +1825,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.16.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.17.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2061,10 +2063,11 @@ function fitnessProgress(weeks){
 }
 function nutritionProgress(weeks){
  const series=(fn)=>weeks.map(w=>({d:w.d,label:w.label,v:fn(w)}));
- return `<h2>Nutrition</h2><div class="card"><h3>Meal quality and goals</h3><p class="muted sm">The quality score uses logged meals and rewards. Macro comparisons use days with macro data and your current targets.</p><button class="btn small ghost" data-go="nutrition">Open Nutrition & targets</button></div>
+ return `<h2>Nutrition</h2><div class="card"><h3>Meal quality and goals</h3><p class="muted sm">The quality score uses rated meals and rewards. Palms and fists are averages for the days you logged.</p><button class="btn small ghost" data-go="nutrition">Open Nutrition</button></div>
  ${progressChart('Weekly meal quality',series(w=>w.n.pct),'%',{baseline:80,baselineLabel:'Program reference'})}
  ${progressChart('Days with meals logged',series(w=>w.mealDays),' days')}
- ${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([key,label])=>progressChart(`Daily ${label.toLowerCase()} average vs. goal`,series(w=>avg(w.macroDays.map(entries=>entries.reduce((sum,x)=>sum+(Number(x[key])||0),0)))),' g',{baseline:Number(F.targets[key])||null})).join('')}`;
+ ${progressChart('Palms of protein a day',series(w=>w.n.protein==null?null:Math.round(w.n.protein/PROTEIN_PER_SERVING*10)/10),' palms',{baseline:palmGoal(),baselineLabel:'Your goal'})}
+ ${progressChart('Fists of fruit and veg a day',series(w=>w.n.produce==null?null:Math.round(w.n.produce*10)/10),' fists',{baseline:FIST_GOAL,baselineLabel:'Goal'})}`;
 }
 document.addEventListener('click',e=>{
  const button=e.target.closest('[data-benefit],[data-progress-pane],[data-progress-range]');if(!button)return;
@@ -2113,9 +2116,11 @@ function localMealCheck(text){ const res=parseMeal(text); let p=0,prod=0,carb=0;
   const drinks=res.rewards.alc||0, junk=(res.rewards.dessert||0)+(res.rewards.snack||0);
   if(!p&&!prod&&!carb&&!junk&&!drinks) return {rating:null,why:"I couldn't tell what that was. Try naming the foods: chicken, salad, rice, a beer.",src:"local"};
   if(!p&&!prod&&!carb&&!junk) return {rating:null,drinks,why:"That's "+drinks+" drink"+(drinks>1?"s":"")+" and no food. Drinks are counted on their own line.",src:"local"};
-  const rating=p&&prod?"q":(p||prod)?"m":"n";
-  const why=rating==="q"?"Protein and produce are both there.":rating==="m"?(p?"There's protein, but no fruit or veg.":"There's fruit or veg, but no real protein."):"No protein and no fruit or veg in that.";
-  const fix=rating==="q"?null:rating==="m"?(p?"Add a vegetable or a piece of fruit and it's quality.":"Add a palm of protein and it's quality."):"Next time start with the protein and add a vegetable.";
+  // A quick check cannot measure portions: only downgrade explicit oversized descriptions.
+  const oversized=/(?:more than (?:about )?(?:a|one|1) fist|(?:several|[2-9]|two|three|four|five|six) cups? of (?:pasta|rice|noodles|mac(?:aroni)?|potatoes)|(?:large|huge|big) (?:pile|plate|bowl|portion|serving) of (?:fries|chips|pasta|rice|noodles|mac(?:aroni)?|potatoes)|mountain of (?:mac|pasta|rice|fries)|heaped (?:pasta|rice|fries))/i.test(text);
+  const rating=p&&prod?(oversized?"m":"q"):(p||prod)?"m":"n";
+  const why=p&&prod&&oversized?"Protein and produce are there, but the rest of the plate sounds oversized.":rating==="q"?"Protein and produce are both there. Keep the rest to about a fist.":rating==="m"?(p?"There's protein, but no fruit or veg.":"There's fruit or veg, but no real protein."):"No protein and no fruit or veg in that.";
+  const fix=p&&prod&&oversized?"Keep the protein and produce; bring the rest closer to a fist.":rating==="q"?null:rating==="m"?(p?"Add a vegetable or a piece of fruit and it's quality.":"Add a palm of protein and it's quality."):"Next time start with the protein and add a vegetable.";
   return {rating,protein:!!p,produce:!!prod,drinks,why,fix,src:"local"} }
 async function checkMeal(text){
   try{ const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),9000);
@@ -2171,7 +2176,7 @@ async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=
 function backupHelp(){return `<div class="note sm"><b>Portable backup</b><p>Export this profile’s logs, plans, saved meals/workouts, preferences and locally saved photos to a private JSON file. Save it in Files and confirm it exists before removing the app. Imports replace this profile’s local data, not merge it. Other profiles, sign-in credentials, notification permissions and connections are not backed up. Cloud health readings already loaded here are saved as a snapshot; reconnect for newer readings.</p>${F.backupSyncPaused?'<p><b>Cloud sync is paused after restore.</b> Your restored data stays on this device until you choose to resume. This protects it from being replaced by an older cloud copy.</p><button class="btn small ghost" id="backup-resume">Review and resume cloud sync</button>':''}<p id="backup-status" role="status"></p></div>`}
 function exportData(){
  try{
-  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.16.0',accountId:activeWorkspace});
+  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.17.0',accountId:activeWorkspace});
   const text=JSON.stringify(bundle,null,1);if(new TextEncoder().encode(text).length>window.MomentumBackup.MAX_BYTES)throw Error('Backup exceeds 25 MB. Do not remove the app; reduce photo sizes or ask for help first.');
   const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='momentum-backup-'+ymd(today())+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -2294,7 +2299,6 @@ function kcalDisplay(x){return x.caloriesBurned==null?'Not recorded':Math.round(
 const fusionId=()=>Date.now()+Math.random();
 function fTotalsFor(date){return F.entries.filter(x=>x.date===date&&x.type==='meal').reduce((a,x)=>{for(const k of ['p','c','f','fiber','calories'])a[k]+=Number(x[k])||0;return a},{p:0,c:0,f:0,fiber:0,calories:0})}
 function fTotals(){return fTotalsFor(nutDay)}
-function fMeters(date){const t=fTotalsFor(date);return [['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,label])=>`<div class="fmeter"><div class="row" style="justify-content:space-between"><b>${label}</b><span>${Math.round(t[k])} / ${F.targets[k]}g</span></div><div class="meter"><i style="width:${Math.min(100,t[k]/Math.max(1,F.targets[k])*100)}%"></i></div></div>`).join('')}
 function fFavoriteRows(type){const fav=F.favorites.map((x,i)=>({...x,i})).filter(x=>x.type===type);return fav.length?fav.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${S.profile?.detailedNutrition?`${x.p||0}P · ${x.c||0}C · ${x.f||0}F · `:''}${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])}`:`${x.minutes||0} min · saved activity`}</small></span><div class="row tight"><button class="btn small" data-favorite="${x.i}">+ Log</button><button class="btn small ghost" data-fremove="${x.i}" aria-label="Remove favorite">×</button></div></div>`).join(''):'<p class="muted xs">Your saved favorites will appear here.</p>'}
 function fRecent(type,date){const xs=[...F.entries].filter(x=>x.type===type&&x.date===date).reverse();return xs.length?xs.map(x=>`<div class="frow"><span><b>${esc(x.description)}</b><br><small class="muted">${type==='meal'?`${esc(({b:'Breakfast',l:'Lunch',d:'Dinner',s:'Snack'})[fusionMealSlot(x)])} · ${Math.round(x.p||0)}g protein · ${Math.round(x.c||0)}g carbs · ${Math.round(x.f||0)}g fat · ${x.qualityChoice==='quality'?'Quality':x.qualityChoice==='off'?'Off plan':'Unclassified'}`:`${x.minutes||0} min · ${esc(x.intensity||'unspecified intensity')} · Activity Score included · ${kcalDisplay(x)}${x.planAction&&x.planAction!=='extra'?' · Replaced scheduled workout':''}`}${x.source==='demo'?' · SIMULATED PREVIEW':x.assistant?' · Logged by '+esc(x.assistant):''}</small></span><div class="row tight"><button class="btn small ghost" data-fedit="${esc(x.id)}" title="Edit ${type==='meal'?'meal':'activity'}">Edit</button><button class="btn small ghost" data-fsave="${x.id}" title="Save favorite">☆</button><button class="btn small ghost" data-fdelete="${x.id}" title="Delete">×</button></div></div>`).join(''):'<p class="muted xs">No entries logged for this date.</p>'}
 
@@ -2421,9 +2425,6 @@ function coachPrefsPanel(){const p=F.coachPrefs,rem=p.reminders;
  <p class="note"><b>Reminder delivery:</b> Push delivery and scheduling are in testing. Keep this app installed and open it after changing settings to synchronize. iPhone web push also requires installing SD Health Stack to the Home Screen and granting notification permission.</p></div>`;
 }
 
-function fNutritionPanel(){return `<h2>Macro tracking · AI Preview</h2><div class="card"><p class="muted xs">Unified log: all meals add to macros. Meal quality is counted once per meal slot per day (breakfast, lunch, dinner, snack), even if multiple items are logged in that slot. A logged meal determines the quality of its meal slot; multiple entries in the same slot count once.</p>${fMeters(nutDay)}<details><summary>Adjust daily targets</summary><form id="fTargets" class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber']].map(([k,n])=>`<label>${n} (g)<input name="${k}" type="number" min="1" value="${F.targets[k]}" required></label>`).join('')}<button class="btn" type="submit">Save targets</button></form></details></div>
-<div class="card"><h3>Describe your meal</h3><p class="muted xs">AI PREVIEW ONLY: estimates are simulated examples, not live AI. Review and edit all numbers before saving.</p><form id="fMeal"><input type="hidden" name="editId" value=""><div class="fgrid"><label>Meal slot<select name="mealSlot"><option value="b">Breakfast</option><option value="l">Lunch</option><option value="d">Dinner</option><option value="s">Snack</option></select></label><label>Meal quality<select name="qualityChoice"><option value="quality">Quality: protein + fruit/vegetables</option><option value="off">Off plan</option><option value="unknown">Not sure / unclassified</option></select></label></div><textarea name="description" rows="2" required placeholder="Chicken burrito, rice, salad, two IPAs"></textarea><div class="row" style="margin:8px 0;flex-wrap:wrap"><button class="btn small" type="button" data-fai="meal">✦ AI Preview: Estimate meal</button><span class="muted xs" id="fAiStatus">Or enter macros yourself below.</span></div><div class="fgrid">${[['p','Protein'],['c','Carbs'],['f','Fat'],['fiber','Fiber'],['calories','Calories']].map(([k,n])=>`<label>${n}<input name="${k}" type="number" min="0" step="any" value="0"></label>`).join('')}</div><button class="btn" type="submit">Save meal</button></form></div>
-<div class="card"><h3>Weekly macros</h3>${fusionWeeklyMacros(parseD(nutDay)).map(x=>`<div class="frow"><span>${esc(fmt(x.date))}</span><span>${Math.round(x.p)}P · ${Math.round(x.c)}C · ${Math.round(x.f)}F</span></div>`).join('')}</div><div class="card"><h3>Meals logged · ${fmt(nutDay)}</h3>${fRecent('meal',nutDay)}</div>`}
 document.addEventListener('toggle',event=>{
  if(event.target.id==='weekly-workout-editor'&&event.target.isConnected)weeklyEditorOpen=event.target.open;
 },true);
@@ -2636,7 +2637,7 @@ ${fDailyCoachPanel()}
 <div class="card"><h3>Your weekly performance review</h3><p class="muted xs">Last 7 days · calculated from actual logged data · rule-based coaching, not live AI</p>
 <div class="stat"><div><b>${m.activeDays}/7</b><span>active days</span></div><div><b>${m.workouts}</b><span>workouts logged</span></div><div><b>${m.minutes}</b><span>training minutes</span></div></div>
 <p><b>Training:</b> ${m.workouts?`${m.workouts} completed workout(s) across ${m.activeDays} active day(s).`:'No completed workouts logged this week.'}</p>
-<p><b>Nutrition:</b> ${m.nutritionDays?`${m.nutritionDays} logged day(s); average ${m.protein}g protein and ${m.fiber}g fiber per logged day. ${m.quality.good} quality meal slot(s) recorded.`:'No macro-tracked meals logged this week.'}</p>
+<p><b>Nutrition:</b> ${(w=>w.units?`${w.q+w.mid+w.n} meals rated, ${w.pct}% quality. ${w.q} quality, ${w.mid} in-between, ${w.n} off plan.`:'No meals rated this week.')(weekNutrition())}</p>
 <p><b>Recovery:</b> No integrated Apple Health or WHOOP recovery data is available in this preview. No readiness score is inferred.</p>
 <p><b>Body composition:</b> ${m.weightTrend==null?'Insufficient weight trend data.':'Weight trend data is available in Track; use several weeks of measurements for context.'}</p>
 <div class="note"><b>Your focus:</b> ${esc(fCoachAdvice(m))}</div>
@@ -2814,7 +2815,6 @@ document.addEventListener('submit',e=>{
 });
 document.addEventListener('change',e=>{if(e.target.name==='healthCategory'&&e.target.closest('#fActivity')){const el=document.getElementById('customStrengthAssessment');if(el)el.hidden=!['strength','mixed'].includes(e.target.value)}});
 document.addEventListener('change',e=>{
- if(e.target.id==='detailedNutrition'){S.profile.detailedNutrition=e.target.checked;save();render()}
  if(e.target.id==='nutritionTarget'){S.profile.nutritionTarget=Number(e.target.value);save();render()}
 });
 document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.swap){ const k=e.target.dataset.swap; S.swaps=S.swaps||{}; const wd=WEEKDAYS[parseD(k).getDay()][0]; const base=((S.profile&&S.profile.layout)||{})[wd]||DEFAULT_LAYOUT[wd]; if(e.target.value===base) delete S.swaps[k]; else S.swaps[k]=e.target.value; save(); render(); toast("Day changed"); return }
@@ -3416,7 +3416,7 @@ function render(){
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
+  const t=e.target.closest("[data-plate],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
   const ds=t.dataset;
   if(ds.tab||ds.go){ lastTab=null; if(S.profile) dailyOpen=false; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
@@ -3426,15 +3426,16 @@ document.addEventListener("click",e=>{
   if(ds.dmeal!==undefined){ setMealRating(ymd(today()),ds.dmeal,ds.v); render(); toast(ds.v==="q"?"Quality +"+PTS.meal:ds.v==="m"?"In-between · half credit":"Logged"); return }
   if(ds.dailyClose!==undefined){ dailyOpen=false; renderDaily(); return }
   if(ds.dailyOpen!==undefined){ dailySkipped.clear(); deckFirst=ds.only||null; deckLast=null; dailyOpen=true; renderDaily(); return }
-  if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
+  if(ds.checkLog!==undefined){ if(!mealCheck||!mealCheck.result||!mealCheck.result.rating) return; const r=mealCheck.result; setMealRating(nutDay,ds.checkLog,r.rating,!!r.protein,!!r.produce); if(r.drinks>0){ S.rewards[nutDay]=S.rewards[nutDay]||{}; S.rewards[nutDay].alc=(S.rewards[nutDay].alc||0)+r.drinks; save() } const nm=MEALS.find(x=>x[0]===ds.checkLog)[1]; mealCheck=null; render(); toast("Logged as "+nm.toLowerCase()); return }
   if(ds.checkClear!==undefined){ mealCheck=null; render(); return }
   if(ds.unswap!==undefined){ delete (S.swaps||{})[ds.unswap]; save(); render(); return }
   if(ds.minSet){ const k=ds.k; S.sess[k]=S.sess[k]||{}; S.sess[k][ds.minSet]=S.sess[k][ds.minSet]||{done:true}; S.sess[k][ds.minSet].min=+ds.v; save(); render(); return }
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
   if(ds.week){ sel=shiftDate(sel,7*+ds.week); lastTab=null; render(); return }
   if(ds.nut){ const n=shiftDate(nutDay,+ds.nut); if(n<=ymd(today())) nutDay=n; render(); return }
-  if(ds.mealset!==undefined){setMealRating(nutDay,ds.mealset,ds.v);render();return}
-  if(ds.food){ const k=nutDay; S.meals[k]=S.meals[k]||{}; const m=S.meals[k][ds.meal]||{p:0,f:0,v:0,c:0}; m[ds.food]=Math.max(0,(m[ds.food]||0)+ +ds.dv); delete m.q; delete m.n; delete m.suggestion; S.meals[k][ds.meal]=m; save(); render(); return }
+  if(ds.platePlan!==undefined){ setPlate(nutDay,ds.platePlan,{p:1,f:2,rest:"ok"}); render(); toast("Quality +"+PTS.meal); return }
+  if(ds.plate!==undefined){ const r=setPlate(nutDay,ds.plate,{[ds.f]:ds.f==="rest"?ds.v:+ds.v}); render(); return }
+  if(ds.mealset!==undefined){ if(ds.v===""){ const day=S.meals[nutDay]; if(day){ delete day[ds.mealset]; save() } } else setMealRating(nutDay,ds.mealset,ds.v); render(); return }
   if(ds.reward){ const k=nutDay; S.rewards[k]=S.rewards[k]||{}; S.rewards[k][ds.reward]=Math.max(0,(S.rewards[k][ds.reward]||0)+ +ds.dv); save(); render(); return }
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
   if(ds.vitd){ S.profile.vitd=!S.profile.vitd; save(); render(); return }
@@ -3494,11 +3495,6 @@ document.addEventListener("submit",async e=>{
   if(f.id==="fWeigh"){ let photo=null; const file=fd.get("photo"); if(file&&file.size) photo=await shrinkImage(file); if(!validLogDate(d.d))return toast("Choose a valid measurement date"); S.weigh=S.weigh.filter(x=>x.d!==d.d||x.source!=="manual"); S.weigh.push({id:Date.now(),d:d.d,wt:d.wt,bf:d.bf,mm:d.mm,photo,source:"manual"}); toast("Weigh-in logged") }
   if(f.id==="fTest"){ let v=d.mod==="bike"?+d.v:parseTime(d.v); if(v==null||isNaN(v)){ toast("Check the result format"); return } S.tests.push({id:Date.now(),d:d.d,mod:d.mod,v,watch:d.watch,note:d.note}); toast("Test logged") }
   if(f.id==="fPlan"){ const mk=f.dataset.mk, day=f.dataset.day; S.plans[mk]=S.plans[mk]||{}; S.plans[mk][day]={text:d.text.trim(),link:d.link.trim()}; toast("Plan saved for the month") }
-  if(f.dataset.mealGuide){
-   if(!d.protein||!d.produce)return;
-   setMealRating(nutDay,f.dataset.mealGuide,d.protein==='yes'&&d.produce==='yes'?'q':(d.protein==='yes'||d.produce==='yes')?'m':'n',d.protein==='yes');
-   render();return;
-  }
   if(f.classList.contains("fAlt")){ const k=f.dataset.k, sid=f.dataset.sid, what=(d.what||"").trim().slice(0,40); S.sess[k]=S.sess[k]||{}; const st=S.sess[k][sid]||{}; if(what){ st.alt=what; st.done=true; if(!st.min){ const def=dayDef(k).sessions.find(x=>x.id===sid); st.min=def.range[1] } } else { delete st.alt; st.done=false } S.sess[k][sid]=st; altOther=null; save(); render(); if(what) toast(what+" counts"); return }
   if(f.id==="fCheck"){ const txt=(d.text||"").trim(); if(!txt) return; mealCheck={text:txt,busy:true,result:null}; render(); const result=await checkMeal(txt); if(mealCheck&&mealCheck.text===txt){ mealCheck={text:txt,busy:false,result}; render(); const v=document.getElementById("checkVerdict"); if(v&&v.scrollIntoView) v.scrollIntoView({block:"nearest"}) } return }
   if(f.id==="fSay"){ const txt=d.text.trim(); if(!txt) return; const res=parseMeal(txt); const touched=applyParsed(nutDay,res); save(); render(); const out=$("#sayOut"); if(out) out.textContent=touched.length?"Added: "+touched.join(" · ")+". Review the meal ratings above.":"Didn't recognize any food words in that. Try naming the foods: eggs, chicken, salad, rice, a beer."; return }
@@ -3540,7 +3536,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.16.0';
+ const VERSION='9.17.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

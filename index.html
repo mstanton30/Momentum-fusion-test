@@ -1081,7 +1081,7 @@ function vNutrition(){
     <p style="margin:0"><b>A fist is</b> an apple, a banana, a cup of berries, a cup of cooked vegetables, or two big handfuls of salad.</p></div></details>
   </div>
   <div class="navrow"><button data-nut="-1" aria-label="Previous day">‹</button><h2 style="margin:0">${key===tk?"Today":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2><button data-nut="1" aria-label="Next day" ${key>=tk?"disabled":""}>›</button></div>
-  <div class="card"><div class="hmeters">${meter(palms,pg,"high fives")}${meter(fists,FIST_GOAL,"fist bumps")}</div></div>
+  <div class="card"><div class="hmeters">${meter(palms,pg,"high fives 🙌")}${meter(fists,FIST_GOAL,"fist bumps 👊")}</div></div>
   ${MEALS.map(([id,name])=>{
    const x=m[id]||{}, state=mealRating(x), touched=!!x.plate, p=touched?(+x.p||0):"", f=touched?Math.min(2,(+x.f||0)+(+x.v||0)):"", rest=touched?(x.rest||""):"";
    return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
@@ -3254,9 +3254,9 @@ function recapData(){ const per=recapPeriod, weekly=per==="week"||per==="last", 
   const units=dn.reduce((t,n)=>t+n.units,0), mpct=units?Math.round(dn.reduce((t,n)=>t+n.credit,0)/units*100):null;
   const ppts=per==="day"?dayPoints(tk):per==="month"?keys.reduce((t,k)=>t+dayPoints(k),0):pts, mins=Math.round(keys.reduce((t,k)=>t+totalTrainingMinutes(k),0)), workouts=keys.filter(k=>sessOf(k,"main").done||fusionActivities(k).length).length;
   /* On the image, only numbers worth showing: nothing empty, no zeros, and drinks stay private */
-  const show=(per==="day"?[hf>0&&[hf+"/"+palmGoal(),"High fives"],fb>0&&[fb+"/"+FIST_GOAL,"Fist bumps"],ppts>0&&[String(ppts),"Stack points"],mins>0&&[String(mins),"Minutes"]]
-    :per==="month"?[workouts>0&&[String(workouts),"Workouts"],mpct!=null&&units>=20&&[mpct+"%","Quality meals"],ppts>0&&[String(ppts),"Stack points"],hf>0&&[String(hf),"High fives"],fb>0&&[String(fb),"Fist bumps"],mins>0&&[String(mins),"Minutes"]]
-    :[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],hf>0&&[String(hf),"High fives"],fb>0&&[String(fb),"Fist bumps"],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]]).filter(Boolean).slice(0,6);
+  const show=(per==="day"?[hf>0&&[hf+"/"+palmGoal(),"🙌 High fives"],fb>0&&[fb+"/"+FIST_GOAL,"👊 Fist bumps"],ppts>0&&[String(ppts),"Stack points"],mins>0&&[String(mins),"Minutes"]]
+    :per==="month"?[workouts>0&&[String(workouts),"Workouts"],mpct!=null&&units>=20&&[mpct+"%","Quality meals"],ppts>0&&[String(ppts),"Stack points"],hf>0&&[String(hf),"🙌 High fives"],fb>0&&[String(fb),"👊 Fist bumps"],mins>0&&[String(mins),"Minutes"]]
+    :[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],hf>0&&[String(hf),"🙌 High fives"],fb>0&&[String(fb),"👊 Fist bumps"],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]]).filter(Boolean).slice(0,6);
   const label=per==="day"?today().toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}):per==="month"?"Last 30 days":fmt(wk[0])+" – "+fmt(wk[6]);
   return {per,weekly,tk,keys,ref,wk,q,wn,mob,drinks,pts,need,nudge,tiles,show,top:show.slice(0,3),hf,fb,mpct,units,ppts,mins,workouts,label} }
 /* Every highlight the data supports, best first. The first one is the suggestion. Each can carry a big number and a trend line for the Big number look. */
@@ -3271,9 +3271,9 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
     if(wo){ const bits=[wo.min?wo.min+" minutes":"",wo.cal?big1(wo.cal)+" calories":""].filter(Boolean).join(", "); add("workout","Today's workout",wo.name+". Done."+(bits?" "+bits+".":""),"Just finished: "+wo.name+(bits?", "+bits:"")+".",wo.cal?big1(wo.cal):wo.min||null,(wo.cal?"calories":"minutes")+" · "+wo.name) } }
   /* written for someone who has never opened the app: say what the number means, then ask if they got theirs */
   if(isDay){ const pg=palmGoal(), fullF=d.fb>=FIST_GOAL, fullP=d.hf>=pg;
-    if(fullF&&fullP) add("full","Full day",pl(d.hf,"high five")+", "+pl(d.fb,"fist bump")+". Protein and produce: done. You?","Protein and produce are both in for the day: "+hands+"."+EXPL+" Did you get yours?");
-    if(fullF) add("fb","Fist bumps","Got my "+d.fb+" fist bumps today. Fruit and veg: done. Did you?","Got my "+d.fb+" fist bumps today, so my fruit and veg are in. Did you get yours?"+EXPL,d.fb,"fist bumps. My fruit and veg are in. Did you?");
-    if(fullP) add("hf","High fives","Got my "+d.hf+" high fives today. Protein: done. Did you?","Got my "+d.hf+" high fives today, so my protein is in. Did you get yours?"+EXPL,d.hf,"high fives. My protein is in. Did you?");
+    if(fullF&&fullP) add("full","Full day",pl(d.hf,"high five")+" 🙌 "+pl(d.fb,"fist bump")+" 👊 Protein and produce: done. You?","Protein and produce are both in for the day: "+hands+"."+EXPL+" Did you get yours?");
+    if(fullF) add("fb","Fist bumps","Got my "+d.fb+" fist bumps today 👊 Fruit and veg: done. Did you?","Got my "+d.fb+" fist bumps today 👊 so my fruit and veg are in. That is about 800 grams, the amount the research keeps landing on. Did you get yours?"+EXPL,d.fb,"fist bumps 👊 My fruit and veg are in. Did you?");
+    if(fullP) add("hf","High fives","Got my "+d.hf+" high fives today 🙌 Protein: done. Did you?","Got my "+d.hf+" high fives today 🙌 so my protein is in: about "+d.hf*PROTEIN_PER_SERVING+" grams. The target is 0.75 to 1 gram per pound of ideal body weight. Did you get yours?"+EXPL,d.hf,"high fives 🙌 My protein is in. Did you?");
     if(d.hf+d.fb>0) add("hands",fullF||fullP?"Both numbers":"High fives",hands+" today.",hands+" today."+EXPL+" How did you do?");
     if(d.ppts>0) add("dpts","Today's points",d.ppts+" Stack points today.",d.ppts+" Stack points today from moving, eating well and sleeping.",d.ppts,"Stack points today") }
   if(isMonth){ if(d.mpct!=null&&d.units>=20&&d.mpct>=70) add("mq","Quality meals",d.mpct+"% quality meals this month.",d.mpct+" percent of my meals were quality over the last 30 days. Protein and produce on the plate, no calorie counting.",d.mpct+"%","quality meals, last 30 days");
@@ -3337,7 +3337,7 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
 function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||(recapPick==="workout"&&hs.find(h=>h.id==="ownw"))||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own"||pick.id==="ownw";
   if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
   return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
-const EXPL=" A high five is a palm of protein. A fist bump is a fist of fruit or veg.";
+const EXPL=" 🙌 A high five is a palm of protein, about "+PROTEIN_PER_SERVING+" grams. 👊 A fist bump is a fist of fruit or veg, and "+FIST_GOAL+" a day is about 800 grams.";
 const OWN_HINT="Type what you are proud of";
 const WORKOUT_IDEAS=["Strength day. Done.","Cardio. Done.","Won at pickup hoops.","Long walk with the dog.","New personal best."];
 function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
@@ -3347,6 +3347,7 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;;s=Math.max(44,s-6)){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
   x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
   const bg=layout==="split"?null:recapPhoto;
+  const keyOn=(layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands"].includes(st.pick.id), keyPad=keyOn?(story?20:44):0;
   if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);
     if(layout==="photo"){ g.addColorStop(0,"rgba(8,12,24,.66)"); g.addColorStop(.2,"rgba(8,12,24,.06)"); g.addColorStop(.48,"rgba(8,12,24,.1)"); g.addColorStop(.7,"rgba(8,12,24,.78)"); g.addColorStop(1,"rgba(8,12,24,.96)") }
     else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,layout==="big"?"rgba(8,12,24,.5)":"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
@@ -3361,23 +3362,24 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   /* their own words are optional: the prompt shows in the preview only, never on the shared image */
   const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
   if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
-    shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-th*rows-gap*(rows-1);
+    shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-keyPad-th*rows-gap*(rows-1);
     d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
   else if(layout==="big"){ const p=st.pick, cy=story?560:290; shadow(true); x.fillStyle="#fff"; let s=story?420:300; x.font="800 "+s+"px "+F1; while(x.measureText(p.big).width>W-2*M&&s>120){ s-=20; x.font="800 "+s+"px "+F1 }
     const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; { let ls=story?52:42; x.font="700 "+ls+"px "+F2; while(x.measureText(subText).width>W-2*M&&ls>28){ ls-=2; x.font="700 "+ls+"px "+F2 } } x.fillText(subText,M,by+(story?112:100));
-    const stripY=H-(story?170:80)-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
+    const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
     if(ser.length>=3&&room>=100){ shadow(false); const lo=Math.min(...ser), hi=Math.max(...ser), ch=Math.min(room,story?420:200), w=W-2*M, px=i=>M+i*w/(ser.length-1), py=v=>top2+ch-(hi===lo?.5:(v-lo)/(hi-lo))*(ch-24)-12;
       const area=x.createLinearGradient(0,top2,0,top2+ch); area.addColorStop(0,"rgba(255,122,82,.35)"); area.addColorStop(1,"rgba(255,122,82,0)"); x.beginPath(); x.moveTo(px(0),top2+ch); ser.forEach((v,i)=>x.lineTo(px(i),py(v))); x.lineTo(px(ser.length-1),top2+ch); x.closePath(); x.fillStyle=area; x.fill();
       x.beginPath(); ser.forEach((v,i)=>i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v))); x.strokeStyle="#ff7a52"; x.lineWidth=8; x.lineJoin="round"; x.lineCap="round"; x.stroke();
       const lx=px(ser.length-1), ly=py(ser[ser.length-1]); x.beginPath(); x.arc(lx,ly,16,0,Math.PI*2); x.fillStyle="#fff"; x.fill(); x.beginPath(); x.arc(lx,ly,8,0,Math.PI*2); x.fillStyle="#ff7a52"; x.fill() }
     if(d.top.length) strip(stripY) }
-  else if(layout==="photo"){ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
-  else{ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
+  else if(layout==="photo"){ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  else{ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
     [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
       x.font="700 28px "+F2; const lw=x.measureText(lab).width+36; rr(px+18,py+18,lw,50,25); x.fillStyle=i?"#e2512a":"rgba(8,12,24,.72)"; x.fill(); x.fillStyle="#fff"; x.fillText(lab,px+36,py+53) });
     let y=headTop; x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
-  /* a one-line key, so the words make sense to someone who is not on the app */
-  if((layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands"].includes(st.pick.id)){ shadow(true); x.font="600 25px "+F2; x.fillStyle="rgba(255,255,255,.74)"; x.textAlign="center"; x.fillText("High five = a palm of protein   ·   Fist bump = a fist of fruit or veg",W/2,H-(story?104:30)); x.textAlign="left" }
+  /* a two-line key with the numbers behind it, so the words make sense to someone who is not on the app */
+  if(keyOn){ shadow(true); x.font="600 "+(story?30:25)+"px "+F2; x.fillStyle="rgba(255,255,255,.8)"; const ky=H-(story?128:62), pg=palmGoal();
+    x.fillText("🙌 High five = a palm of protein, about "+PROTEIN_PER_SERVING+" g. My goal: "+pg+" a day.",M,ky); x.fillText("👊 Fist bump = a fist of fruit or veg. "+FIST_GOAL+" a day is about 800 g.",M,ky+(story?42:36)) }
   shadow(false); return c }
 function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return;
   if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>paintRecap(); recapLogo.src="./sd-icon-192.png" }
@@ -3398,7 +3400,7 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
   <p class="muted xs" style="margin:10px 0 0">Photos stay on your phone. Nothing is uploaded until you share the finished image yourself.</p>
   <h3 style="margin-top:22px">3. Choose the look</h3>
   ${seg("recap-layout",recapLayout,[["big","Big number"],["stats","All the numbers"],["photo","Photo first"],["split","Before / after"]])}${seg("recap-size",recapSize,[["square","Square post"],["story","Story"]])}
-  <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="4" maxlength="400">${esc(st.cap)}</textarea>
+  <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="5" maxlength="600">${esc(st.cap)}</textarea>
   <div class="row" style="margin-top:12px"><button class="btn" type="button" data-recap-share style="justify-content:center">${ICON.share} Share</button><button class="btn ghost" type="button" data-recap-copy style="justify-content:center">Copy caption</button></div>
   <p class="muted xs" style="margin:10px 0 0">Instagram does not take a caption from the share sheet. Copy it first, then paste it in.</p>
   ${st.d.weekly?`<p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(st.d.nudge)} This line stays here and is not on the image.</p>`:""}</div>
@@ -3406,12 +3408,12 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
 /* Recipes: the two house recipes as templates, plus one of your own. Tweak it, add a photo, share the card. */
 let recipeSel="smoothie", recipePhoto=null;
 const RECIPES={
- smoothie:{tab:"Smoothie",name:"Breakfast smoothie",title:"My breakfast smoothie",hands:"1 high five + 2 fist bumps",build:[["Liquid","1 cup of milk, almond milk or coconut water"],["Protein","1 scoop of whey or plant protein. That is the high five."],["Fruit","1 fist, frozen: berries, mango or banana"],["Veg","1 fist: spinach, kale or riced cauliflower"],["Staying power","Oats, nut butter, chia or flax"]],ideas:["Mango, spinach and lime","Banana, peanut butter and cinnamon","Blueberry, kale and ginger","Cherry and cocoa"]},
- drink:{tab:"Recovery drink",name:"Recovery drink",title:"My recovery drink",hands:"1 high five",build:[["Protein","1 scoop of whey or plant protein. That is the high five."],["Creatine","5 g of creatine monohydrate"],["Electrolytes","A pinch of sodium and potassium"],["Liquid","12 to 16 oz of water or milk"]],ideas:["Chocolate whey in milk","Vanilla whey and cold brew","Unflavored, in orange juice and water"]},
+ smoothie:{tab:"Smoothie",name:"Breakfast smoothie",title:"My breakfast smoothie",hands:"🙌 1 high five + 👊 2 fist bumps",build:[["Liquid","1 cup of milk, almond milk or coconut water"],["Protein","1 scoop of whey or plant protein. That is the high five."],["Fruit","1 fist, frozen: berries, mango or banana"],["Veg","1 fist: spinach, kale or riced cauliflower"],["Staying power","Oats, nut butter, chia or flax"]],ideas:["Mango, spinach and lime","Banana, peanut butter and cinnamon","Blueberry, kale and ginger","Cherry and cocoa"]},
+ drink:{tab:"Recovery drink",name:"Recovery drink",title:"My recovery drink",hands:"🙌 1 high five",build:[["Protein","1 scoop of whey or plant protein. That is the high five."],["Creatine","5 g of creatine monohydrate"],["Electrolytes","A pinch of sodium and potassium"],["Liquid","12 to 16 oz of water or milk"]],ideas:["Chocolate whey in milk","Vanilla whey and cold brew","Unflavored, in orange juice and water"]},
  own:{tab:"Your own",name:"My recipe",title:"My recipe",hands:"",build:[["Protein","A palm. That is the high five."],["Produce","Two fists of fruit or veg. Those are the fist bumps."],["Everything else","About a fist of starch, fat or sauce"]],ideas:["Sheet-pan chicken and vegetables","Greek yogurt bowl with berries","Egg scramble with peppers and spinach"]}};
 function recipeGet(id){ const o=(S.recipes||{})[id]||{}; return {name:id==="own"?(o.name||""):RECIPES[id].name,title:id==="own"?(String(o.name||"").trim()||RECIPES.own.title):RECIPES[id].title,text:id==="smoothie"?(S.smoothie||DEFAULT_SMOOTHIE):id==="drink"?(S.drink||DEFAULT_DRINK):(o.text||""),note:o.note||"",changed:id==="smoothie"?(S.smoothie||DEFAULT_SMOOTHIE)!==DEFAULT_SMOOTHIE:id==="drink"?(S.drink||DEFAULT_DRINK)!==DEFAULT_DRINK:false} }
 function recipeSet(id,field,val){ if(field==="text"&&id==="smoothie") S.smoothie=val; else if(field==="text"&&id==="drink") S.drink=val; else{ S.recipes=S.recipes||{}; S.recipes[id]={...(S.recipes[id]||{}),[field]:val} } clearTimeout(recipeSet.h); recipeSet.h=setTimeout(save,500) }
-function recipeText(){ const r=recipeGet(recipeSel), R=RECIPES[recipeSel]; return [r.title,"",r.text.trim(),r.note.trim()?"\nMy tweak: "+r.note.trim():"",R.hands?"\nCounts as "+R.hands+".":"","\nWhat's your stack? "+RECAP_TAGS].filter(x=>x!=="").join("\n").replace(/\n{3,}/g,"\n\n") }
+function recipeText(){ const r=recipeGet(recipeSel), R=RECIPES[recipeSel]; return [r.title,"",r.text.trim(),r.note.trim()?"\nMy tweak: "+r.note.trim():"",R.hands?"\nCounts as "+R.hands+"."+EXPL:"","\nWhat's your stack? "+RECAP_TAGS].filter(x=>x!=="").join("\n").replace(/\n{3,}/g,"\n\n") }
 function drawRecipe(c,final){ const id=recipeSel, R=RECIPES[id], r=recipeGet(id), W=1080, H=1080, M=80, F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial"; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
   const x=c.getContext("2d"), rr=(px,py,w,h,rad)=>{ x.beginPath(); x.moveTo(px+rad,py); x.arcTo(px+w,py,px+w,py+h,rad); x.arcTo(px+w,py+h,px,py+h,rad); x.arcTo(px,py+h,px,py,rad); x.arcTo(px,py,px+w,py,rad); x.closePath() };
   const fit=(text,maxW)=>{ let t=String(text); if(x.measureText(t).width<=maxW) return t; while(t.length>1&&x.measureText(t+"…").width>maxW) t=t.slice(0,-1); return t.trimEnd()+"…" };
@@ -3427,7 +3429,7 @@ function drawRecipe(c,final){ const id=recipeSel, R=RECIPES[id], r=recipeGet(id)
   const all=r.text.split(/\n+/).map(t=>t.trim()).filter(Boolean), max=10, lines=all.length>max?[...all.slice(0,max-1),"+ "+(all.length-max+1)+" more"]:all, foot=H-150, y0=y+56, room=foot-y0;
   if(!lines.length){ if(!final){ x.font="600 38px "+F2; x.fillStyle="rgba(255,255,255,.45)"; x.fillText("Add your ingredients below",M,y0+60) } }
   else{ const lh=Math.min(70,room/lines.length), fs=Math.round(Math.min(40,lh*.62)); lines.forEach((t,i)=>{ const ly=y0+lh*(i+.72); x.fillStyle="#ff7a52"; x.beginPath(); x.arc(M+9,ly-fs*.32,7,0,Math.PI*2); x.fill(); x.fillStyle="rgba(255,255,255,.94)"; x.font="600 "+fs+"px "+F2; x.fillText(fit(t,W-2*M-40),M+36,ly) }) }
-  if(R.hands){ x.font="700 30px "+F2; const t="= "+R.hands, tw=x.measureText(t).width+56; rr(M,H-124,tw,64,32); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.fillText(t,M+28,H-82) }
+  if(R.hands){ x.font="700 30px "+F2; const t=R.hands, tw=x.measureText(t).width+56; rr(M,H-124,tw,64,32); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.fillText(t,M+28,H-82) }
   x.font="700 30px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.textAlign="right"; x.fillText("What's your stack?",W-M,H-82); x.textAlign="left"; return c }
 function paintRecipe(){ const c=document.getElementById("recipeCanvas"); if(!c||!c.getContext) return;
   if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>{ paintRecap(); paintRecipe() }; recapLogo.src="./sd-icon-192.png" }

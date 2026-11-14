@@ -3166,7 +3166,7 @@ document.addEventListener('click',async e=>{
 let lastTab=null, altOther=null, lastScore=[];
 /* Weekly recap: a square image to post or send to the group, with an optional photo behind it */
 /* Share my week: a post-ready image. The app suggests the highlight from the week or the month, the words stay editable, photos are encouraged. */
-let recapPhoto=null, recapPhoto2=null, recapOffset=0, recapPick=null, recapHead=null, recapCap=null, recapLayout="stats", recapSize="square", recapLogo=null;
+let recapPhoto=null, recapPhoto2=null, recapOffset=0, recapPick=null, recapHead=null, recapCap=null, recapLayout="big", recapSize="square", recapLogo=null;
 const RECAP_TAGS="#StackTheDay #SDHealthStack";
 const PHOTO_IDEAS=["Before and after","Flexing a bicep","Mid push-up","Making the smoothie","A quality plate","Post-workout selfie","Your walk or ride","The weights you lifted"];
 function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref);
@@ -3174,35 +3174,63 @@ function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset
   const nudge=q.strengthDone<need?(need-q.strengthDone)+" more strength day"+(need-q.strengthDone===1?"":"s")+" would have made the full week. Put them on the calendar first.":wn.pct!=null&&wn.pct<70?"Meals came in under 70 percent. Start with protein at breakfast.":drinks>7?"Drinks were over seven. Aim to come in under next week.":mob<5?"Mobility was light. Ten minutes after each workout covers it.":"Nothing to fix. Do the same again.";
   const tiles=[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Stack points"]];
   /* On the image, only numbers worth showing: nothing empty, no zeros, and drinks stay private */
-  const show=[q.strengthDone>0&&tiles[0],wn.pct!=null&&tiles[3],pts>0&&tiles[5],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]].filter(Boolean);
+  const show=[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]].filter(Boolean);
   return {ref,wk,q,wn,mob,drinks,pts,need,nudge,tiles,show,top:show.slice(0,3)} }
-/* Every highlight the data supports, best first. The first one is the suggestion. */
-function recapHighlights(d){ const out=[], add=(id,label,head,cap)=>out.push({id,label,head,cap:cap+" What's your stack? "+RECAP_TAGS}), num=n=>(Math.round(n*10)/10).toFixed(1).replace(/\.0$/,"");
-  const end=ymd(d.ref), from=shiftDate(end,-35), rows=bodyRows().filter(r=>r.d>=from&&r.d<=end), span=(key)=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
+/* Every highlight the data supports, best first. The first one is the suggestion. Each can carry a big number and a trend line for the Big number look. */
+function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(1).replace(/\.0$/,""), sign=n=>(n>0?"+":"−")+num(Math.abs(n));
+  const add=(id,label,head,cap,big,biglab,series)=>out.push({id,label,head,cap:cap+" What's your stack? "+RECAP_TAGS,big:big==null?null:String(big),biglab:biglab||"",series:(series||[]).filter(v=>v!=null&&isFinite(v))});
+  const end=ymd(d.ref), from=shiftDate(end,-35), all=bodyRows().filter(r=>r.d<=end), rows=all.filter(r=>r.d>=from), col=(key,src)=>(src||all).map(r=>valueOrNull(r[key])).filter(v=>v!=null);
+  const span=(key)=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
+  const weeksBack=(n,fn)=>{ const xs=[]; for(let i=n-1;i>=0;i--){ const r=new Date(d.ref); r.setDate(r.getDate()-7*i); xs.push(fn(r)) } return xs };
+  const three=d.need===3?"three":String(d.need), fed=(d.wn.units||0)>=9;
+  /* body */
   const mm=span("mm"), bf=span("bf");
-  if(mm!=null&&mm>=0.5) add("muscle","Muscle up","Up "+num(mm)+" lb of muscle this month.","Muscle is up "+num(mm)+" lb over the last month. Three strength days a week and protein at every meal.");
-  if(bf!=null&&bf<=-0.5) add("fat","Body fat down","Body fat down "+num(-bf)+" points this month.","Body fat is down "+num(-bf)+" points in a month, without counting a calorie.");
+  if(mm!=null&&mm>=0.5) add("muscle","Muscle up","Up "+num(mm)+" lb of muscle this month.","Muscle is up "+num(mm)+" lb over the last month. Three strength days a week and protein at every meal.",sign(mm),"lb of muscle, this month",col("mm").slice(-12));
+  if(bf!=null&&bf<=-0.5) add("fat","Body fat down","Body fat down "+num(-bf)+" points this month.","Body fat is down "+num(-bf)+" points in a month, without counting a calorie.",sign(bf),"points of body fat, this month",col("bf").slice(-12));
+  /* fitness: VO2 max, recorded on a watch or estimated from the fitness test */
+  const kg=kgNow(), tests=[...(S.tests||[])].filter(x=>x.d<=end).sort((x,y)=>x.d<y.d?-1:1), vo=x=>x.watch?valueOrNull(x.watch):vo2FromTest(x,kg), vs=tests.map(x=>({d:x.d,v:vo(x),est:!x.watch})).filter(x=>x.v!=null&&isFinite(x.v));
+  const lastV=vs[vs.length-1], prevV=vs[vs.length-2];
+  if(lastV&&lastV.d>=shiftDate(end,-70)){ const v=Math.round(lastV.v*10)/10, up=prevV?lastV.v-prevV.v:null, est=lastV.est?" (estimated)":"";
+    if(up!=null&&up>=0.5) add("vo2","VO2 max up","VO2 max up "+num(up)+" to "+num(v)+".","VO2 max is up "+num(up)+" to "+num(v)+est+". Fitness is one of the best predictors of how long and how well you live.",num(v),"VO2 max"+est+", up "+num(up),vs.map(x=>x.v));
+    else add("vo2","VO2 max","VO2 max: "+num(v)+".","VO2 max "+num(v)+est+". Retesting every two months to push it up.",num(v),"VO2 max"+est,vs.map(x=>x.v)) }
+  const lastT=tests[tests.length-1], prevT=lastT&&tests.filter(x=>x.mod===lastT.mod&&x.d<lastT.d).pop();
+  if(lastT&&prevT&&lastT.d>=shiftDate(end,-21)){ const bike=lastT.mod==="bike", gain=bike?lastT.v-prevT.v:prevT.v-lastT.v; if(gain>0) add("fit","Fitness test",bike?"Fitness test up "+Math.round(gain)+" watts.":"Fitness test "+fmtTime(Math.round(gain))+" faster.","Repeated my fitness test and beat the last one. The engine is getting bigger.",bike?"+"+Math.round(gain):fmtTime(Math.round(gain)),bike?"watts on the fitness test":"faster on the fitness test") }
+  /* strength */
   let run=0; for(let i=0;i<12;i++){ const r=new Date(d.ref); r.setDate(r.getDate()-7*i); const q=weekQuota(r); if(q.strengthDone>=(q.strength||3)) run++; else break }
-  const three=d.need===3?"three":String(d.need);
-  if(run>=2) add("run","Strength streak",run+" weeks straight of "+three+" strength days.","That is "+run+" weeks in a row with all "+three+" strength days done. Lifting is the habit that changes the most.");
-  else if(d.q.strengthDone>=d.need) add("strength","Strength goal","All "+three+" strength days. Done.","All "+three+" strength days done this week. Lifting is the habit that changes the most.");
-  /* a percentage from one or two meals is not a result yet */
-  const fed=(d.wn.units||0)>=9;
-  if(fed&&d.wn.pct>=80) add("q80","80 percent",d.wn.pct+"% quality meals. Stretch goal hit.",d.wn.pct+" percent of my meals were quality this week. Protein and produce on the plate, no calorie counting.");
-  else if(fed&&d.wn.pct>=70) add("q70","70 percent",d.wn.pct+"% quality meals. Majority rules.",d.wn.pct+" percent quality meals this week. Majority rules: eat well most of the time and the rest is yours.");
-  const tests=[...(S.tests||[])].filter(x=>x.d<=end).sort((x,y)=>x.d<y.d?-1:1), lastT=tests[tests.length-1], prevT=lastT&&tests.filter(x=>x.mod===lastT.mod&&x.d<lastT.d).pop();
-  if(lastT&&prevT&&lastT.d>=shiftDate(end,-21)){ const bike=lastT.mod==="bike", gain=bike?lastT.v-prevT.v:prevT.v-lastT.v; if(gain>0) add("fit","Fitness test",bike?"Fitness test up "+Math.round(gain)+" watts.":"Fitness test "+fmtTime(Math.round(gain))+" faster.","Repeated my fitness test and beat the last one. The engine is getting bigger.") }
+  if(run>=2) add("run","Strength streak",run+" weeks straight of "+three+" strength days.","That is "+run+" weeks in a row with all "+three+" strength days done. Lifting is the habit that changes the most.",run,"weeks straight, every strength day");
+  else if(d.q.strengthDone>=d.need) add("strength","Strength goal","All "+three+" strength days. Done.","All "+three+" strength days done this week. Lifting is the habit that changes the most.",d.q.strengthDone+"/"+d.need,"strength days this week");
+  const grips=(S.extras||[]).filter(x=>/grip/i.test(x.kind)&&x.d<=end&&valueOrNull(x.v)!=null).sort((x,y)=>x.d<y.d?-1:1), g1=grips[grips.length-1], g0=grips[grips.length-2];
+  if(g1&&g0&&valueOrNull(g1.v)>valueOrNull(g0.v)&&g1.d>=shiftDate(end,-21)) add("grip","Grip strength","Grip strength up to "+num(valueOrNull(g1.v))+" lb.","Grip strength is up to "+num(valueOrNull(g1.v))+" lb. A simple test that tracks whole-body strength.",num(valueOrNull(g1.v)),"lb grip strength, a new best",grips.map(x=>valueOrNull(x.v)));
+  /* food */
+  if(fed&&d.wn.pct>=80) add("q80","80 percent",d.wn.pct+"% quality meals. Stretch goal hit.",d.wn.pct+" percent of my meals were quality this week. Protein and produce on the plate, no calorie counting.",d.wn.pct+"%","quality meals this week");
+  else if(fed&&d.wn.pct>=70) add("q70","70 percent",d.wn.pct+"% quality meals. Majority rules.",d.wn.pct+" percent quality meals this week. Majority rules: eat well most of the time and the rest is yours.",d.wn.pct+"%","quality meals this week");
+  if(fed&&d.wn.protein!=null&&d.wn.protein>=100) add("protein","Protein","Averaged "+Math.round(d.wn.protein)+" g of protein a day.","Averaged about "+Math.round(d.wn.protein)+" grams of protein a day this week, from a palm-size serving at every meal.",Math.round(d.wn.protein),"grams of protein a day");
+  /* volume: minutes this week, workouts this month, best week yet */
+  const mins=d.wk.reduce((s,k)=>s+totalTrainingMinutes(k),0);
+  if(mins>=90) add("mins","Minutes trained",Math.round(mins)+" minutes of training this week.",Math.round(mins)+" minutes of training this week. Strength, cardio and ten minutes of mobility a day.",Math.round(mins),"minutes trained this week",weeksBack(8,r=>weekKeys(r).reduce((s,k)=>s+totalTrainingMinutes(k),0)));
+  let month=0; for(let i=0;i<30;i++){ if(sessOf(shiftDate(end,-i),"main").done) month++ }
+  if(month>=8) add("month","30-day count",month+" workouts in 30 days.",month+" workouts in the last 30 days. Showing up is most of it.",month,"workouts in 30 days");
+  const ptsWeeks=weeksBack(12,r=>weekPoints(r)), earlier=ptsWeeks.slice(0,-1).filter(v=>v>0);
+  if(d.pts>0&&earlier.length>=3&&d.pts>Math.max(...earlier)) add("best","Best week yet","Best week yet: "+d.pts+" Stack points.","My best week so far: "+d.pts+" Stack points.",d.pts,"Stack points, my best week yet",ptsWeeks);
+  /* recovery */
+  const slept=d.wk.filter(k=>{ const h=sleepHours(k); return h!=null&&h>=7 }).length;
+  if(slept>=5) add("sleep","Sleep","Seven hours or more, "+slept+" nights.","Seven-plus hours of sleep on "+slept+" nights this week. Sleep is when the work pays off.",slept+"/7","nights of 7+ hours");
+  const saunas=(S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).length;
+  if(saunas>=3) add("sauna","Sauna",saunas+" sauna sessions this week.",saunas+" sauna sessions this week, on top of the training.",saunas,"sauna sessions this week");
   const streak=recapOffset?0:mobStreak();
-  if(streak>=7) add("streak","Days stacked",streak+" days stacked.",streak+" days in a row with mobility done. Ten minutes a day is the whole trick.");
-  else if(d.mob>=5) add("mob","Mobility","Mobility "+d.mob+" of 7 days.","Stretched on "+d.mob+" of seven days this week. It is the part everyone skips.");
-  const w4=fourWeekWeight(0), p4=fourWeekWeight(4); if(!recapOffset&&w4!=null&&p4!=null&&p4-w4>=1) add("trend","Weight trend","Four-week average down "+num(p4-w4)+" lb.","My four-week average is down "+num(p4-w4)+" lb. One weigh-in a week and I read the trend, not the day.");
-  const day=programDay(end)+1; if(S.profile&&S.profile.start&&day>=7) add("day","Day "+day,"Day "+day+" of 365.","Day "+day+" of a year-long program. One lesson, one workout and three meals at a time.");
-  if(d.pts>0) add("pts","Stack points",d.pts+" Stack points this week.",d.pts+" Stack points this week from moving, eating well and sleeping.");
+  if(streak>=7) add("streak","Days stacked",streak+" days stacked.",streak+" days in a row with mobility done. Ten minutes a day is the whole trick.",streak,"days stacked");
+  else if(d.mob>=5) add("mob","Mobility","Mobility "+d.mob+" of 7 days.","Stretched on "+d.mob+" of seven days this week. It is the part everyone skips.",d.mob+"/7","days of mobility");
+  /* the long view */
+  const w4=fourWeekWeight(0), p4=fourWeekWeight(4); if(!recapOffset&&w4!=null&&p4!=null&&p4-w4>=1) add("trend","Weight trend","Four-week average down "+num(p4-w4)+" lb.","My four-week average is down "+num(p4-w4)+" lb. One weigh-in a week and I read the trend, not the day.",sign(w4-p4),"lb, four-week average",weeklyWeights().map(x=>x.w).slice(-12));
+  const day=programDay(end)+1; if(S.profile&&S.profile.start&&day>=7) add("day","Day "+day,"Day "+day+" of 365.","Day "+day+" of a year-long program. One lesson, one workout and three meals at a time.",day,"of 365 days");
+  const read=lessonsRead().size; if(read>=10) add("lessons","Lessons read",read+" lessons in.",read+" daily lessons read so far. One idea a day adds up.",read,"lessons read");
+  if(fed&&d.drinks===0) add("dry","Zero drinks","Zero drinks this week.","A week with no drinks. Sleep and recovery noticed.","0","drinks this week");
+  if(d.pts>0) add("pts","Stack points",d.pts+" Stack points this week.",d.pts+" Stack points this week from moving, eating well and sleeping.",d.pts,"Stack points this week",ptsWeeks);
   add("showed","Showed up",d.pts>0?"Showed up and logged it.":"A new week starts now.","Showed up this week. Small steps, stacked.");
   return out }
 function recapState(){ const d=recapData(), hs=recapHighlights(d), pick=hs.find(h=>h.id===recapPick)||hs[0]; return {d,hs,pick,head:recapHead==null?pick.head:recapHead,cap:recapCap==null?pick.cap:recapCap} }
 function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
-  const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout;
+  const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
   const cover=(img,px,py,w,h)=>{ const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, s=Math.max(w/iw,h/ih); x.drawImage(img,px+(w-iw*s)/2,py+(h-ih*s)/2,iw*s,ih*s) };
   const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;s>=44;s-=6){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
@@ -3210,7 +3238,7 @@ function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story",
   const bg=layout==="split"?null:recapPhoto;
   if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);
     if(layout==="photo"){ g.addColorStop(0,"rgba(8,12,24,.66)"); g.addColorStop(.2,"rgba(8,12,24,.06)"); g.addColorStop(.48,"rgba(8,12,24,.1)"); g.addColorStop(.7,"rgba(8,12,24,.78)"); g.addColorStop(1,"rgba(8,12,24,.96)") }
-    else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
+    else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,layout==="big"?"rgba(8,12,24,.5)":"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
     x.fillStyle=g; x.fillRect(0,0,W,H) }
   else{ const g=x.createRadialGradient(W*.88,H*.06,0,W*.88,H*.06,W*.95); g.addColorStop(0,"rgba(226,81,42,.6)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
   const shadow=on=>{ x.shadowColor=on&&bg?"rgba(0,0,0,.6)":"transparent"; x.shadowBlur=on&&bg?20:0 };
@@ -3222,6 +3250,14 @@ function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story",
   if(layout==="stats"){ const h=wrap(st.head,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle="#fff"; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
     shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-th*rows-gap*(rows-1);
     d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
+  else if(layout==="big"){ const p=st.pick, cy=story?560:290; shadow(true); x.fillStyle="#fff"; let s=story?420:300; x.font="800 "+s+"px "+F1; while(x.measureText(p.big).width>W-2*M&&s>120){ s-=20; x.font="800 "+s+"px "+F1 }
+    const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; x.font="700 "+(story?52:42)+"px "+F2; x.fillText(p.biglab,M,by+(story?112:100));
+    const stripY=H-(story?170:80)-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
+    if(ser.length>=3&&room>=100){ shadow(false); const lo=Math.min(...ser), hi=Math.max(...ser), ch=Math.min(room,story?420:200), w=W-2*M, px=i=>M+i*w/(ser.length-1), py=v=>top2+ch-(hi===lo?.5:(v-lo)/(hi-lo))*(ch-24)-12;
+      const area=x.createLinearGradient(0,top2,0,top2+ch); area.addColorStop(0,"rgba(255,122,82,.35)"); area.addColorStop(1,"rgba(255,122,82,0)"); x.beginPath(); x.moveTo(px(0),top2+ch); ser.forEach((v,i)=>x.lineTo(px(i),py(v))); x.lineTo(px(ser.length-1),top2+ch); x.closePath(); x.fillStyle=area; x.fill();
+      x.beginPath(); ser.forEach((v,i)=>i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v))); x.strokeStyle="#ff7a52"; x.lineWidth=8; x.lineJoin="round"; x.lineCap="round"; x.stroke();
+      const lx=px(ser.length-1), ly=py(ser[ser.length-1]); x.beginPath(); x.arc(lx,ly,16,0,Math.PI*2); x.fillStyle="#fff"; x.fill(); x.beginPath(); x.arc(lx,ly,8,0,Math.PI*2); x.fillStyle="#ff7a52"; x.fill() }
+    if(d.top.length) strip(stripY) }
   else if(layout==="photo"){ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(st.head,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle="#fff"; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
   else{ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(st.head,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
     [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
@@ -3231,7 +3267,7 @@ function drawRecap(c){ const st=recapState(), d=st.d, story=recapSize==="story",
 function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return;
   if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>paintRecap(); recapLogo.src="./sd-icon-192.png" }
   try{ drawRecap(c); if(document.fonts&&document.fonts.ready&&!paintRecap.fonts){ paintRecap.fonts=true; document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) } }catch(e){} }
-function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length},1fr);margin:0 0 14px">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${cur===v}">${l}</button>`).join("")}</div>`;
+function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length>3?2:opts.length},1fr);margin:0 0 14px">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${cur===v}">${l}</button>`).join("")}</div>`;
   const photoBtn=(id,img,label)=>`<label class="btn ghost" style="justify-content:center;cursor:pointer">${img?"Change "+label:"Add "+label}<input id="${id}" type="file" accept="image/*" hidden></label>`;
   return header("What's your stack?","Share your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
   <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your week and your month. Tap another if you like it better.</p>
@@ -3243,7 +3279,7 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
   ${recapPhoto||recapPhoto2?`<button class="btn small ghost" type="button" data-recap-clear style="margin-top:10px">Remove photo${recapPhoto&&recapPhoto2?"s":""}</button>`:""}
   <p class="muted xs" style="margin:10px 0 0">Photos stay on your phone. Nothing is uploaded until you share the finished image yourself.</p>
   <h3 style="margin-top:22px">3. Choose the look</h3>
-  ${seg("recap-layout",recapLayout,[["stats","Numbers"],["photo","Photo first"],["split","Before / after"]])}${seg("recap-size",recapSize,[["square","Square post"],["story","Story"]])}
+  ${seg("recap-layout",recapLayout,[["big","Big number"],["stats","All the numbers"],["photo","Photo first"],["split","Before / after"]])}${seg("recap-size",recapSize,[["square","Square post"],["story","Story"]])}
   <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="4" maxlength="400">${esc(st.cap)}</textarea>
   <div class="row" style="margin-top:12px"><button class="btn" type="button" data-recap-share style="justify-content:center">${ICON.share} Share</button><button class="btn ghost" type="button" data-recap-copy style="justify-content:center">Copy caption</button></div>
   <p class="muted xs" style="margin:10px 0 0">Instagram does not take a caption from the share sheet. Copy it first, then paste it in.</p>
@@ -3254,7 +3290,7 @@ async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(
   c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text}) }catch(e){} }
     else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Image saved") } },"image/png") }
-document.addEventListener("change",e=>{ const id=e.target&&e.target.id; if(id!=="recapPhoto"&&id!=="recapPhoto2") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ if(id==="recapPhoto2") recapPhoto2=img; else recapPhoto=img; if(recapLayout==="stats"&&id==="recapPhoto") recapLayout="photo"; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
+document.addEventListener("change",e=>{ const id=e.target&&e.target.id; if(id!=="recapPhoto"&&id!=="recapPhoto2") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ if(id==="recapPhoto2") recapPhoto2=img; else recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
 document.addEventListener("input",e=>{ const id=e.target&&e.target.id; if(id==="recapHead"){ recapHead=e.target.value; const c=document.getElementById("recapCanvas"); if(c) try{ drawRecap(c) }catch(err){} } else if(id==="recapCap") recapCap=e.target.value });
 document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-recap-pick],[data-recap-layout],[data-recap-size],[data-recap-copy]"); if(!b) return; const ds=b.dataset;
   if(ds.recapPick!==undefined){ recapPick=ds.recapPick; recapHead=null; recapCap=null; render(); return }

@@ -846,13 +846,18 @@ function vWhy(){
 }
 /* The profile is a starting point: who you are and where you began, stamped with the date. It sets no goal and no schedule.
    One plan for everyone; the numbers that matter are measured on Progress. */
-function baselineOf(p){ p=p||{}; return p.baseline||{at:null,d:p.start||"",weightLb:p.weightLb||"",bf:p.bf||"",mm:p.mm||"",waist:"",grip:""} }
+function baselineOf(p){ p=p||{}; return {waist:"",grip:"",rhr:"",sys:"",dia:"",...(p.baseline||{at:null,d:p.start||"",weightLb:p.weightLb||"",bf:p.bf||"",mm:p.mm||""})} }
 function baselineStamp(b){ if(b.at){ const t=new Date(b.at); if(!isNaN(t)) return t.toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})+" at "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) } return b.d?fmt(b.d):"" }
-function baselineLine(b){ return [b.weightLb&&b.weightLb+" lb",b.bf&&b.bf+"% body fat",b.mm&&b.mm+" lb muscle",b.waist&&b.waist+" in waist",b.grip&&b.grip+" lb grip"].filter(Boolean).join(" · ") }
+function baselineLine(b){ return [b.weightLb&&b.weightLb+" lb",b.bf&&b.bf+"% body fat",b.mm&&b.mm+" lb muscle",b.waist&&b.waist+" in waist",b.grip&&b.grip+" lb grip",b.rhr&&"resting HR "+b.rhr,b.sys&&b.dia&&"BP "+b.sys+"/"+b.dia].filter(Boolean).join(" · ") }
 function vOnboard(){
   const p=S.profile||{}, b=baselineOf(p), has=!!S.profile;
   const nums=`<div class="row"><div class="field"><label class="f">Weight (lb)</label><input name="weightLb" type="number" step="0.1" inputmode="decimal" required value="${esc(b.weightLb||"")}"></div><div class="field"><label class="f">Body fat % (if known)</label><input name="bf" type="number" step="0.1" inputmode="decimal" value="${esc(b.bf||"")}"></div><div class="field"><label class="f">Muscle lb (if known)</label><input name="mm" type="number" step="0.1" inputmode="decimal" value="${esc(b.mm||"")}"></div></div>
-    <div class="row"><div class="field"><label class="f">Waist at the navel, in (optional)</label><input name="waist" type="number" step="0.1" min="15" max="90" inputmode="decimal" value="${esc(b.waist||"")}"></div><div class="field"><label class="f">Grip strength, lb (optional)</label><input name="grip" type="number" step="0.1" min="0" max="300" inputmode="decimal" value="${esc(b.grip||"")}"></div></div>`;
+    <p class="muted xs" style="margin:0 0 10px">The four below are optional. Each one is here because large studies tie it to how long and how well people live, and because training moves it.</p>
+    <div class="row"><div class="field"><label class="f">Waist at the navel (in)</label><input name="waist" type="number" step="0.1" min="15" max="90" inputmode="decimal" value="${esc(b.waist||"")}"><p class="muted xs" style="margin:4px 0 0">Tracks the fat around your organs. Aim for under half your height.</p></div>
+    <div class="field"><label class="f">Grip strength (lb)</label><input name="grip" type="number" step="0.1" min="0" max="300" inputmode="decimal" value="${esc(b.grip||"")}"><p class="muted xs" style="margin:4px 0 0">A stand-in for whole-body strength. Best of three squeezes, stronger hand.</p></div></div>
+    <div class="row"><div class="field"><label class="f">Resting heart rate (bpm)</label><input name="rhr" type="number" step="1" min="25" max="150" inputmode="numeric" value="${esc(b.rhr||"")}"><p class="muted xs" style="margin:4px 0 0">From a watch, or a morning pulse before you get up. It drifts down as you get fitter.</p></div>
+    <div class="field"><label class="f">Blood pressure</label><div class="row tight" style="gap:6px;align-items:center"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}" style="flex:1"><span class="muted">/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}" style="flex:1"></div><p class="muted xs" style="margin:4px 0 0">Home cuff, after five quiet minutes sitting. The best-studied risk number there is.</p></div></div>
+    <p class="muted xs" style="margin:0 0 12px">No gripper? Any digital hand dynamometer works; the Camry EH101 is a common low-cost one.</p>`;
   return `<div class="onb"><div class="eyebrow">${has?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
   <p class="muted">${has?"Who you are and where you started. Your current numbers live on Progress.":"One screen. It records who you are and where you are starting from, so a year from now you can see how far you have come. Everything stays on this phone."}</p>
   <div class="card hero"><p style="margin:0">One plan for everyone. Follow it and watch your body composition and VO2 max improve, and your fitness age come down.</p></div>
@@ -1839,16 +1844,16 @@ function bodyPoints(key){return bodyRows().map(x=>({d:x.d,v:valueOrNull(x[key]),
 /* What to measure and when: the short list, with the date each was last done */
 function measurePlan(){ const last=(d)=>d?fmt(d):"not yet", extras=S.extras||[];
   const w=bodyRows().filter(x=>valueOrNull(x.wt)!=null).at(-1), test=[...(S.tests||[])].sort((a,b)=>a.d<b.d?-1:1).at(-1);
-  const dexa=extras.filter(x=>/^dexa\b/i.test(x.kind)).map(x=>x.d).sort().at(-1), lab=extras.filter(x=>!/^dexa\b/i.test(x.kind)&&!/blood pressure|vo2|grip/i.test(x.kind)).map(x=>x.d).sort().at(-1), bp=extras.filter(x=>/blood pressure/i.test(x.kind)).map(x=>x.d).sort().at(-1), grip=extras.filter(x=>/grip/i.test(x.kind)).map(x=>x.d).sort().at(-1);
+  const dexa=extras.filter(x=>/^dexa\b/i.test(x.kind)).map(x=>x.d).sort().at(-1), lab=extras.filter(x=>!/^dexa\b/i.test(x.kind)&&!/blood pressure|vo2|grip|waist|resting heart/i.test(x.kind)).map(x=>x.d).sort().at(-1), bp=extras.filter(x=>/blood pressure/i.test(x.kind)).map(x=>x.d).sort().at(-1), grip=extras.filter(x=>/grip/i.test(x.kind)).map(x=>x.d).sort().at(-1), waist=extras.filter(x=>/waist/i.test(x.kind)).map(x=>x.d).sort().at(-1), rhr=extras.filter(x=>/resting heart/i.test(x.kind)).map(x=>x.d).sort().at(-1);
   const rows=[
    ["Weigh-in, with body fat and muscle if your scale shows them","Every week, Friday morning","The trend between scans. Read the four-week average, not one day.",last(w&&w.d)],
-   ["Waist at the navel","Once a month","Tracks the fat that matters most. Aim for under half your height.",""],
+   ["Waist at the navel","Once a month","Tracks the fat that matters most. Aim for under half your height.",last(waist)],
    ["Fitness test: bike, 2K row or timed mile","Every second month","Your heart and lungs in one number. Same test each time.",last(test&&test.d)],
    ["Grip strength","Every second month, with the fitness test","A hand dynamometer, best of three squeezes each hand. A simple stand-in for whole-body strength.",last(grip)],
    ["DEXA body scan","Once or twice a year","The best measure of muscle, fat and bone most people can get.",last(dexa)],
    ["Blood work","Once a year","Lipids including ApoB, fasting glucose and A1c, kidney and liver panel, vitamin D. Fasting insulin and hs-CRP are worth asking about.",last(lab)],
    ["Blood pressure","A few times a year","A home cuff is fine. Sit quietly for five minutes first.",last(bp)],
-   ["Resting heart rate","Glance monthly","From a watch or a morning pulse. Drifting down over months means you are fitter.",""],
+   ["Resting heart rate","Glance monthly","From a watch or a morning pulse. Drifting down over months means you are fitter.",last(rhr)],
    ["Bone density","When your doctor says it is due","Recommended for women at 65, earlier with risk factors."," "]];
   return `<details class="card" id="measure-plan"><summary>What to measure and when</summary><div><p class="muted sm">Nine measurements cover what this program is trying to change. Anything beyond these is optional.</p>
   ${rows.map(([what,when,why,done])=>`<div class="measure-row"><div><b>${what}</b><br><span class="muted sm">${why}</span></div><div class="measure-when"><span class="pill">${when}</span>${done.trim()?`<span class="muted xs">Last: ${esc(done)}</span>`:""}</div></div>`).join("")}
@@ -1967,7 +1972,7 @@ function dexaProgress(){
   <div class="card">
     <p class="muted sm">Anything measured outside the app: vitamin D, lipids, A1c, testosterone, blood pressure or lab VO2 max. Type one in, or import a whole report.</p>
     ${labImportHtml()}
-    <form id="fExtra"><div class="row"><div class="field"><label class="f">Date</label><input type="date" name="d" value="${ymd(today())}" required></div><div class="field"><label class="f">Type</label><select name="kind"><option>Vitamin D (ng/mL)</option><option>Lipids (LDL / HDL / TG)</option><option>A1c</option><option>Testosterone</option><option>Blood pressure</option><option>Grip strength (lb, best hand)</option><option>Waist (in)</option><option>VO2 max (lab)</option><option>Other</option></select></div></div>
+    <form id="fExtra"><div class="row"><div class="field"><label class="f">Date</label><input type="date" name="d" value="${ymd(today())}" required></div><div class="field"><label class="f">Type</label><select name="kind"><option>Vitamin D (ng/mL)</option><option>Lipids (LDL / HDL / TG)</option><option>A1c</option><option>Testosterone</option><option>Blood pressure</option><option>Grip strength (lb, best hand)</option><option>Waist (in)</option><option>Resting heart rate (bpm)</option><option>VO2 max (lab)</option><option>Other</option></select></div></div>
     <div class="row"><div class="field"><label class="f">Result</label><input name="v" required placeholder="e.g. 18.4"></div><div class="field"><label class="f">Note</label><input name="note" placeholder="where, who ordered it"></div></div><button class="btn" type="submit">Log result</button></form>
     ${labs.length?`<table><tr><th>Date</th><th>Type</th><th class="r">Result</th><th></th></tr>${[...labs].sort((a,b)=>a.d<b.d?1:-1).map(x=>`<tr><td>${fmt(x.d)}</td><td>${esc(x.kind)}${x.note?`<br><span class="muted xs">${esc(x.note)}</span>`:""}</td><td class="r">${esc(x.v)}</td><td class="r"><button class="del" data-del="extras" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}
   </div>
@@ -3441,10 +3446,11 @@ document.addEventListener("submit",async e=>{
   e.preventDefault(); const f=e.target, fd=new FormData(f), d=Object.fromEntries(fd);
   if(f.id==="fOnboard"){ const prev=S.profile||{}; const first=!prev.name, start=prev.start||ymd(today()), was=baselineOf(prev);
     /* the starting point is stamped once, on the first save; later saves can correct a number but never move the date */
-    const baseline={at:first?new Date().toISOString():was.at||null,d:was.d||start,weightLb:d.weightLb,bf:d.bf||"",mm:d.mm||"",waist:d.waist||"",grip:d.grip||""};
+    const baseline={at:first?new Date().toISOString():was.at||null,d:was.d||start,weightLb:d.weightLb,bf:d.bf||"",mm:d.mm||"",waist:d.waist||"",grip:d.grip||"",rhr:d.rhr||"",sys:d.sys||"",dia:d.dia||""};
     S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,why:d.why.trim(),layout:prev.layout||{...DEFAULT_LAYOUT},baseline,start};
     if(!S.weigh.length) S.weigh.push({id:Date.now(),d:S.profile.start,wt:d.weightLb,bf:d.bf,mm:d.mm});
-    if(first){ if(d.waist) S.extras.push({id:fusionId(),d:start,kind:"Waist (in)",v:String(d.waist),note:"Starting point"}); if(d.grip) S.extras.push({id:fusionId(),d:start,kind:"Grip strength (lb, best hand)",v:String(d.grip),note:"Starting point"}) }
+    if(first){ if(d.waist) S.extras.push({id:fusionId(),d:start,kind:"Waist (in)",v:String(d.waist),note:"Starting point"}); if(d.grip) S.extras.push({id:fusionId(),d:start,kind:"Grip strength (lb, best hand)",v:String(d.grip),note:"Starting point"});
+      if(d.rhr) S.extras.push({id:fusionId(),d:start,kind:"Resting heart rate (bpm)",v:String(d.rhr),note:"Starting point"}); if(d.sys&&d.dia) S.extras.push({id:fusionId(),d:start,kind:"Blood pressure",v:d.sys+"/"+d.dia,note:"Starting point"}) }
     tab="home"; location.hash=tab; save(); render(); toast(prev.name?"Profile saved":"Starting point set. Let's go."); return }
   if(f.id==="fWeigh"){ let photo=null; const file=fd.get("photo"); if(file&&file.size) photo=await shrinkImage(file); if(!validLogDate(d.d))return toast("Choose a valid measurement date"); S.weigh=S.weigh.filter(x=>x.d!==d.d||x.source!=="manual"); S.weigh.push({id:Date.now(),d:d.d,wt:d.wt,bf:d.bf,mm:d.mm,photo,source:"manual"}); toast("Weigh-in logged") }
   if(f.id==="fTest"){ let v=d.mod==="bike"?+d.v:parseTime(d.v); if(v==null||isNaN(v)){ toast("Check the result format"); return } S.tests.push({id:Date.now(),d:d.d,mod:d.mod,v,watch:d.watch,note:d.note}); toast("Test logged") }

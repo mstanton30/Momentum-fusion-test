@@ -3314,7 +3314,7 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
   const cover=(img,px,py,w,h)=>{ const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, s=Math.max(w/iw,h/ih); x.drawImage(img,px+(w-iw*s)/2,py+(h-ih*s)/2,iw*s,ih*s) };
-  const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;s>=44;s-=6){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
+  const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;;s=Math.max(44,s-6)){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
   x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
   const bg=layout==="split"?null:recapPhoto;
   if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);

@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="Health Stack">
 <meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.18.0">
+<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.19.0">
 <link rel="manifest" href="./manifest.json?v=sd-3">
-<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.18.0">
+<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.19.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.18.0</title>
+<title>SD Health Stack — Beta v9.19.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -92,6 +92,7 @@ label.f{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px}
 .meal b{font-family:var(--display)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .chips button{background:var(--soft);border:1px solid transparent;border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;font-family:var(--display);color:var(--fg);display:inline-flex;gap:6px;align-items:center}
+.chips button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .chips button i{font-style:normal;background:var(--fg);color:var(--bg);border-radius:999px;min-width:20px;height:20px;display:inline-grid;place-items:center;font-size:.72rem;font-weight:900}
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
 .week .d{background:var(--soft);border-radius:10px;padding:8px 2px;text-align:center;font-size:.7rem;line-height:1.3;border:1px solid transparent}
@@ -361,6 +362,7 @@ details.phow p{margin:0 0 8px}
 .hm-bar{height:8px;border-radius:8px;background:var(--soft);overflow:hidden;margin-top:6px}.hm-bar i{display:block;height:100%;border-radius:8px;background:var(--green);transition:width .3s ease}
 .mealcard .seg button{font-size:.8rem;padding:10px 2px}
 .mealcard label.f{display:block;margin:0 0 6px}
+.deckmeal+.deckmeal{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.deckmeal .meal{margin-top:0}
 .tally{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}.tally>div{display:flex;align-items:baseline;gap:8px}.tally b{font-family:var(--display);font-size:1.7rem;font-weight:800;line-height:1}.tally span{color:var(--muted);font-size:.86rem}.tally-minus{width:44px;height:44px;border-radius:12px;border:1px solid var(--line,rgba(0,0,0,.14));background:transparent;color:var(--fg);font-size:1.3rem;font-weight:700}.tally-minus:disabled,.tally .btn:disabled{opacity:.35}
 </style>
 </head>
@@ -374,7 +376,7 @@ details.phow p{margin:0 0 8px}
 
 <script src="./backup.js"></script>
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.18.0"></script>
+<script src="./beta-config.js?v=9.19.0"></script>
 <script>
 (function(){
 "use strict";
@@ -384,7 +386,7 @@ const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19
 
 /* =========================== PROGRAM CONTENT =========================== */
 /* Temporary name (SD = Stanton and Day; navy is the brand colour, orange stays the one accent). Storage keys and file names keep the old name so nobody loses data. */
-const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.18.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
+const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.19.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
 const ICON={
  book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
@@ -1726,18 +1728,28 @@ function dailyDeck(){ const k=ymd(today()), cards=[]; const add=(id,html)=>cards
   }else if(open.length) add("workout",`<div class="card"><div class="eyebrow">Today's workout</div><h3 style="margin:6px 0 2px;font-size:1.15rem">${esc(day.title)}</h3>
    ${open.map(x=>checkBtn(false,x.title,x.range[0]===x.range[1]?x.range[0]+" min":x.range[0]+"–"+x.range[1]+" min",x.pts,`data-sess="${x.id}" data-k="${k}"`)).join("")}
    <button class="del xs" type="button" data-go="workout" style="text-decoration:underline;margin-top:8px">Did something else, or want to change the day</button></div>`);
-  const due=dueMeals(k);
+  const dueNow=dueMeals(k).map(x=>x[0]), due=MEALS.filter(([id])=>dueNow.includes(id)||deckMealEdit.has(id));
   if(due.length) add("meals",`<div class="card"><div class="eyebrow">What you ate</div>
-   ${due.map(([id,name])=>`<div class="meal"><b>${name}</b></div><div class="seg three"><button class="q" data-dmeal="${id}" data-v="q">Quality</button><button class="m" data-dmeal="${id}" data-v="m">In-between</button><button class="n" data-dmeal="${id}" data-v="n">Off plan</button></div><p class="muted xs" style="margin:4px 0 2px"><span style="color:var(--green)">●</span> ${esc(MEAL_EXAMPLES[id].q)}</p>`).join("")}
-   <button class="del xs" type="button" data-go="nutrition" style="text-decoration:underline;margin-top:8px">Not sure? Ask in Nutrition</button></div>`);
+   ${due.map(([id,name])=>deckMeal(id,name,k)).join("")}
+   ${deckMealEdit.size?`<button class="btn" type="button" data-deck-meal-done="1" style="width:100%;justify-content:center;margin-top:14px">Done</button>`:""}
+   <button class="del xs" type="button" data-go="nutrition" style="text-decoration:underline;margin-top:10px">Snacks, drinks and rewards are in Nutrition</button></div>`);
   return cards }
 function dailyCards(){ return dailyDeck().map(c=>c.html) }
+/* The opening card rates a meal the same way the Nutrition tab does: a palm, fists, and the rest of the plate. A meal stays on the card while it is being filled in. */
+const deckMealEdit=new Map();
+function deckMeal(id,name,k){ const x=effectiveMeals(k)[id]||{}, state=mealRating(x), touched=!!x.plate, p=touched?(+x.p||0):"", f=touched?Math.min(2,(+x.f||0)+(+x.v||0)):"", rest=touched?(x.rest||""):"";
+  const pick=(field,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(([v,l])=>`<button type="button" data-plate="${id}" data-k="${k}" data-deck="1" data-f="${field}" data-v="${v}" aria-pressed="${String(cur)===String(v)}">${l}</button>`).join("")}</div>`;
+  return `<div class="mealcard deckmeal"><div class="meal"><b>${name}</b>${state?`<span class="${state==="q"?"pill ok":state==="m"?"pill warn":"pill bad"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":"Off plan"}</span>`:""}</div>
+  <button class="btn small ghost" type="button" data-plate-plan="${id}" data-k="${k}" data-deck="1" style="width:100%;justify-content:center;margin:8px 0 12px">✋ ✊✊ On plan: a palm and two fists</button>
+  <label class="f">Protein</label>${pick("p",p,[[0,"None"],[1,"1 palm"],[2,"2 palms"]])}
+  <label class="f" style="margin-top:10px">Fruit and veg</label>${pick("f",f,[[0,"None"],[1,"1 fist"],[2,"2+ fists"]])}
+  <label class="f" style="margin-top:10px">The rest of the plate</label>${pick("rest",rest,[["ok","About a fist or less"],["more","More than that"]])}</div>` }
 const DECK_ORDER=["lesson","workout","meals"];
 let dailySkipped=new Set(), deckLast=null, deckFirst=null;
 /* Today's three as a deck: one card at a time. Answer it and the next one comes up; swipe or tap Skip to move on. */
 function renderDaily(){ const el=document.getElementById("daily"); if(!el) return;
   const blocked=!S.profile||tab==="why"||tab==="onboard"||!!accountScreen||!!consentRequest;
-  if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; deckLast=null; return }
+  if(!dailyOpen||blocked){ el.hidden=true; el.innerHTML=""; deckLast=null; deckMealEdit.clear(); return }
   const all=dailyDeck(), deck=all.filter(c=>!dailySkipped.has(c.id));
   if(deckFirst) deck.sort((a,b)=>(a.id===deckFirst?-1:0)-(b.id===deckFirst?-1:0));
   if(!deck.length){ el.hidden=true; el.innerHTML=""; dailyOpen=false; deckLast=null; if(el.dataset.had==="1"){ el.dataset.had=""; toast(all.length?"Skipped for now. They're on Home when you're ready.":"That's today's three. Day stacked.") } return }
@@ -1839,7 +1851,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.18.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.19.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2190,7 +2202,7 @@ async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=
 function backupHelp(){return `<div class="note sm"><b>Portable backup</b><p>Export this profile’s logs, plans, saved meals/workouts, preferences and locally saved photos to a private JSON file. Save it in Files and confirm it exists before removing the app. Imports replace this profile’s local data, not merge it. Other profiles, sign-in credentials, notification permissions and connections are not backed up. Cloud health readings already loaded here are saved as a snapshot; reconnect for newer readings.</p>${F.backupSyncPaused?'<p><b>Cloud sync is paused after restore.</b> Your restored data stays on this device until you choose to resume. This protects it from being replaced by an older cloud copy.</p><button class="btn small ghost" id="backup-resume">Review and resume cloud sync</button>':''}<p id="backup-status" role="status"></p></div>`}
 function exportData(){
  try{
-  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.18.0',accountId:activeWorkspace});
+  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.19.0',accountId:activeWorkspace});
   const text=JSON.stringify(bundle,null,1);if(new TextEncoder().encode(text).length>window.MomentumBackup.MAX_BYTES)throw Error('Backup exceeds 25 MB. Do not remove the app; reduce photo sizes or ask for help first.');
   const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='momentum-backup-'+ymd(today())+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -3253,7 +3265,7 @@ document.addEventListener('click',async e=>{
 let lastTab=null, altOther=null, lastScore=[];
 /* Weekly recap: a square image to post or send to the group, with an optional photo behind it */
 /* Share: a post-ready image for today, the week or the month. The app suggests the highlight, the words stay editable, photos are encouraged. */
-let recapPhoto=null, recapPhoto2=null, recapPeriod="week", recapPick=null, recapHead=null, recapSub=null, recapCap=null, recapOwnBig="", recapLayout="big", recapSize="square", recapLogo=null;
+let recapPhoto=null, recapPhoto2=null, recapPeriod="week", recapPick=null, recapHead=null, recapSub=null, recapCap=null, recapOwnBig="", recapOwnUnit="", recapLayout="big", recapSize="square", recapLogo=null;
 const RECAP_TAGS="#StackTheDay #SDHealthStack";
 const PHOTO_IDEAS=["Before and after","Flexing a bicep","Mid push-up","Making the smoothie","A quality plate","Post-workout selfie","Your walk or ride","The weights you lifted"];
 function recapData(){ const per=recapPeriod, weekly=per==="week"||per==="last", ref=today(); if(per==="last") ref.setDate(ref.getDate()-7); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref), tk=ymd(today());
@@ -3287,6 +3299,9 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
     if(fullF) add("fb","Fist bumps","Got my "+d.fb+" fist bumps today 👊 Fruit and veg: done. Did you?","Got my "+d.fb+" fist bumps today 👊 so my fruit and veg are in. That is about 800 grams, the amount the research keeps landing on. Did you get yours?"+EXPL,d.fb,"fist bumps 👊 My fruit and veg are in. Did you?");
     if(fullP) add("hf","High fives","Got my "+d.hf+" high fives today 🙌 Protein: done. Did you?","Got my "+d.hf+" high fives today 🙌 so my protein is in: about "+d.hf*PROTEIN_PER_SERVING+" grams. The target is 0.75 to 1 gram per pound of ideal body weight. Did you get yours?"+EXPL,d.hf,"high fives 🙌 My protein is in. Did you?");
     if(d.hf+d.fb>0) add("hands",fullF||fullP?"Both numbers":"High fives",hands+" today.",hands+" today."+EXPL+" How did you do?");
+    for(const [id,name] of MEALS){ const m=effectiveMeals(d.tk)[id]; if(!m||!mealRating(m)) continue; const mp=+m.p||0, mf=(+m.f||0)+(+m.v||0);
+      const bits=[mp?"🙌 "+pl(mp,"high five"):"",mf?"👊 "+pl(mf,"fist bump"):""].filter(Boolean).join(", "), plain=[mp?pl(mp,"palm")+" of protein":"",mf?pl(mf,"fist")+" of fruit and veg":""].filter(Boolean).join(" and ");
+      add("meal-"+id,name,bits?name+": "+bits+".":name+". Logged.",(plain?name+" today: "+plain+".":name+" today.")+EXPL+" What was on your plate?") }
     if(d.ppts>0) add("dpts","Today's points",d.ppts+" Stack points today.",d.ppts+" Stack points today from moving, eating well and sleeping.",d.ppts,"Stack points today") }
   if(isMonth){ if(d.mpct!=null&&d.units>=20&&d.mpct>=70) add("mq","Quality meals",d.mpct+"% quality meals this month.",d.mpct+" percent of my meals were quality over the last 30 days. Protein and produce on the plate, no calorie counting.",d.mpct+"%","quality meals, last 30 days");
     if(d.hf+d.fb>0) add("hands","High fives",hands+" in 30 days.",hands+" in the last 30 days."+EXPL+" What did your month look like?");
@@ -3340,17 +3355,25 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   if(d.pts>0) add("pts","Stack points",d.pts+" Stack points this week.",d.pts+" Stack points this week from moving, eating well and sleeping.",d.pts,"Stack points this week",ptsWeeks);
   add("showed","Showed up",d.ppts>0?"Showed up and logged it.":isDay?"Today starts now.":"A new week starts now.","Showed up "+(isDay?"today":isMonth?"this month":"this week")+". Small steps, stacked.");
   /* always last: their own words, for the thing no tracker can see */
+  add("ownm","✎ A meal","","On my plate today."+EXPL);
   add("ownw","✎ A workout","","Got it done today.");
   add("own","✎ Write your own","","Proud of this one.");
   /* week-only numbers stay out of the day and month views, and the day view leads with today */
   const weekOnly=["strength","q80","q70","protein","mins","best","sleep","sauna","mob","dry","pts"], lead=["workout","full","fb","hf","hands","dpts"];
   const list=d.weekly?out:out.filter(h=>!weekOnly.includes(h.id));
   return isDay?[...lead.map(id=>list.find(h=>h.id===id)).filter(Boolean),...list.filter(h=>!lead.includes(h.id))]:list }
-function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||(recapPick==="workout"&&hs.find(h=>h.id==="ownw"))||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own"||pick.id==="ownw";
-  if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
-  return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
+function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||(recapPick==="workout"&&hs.find(h=>h.id==="ownw"))||(recapPick==="meal"&&([...hs].reverse().find(h=>/^meal-/.test(h.id))||hs.find(h=>h.id==="ownm")))||hs[0]; const head=recapHead==null?pick.head:recapHead, own=/^own/.test(pick.id);
+  const unit=own&&pick.id==="ownw"?String(recapOwnUnit||"").trim():"";
+  if(own){ const big=pick.id==="ownm"?null:String(recapOwnBig||"").trim()||null; pick={...pick,big,unit:big?unit:"",biglab:big&&unit?unit+(String(head).trim()?" · "+head:""):head} }
+  return {d,hs,pick,own,head,sub:own?pick.biglab:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
+/* Edits stick: each highlight remembers its own words, number and caption, so switching the highlight, the period or the look never wipes what was typed */
+const recapMemo={};
+function recapKey(){ const id=recapState().pick.id; return /^own/.test(id)?id:recapPeriod+":"+id }
+function recapSwitch(change){ try{ recapMemo[recapKey()]={h:recapHead,s:recapSub,c:recapCap,b:recapOwnBig,u:recapOwnUnit} }catch(e){} change(); let m=null; try{ m=recapMemo[recapKey()] }catch(e){} m=m||{};
+  recapHead=m.h==null?null:m.h; recapSub=m.s==null?null:m.s; recapCap=m.c==null?null:m.c; recapOwnBig=m.b||""; recapOwnUnit=m.u||"" }
 const EXPL=" 🙌 A high five is a palm of protein, about "+PROTEIN_PER_SERVING+" grams. 👊 A fist bump is a fist of fruit or veg, and "+FIST_GOAL+" a day is about 800 grams.";
 const OWN_HINT="Type what you are proud of";
+const WORKOUT_UNITS=["calories","minutes","miles","points","steps","lb"];
 const WORKOUT_IDEAS=["Strength day. Done.","Cardio. Done.","Won at pickup hoops.","Long walk with the dog.","New personal best."];
 function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
   const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
@@ -3359,7 +3382,7 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;;s=Math.max(44,s-6)){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
   x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
   const bg=layout==="split"?null:recapPhoto;
-  const keyOn=(layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands"].includes(st.pick.id), keyPad=keyOn?(story?20:44):0;
+  const keyOn=(layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands","ownm"].includes(st.pick.id)||/^meal-/.test(st.pick.id), keyPad=keyOn?(story?20:44):0;
   if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);
     if(layout==="photo"){ g.addColorStop(0,"rgba(8,12,24,.66)"); g.addColorStop(.2,"rgba(8,12,24,.06)"); g.addColorStop(.48,"rgba(8,12,24,.1)"); g.addColorStop(.7,"rgba(8,12,24,.78)"); g.addColorStop(1,"rgba(8,12,24,.96)") }
     else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,layout==="big"?"rgba(8,12,24,.5)":"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
@@ -3372,20 +3395,20 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   x.font="600 30px "+F2; x.textAlign="right"; x.fillText(d.label,W-M,top+54); x.textAlign="left";
   const strip=(yTop)=>{ shadow(false); const gap=24, tw=(W-2*M-gap*2)/3, th=150; d.top.forEach(([v,lab],i)=>{ const px=M+i*(tw+gap); rr(px,yTop,tw,th,26); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.font="800 64px "+F1; x.fillText(v,px+24,yTop+78); x.fillStyle="rgba(255,255,255,.78)"; x.font="600 26px "+F2; x.fillText(lab,px+24,yTop+122) }) };
   /* their own words are optional: the prompt shows in the preview only, never on the shared image */
-  const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
-  if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
+  const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+(st.pick.unit?" "+st.pick.unit+".":"")+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
+  if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?6:5), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
     shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-keyPad-th*rows-gap*(rows-1);
     d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
   else if(layout==="big"){ const p=st.pick, cy=story?560:290; shadow(true); x.fillStyle="#fff"; let s=story?420:300; x.font="800 "+s+"px "+F1; while(x.measureText(p.big).width>W-2*M&&s>120){ s-=20; x.font="800 "+s+"px "+F1 }
-    const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; { let ls=story?52:42; x.font="700 "+ls+"px "+F2; while(x.measureText(subText).width>W-2*M&&ls>28){ ls-=2; x.font="700 "+ls+"px "+F2 } } x.fillText(subText,M,by+(story?112:100));
-    const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
+    const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; let subExtra=0; { let ls=story?52:42; x.font="700 "+ls+"px "+F2; while(x.measureText(subText).width>W-2*M&&ls>36){ ls-=2; x.font="700 "+ls+"px "+F2 } const sl=[]; let ln=""; for(const w of String(subText).split(/\s+/)){ const t=ln?ln+" "+w:w; if(x.measureText(t).width>W-2*M&&ln){ sl.push(ln); ln=w } else ln=t } sl.push(ln); const shown=sl.slice(0,4); shown.forEach((l,i)=>x.fillText(l,M,by+(story?112:100)+i*ls*1.3)); subExtra=(shown.length-1)*ls*1.3 }
+    const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128)+subExtra, room=stripY-36-top2;
     if(ser.length>=3&&room>=100){ shadow(false); const lo=Math.min(...ser), hi=Math.max(...ser), ch=Math.min(room,story?420:200), w=W-2*M, px=i=>M+i*w/(ser.length-1), py=v=>top2+ch-(hi===lo?.5:(v-lo)/(hi-lo))*(ch-24)-12;
       const area=x.createLinearGradient(0,top2,0,top2+ch); area.addColorStop(0,"rgba(255,122,82,.35)"); area.addColorStop(1,"rgba(255,122,82,0)"); x.beginPath(); x.moveTo(px(0),top2+ch); ser.forEach((v,i)=>x.lineTo(px(i),py(v))); x.lineTo(px(ser.length-1),top2+ch); x.closePath(); x.fillStyle=area; x.fill();
       x.beginPath(); ser.forEach((v,i)=>i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v))); x.strokeStyle="#ff7a52"; x.lineWidth=8; x.lineJoin="round"; x.lineCap="round"; x.stroke();
       const lx=px(ser.length-1), ly=py(ser[ser.length-1]); x.beginPath(); x.arc(lx,ly,16,0,Math.PI*2); x.fillStyle="#fff"; x.fill(); x.beginPath(); x.arc(lx,ly,8,0,Math.PI*2); x.fillStyle="#ff7a52"; x.fill() }
     if(d.top.length) strip(stripY) }
-  else if(layout==="photo"){ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
-  else{ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
+  else if(layout==="photo"){ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,5), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  else{ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,3), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
     [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
       x.font="700 28px "+F2; const lw=x.measureText(lab).width+36; rr(px+18,py+18,lw,50,25); x.fillStyle=i?"#e2512a":"rgba(8,12,24,.72)"; x.fill(); x.fillStyle="#fff"; x.fillText(lab,px+36,py+53) });
     let y=headTop; x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
@@ -3398,13 +3421,14 @@ function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c
   try{ drawRecap(c); if(document.fonts&&document.fonts.ready&&!paintRecap.fonts){ paintRecap.fonts=true; document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) } }catch(e){} }
 function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length>3?2:opts.length},1fr);margin:0 0 14px">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${cur===v}">${l}</button>`).join("")}</div>`;
   const photoBtn=(id,img,label)=>`<label class="btn ghost" style="justify-content:center;cursor:pointer">${img?"Change "+label:"Add "+label}<input id="${id}" type="file" accept="image/*" hidden></label>`;
-  const perWord=st.d.per==="day"?"day":st.d.per==="month"?"month":"week", ownw=st.pick.id==="ownw";
+  const perWord=st.d.per==="day"?"day":st.d.per==="month"?"month":"week", ownw=st.pick.id==="ownw", ownm=st.pick.id==="ownm";
   return header("What's your stack?","Share your "+perWord)+`<div class="card"><div class="seg" style="grid-template-columns:repeat(4,1fr);margin:0 0 14px">${[["day","Today"],["week","This week"],["last","Last week"],["month","30 days"]].map(([v,l])=>`<button type="button" data-recap-period="${v}" aria-pressed="${recapPeriod===v}">${l}</button>`).join("")}</div><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
   <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your numbers. Tap another if you like it better.</p>
   <div class="chips" style="margin:10px 0 14px">${st.hs.map((h,i)=>`<button type="button" data-recap-pick="${h.id}" aria-pressed="${h.id===st.pick.id}">${i===0?"★ ":""}${esc(h.label)}</button>`).join("")}</div>
-  ${st.own?`${ownw?`<p class="muted sm" style="margin:0 0 8px">Tap one to start, or type your own.</p><div class="chips" style="margin:0 0 12px">${WORKOUT_IDEAS.map(t=>`<button type="button" data-recap-fill="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}<label class="f" for="recapHead">${ownw?"What did you just do? (optional)":"What are you proud of? (optional)"}</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="${ownw?"Beat my buddies at 3-on-3. Legs day. Five miles before work.":"First pull-up. Ran the whole 5K. Down a belt notch."}">
-  <label class="f" for="recapBig" style="margin-top:10px">${ownw?"A number from your watch (optional)":"A number to feature (optional)"}</label><input id="recapBig" maxlength="8" value="${esc(recapOwnBig||"")}" autocomplete="off" placeholder="${ownw?"2,000":"225, 5K, 1st"}" style="max-width:10em">
-  <p class="muted xs" style="margin:6px 0 0">With a number, the Big number look puts it front and centre with your words underneath.</p>`:recapLayout==="big"&&st.pick.big!=null?`<label class="f" for="recapSub">Line under the big number</label><input id="recapSub" maxlength="60" value="${esc(st.sub)}" autocomplete="off">`:`<label class="f" for="recapHead">Headline on the image</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off">`}
+  ${st.own?`${ownw?`<p class="muted sm" style="margin:0 0 8px">Tap one to start, or type your own.</p><div class="chips" style="margin:0 0 12px">${WORKOUT_IDEAS.map(t=>`<button type="button" data-recap-fill="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}<label class="f" for="recapHead">${ownw?"What did you just do? (optional)":ownm?"What is on the plate? (optional)":"What are you proud of? (optional)"}</label><textarea id="recapHead" rows="2" maxlength="160" autocomplete="off" placeholder="${ownw?"Beat my buddies at 3-on-3. Legs day. Five miles before work.":ownm?"Eggs, berries and spinach. Salmon, rice and broccoli.":"First pull-up. Ran the whole 5K. Down a belt notch."}">${esc(st.head)}</textarea>
+  ${ownm?"":`<label class="f" for="recapBig" style="margin-top:10px">${ownw?"A number from your watch (optional)":"A number to feature (optional)"}</label><input id="recapBig" maxlength="12" value="${esc(recapOwnBig||"")}" autocomplete="off" inputmode="${ownw?"decimal":"text"}" placeholder="${ownw?"2,000":"225, 5K, 1st"}" style="max-width:10em">
+  ${ownw?`<p class="muted xs" style="margin:10px 0 6px">What the number is:</p><div class="chips" style="margin:0">${WORKOUT_UNITS.map(u=>`<button type="button" data-recap-unit="${u}" aria-pressed="${recapOwnUnit===u}">${u}</button>`).join("")}</div>`:""}`}
+  ${ownm?`<p class="muted xs" style="margin:6px 0 0">Add the photo of the plate below. Your words sit over it.</p>`:`<p class="muted xs" style="margin:8px 0 0">With a number, the Big number look puts it front and centre with your words underneath.</p>`}`:recapLayout==="big"&&st.pick.big!=null?`<label class="f" for="recapSub">Line under the big number</label><input id="recapSub" maxlength="120" value="${esc(st.sub)}" autocomplete="off">`:`<label class="f" for="recapHead">Headline on the image</label><textarea id="recapHead" rows="2" maxlength="160" autocomplete="off">${esc(st.head)}</textarea>`}
   <h3 style="margin-top:22px">2. Add a photo</h3><p class="muted sm">Posts with a real photo get noticed. A few that work:</p>
   <div class="chips" style="margin:10px 0 12px">${PHOTO_IDEAS.map((x,i)=>i===0?`<button type="button" data-recap-layout="split">${x}</button>`:`<label for="recapPhoto" role="button">${x}</label>`).join("")}</div>
   <div class="row">${split?photoBtn("recapPhoto2",recapPhoto2,"before photo")+photoBtn("recapPhoto",recapPhoto,"after photo"):photoBtn("recapPhoto",recapPhoto,"a photo")}</div>
@@ -3475,7 +3499,7 @@ function homeShareCard(){ let tease=""; const keep=recapPeriod; try{ recapPeriod
   return `<div class="card sharehome"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Share</h2>${rd?`<span class="pill hot" style="flex:0 0 auto">Summary ready</span>`:""}</div>
   <p class="muted sm" style="margin:6px 0 0">${tease?"<b>Today:</b> "+esc(tease):"A post-ready image from your numbers, any time. Send it to the group chat."}</p>
   ${rd?`<button class="btn" type="button" data-share-go="${rd[0]}" style="width:100%;justify-content:center;margin-top:12px">${ICON.share} ${rd[1]}</button>`:""}
-  <div class="chips" style="margin-top:12px">${b("day","Today")}${b("week","This week")}${b("month","This month")}${b("workout","A workout")}<button type="button" data-recipe-go="smoothie">A recipe</button></div></div>` }
+  <div class="chips" style="margin-top:12px">${b("day","Today")}${b("week","This week")}${b("month","This month")}${b("workout","A workout")}${b("meal","A meal")}<button type="button" data-recipe-go="smoothie">A recipe</button></div></div>` }
 function recipesCard(){ const b=(v,l)=>`<button type="button" data-recipe-go="${v}">${l}</button>`;
   return `<div class="card"><h2 style="margin:0">Recipes</h2><p class="muted sm" style="margin:6px 0 0">The smoothie and the recovery drink, your way. Tweak one, add a photo, share it.</p>
   <div class="chips" style="margin-top:12px">${b("smoothie","Breakfast smoothie")}${b("drink","Recovery drink")}${b("own","Your own")}</div></div>` }
@@ -3486,17 +3510,18 @@ async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(
 document.addEventListener("change",e=>{ const id=e.target&&e.target.id; if(id!=="recapPhoto"&&id!=="recapPhoto2") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ if(id==="recapPhoto2") recapPhoto2=img; else recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
 document.addEventListener("input",e=>{ const id=e.target&&e.target.id; if(id==="recapHead"||id==="recapSub"||id==="recapBig"){ if(id==="recapSub") recapSub=e.target.value; else if(id==="recapBig") recapOwnBig=e.target.value; else recapHead=e.target.value; const c=document.getElementById("recapCanvas"); if(c) try{ drawRecap(c) }catch(err){} } else if(id==="recapCap") recapCap=e.target.value });
 document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-recap-pick],[data-recap-layout],[data-recap-size],[data-recap-copy]"); if(!b) return; const ds=b.dataset;
-  if(ds.recapPick!==undefined){ recapPick=ds.recapPick; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapPick!==undefined){ recapSwitch(()=>{ recapPick=ds.recapPick }); render(); return }
   if(ds.recapLayout!==undefined){ recapLayout=ds.recapLayout; render(); return }
   if(ds.recapSize!==undefined){ recapSize=ds.recapSize; render(); return }
   if(ds.recapCopy!==undefined){ try{ await navigator.clipboard.writeText(recapState().cap); toast("Caption copied") }catch(err){ toast("Copy is not available here") } } });
-document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-period],[data-recap-fill],[data-share-go],[data-recipe-go],[data-recipe-sel],[data-recipe-reset],[data-recipe-share],[data-recipe-copy],[data-recipe-clear],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
+document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-period],[data-recap-fill],[data-recap-unit],[data-share-go],[data-recipe-go],[data-recipe-sel],[data-recipe-reset],[data-recipe-share],[data-recipe-copy],[data-recipe-clear],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
   if(ds.deckSkip!==undefined){ deckSkip(ds.deckSkip,1); return }
   if(ds.lib!==undefined){ libMonth=libMonth===+ds.lib?0:+ds.lib; render(); return }
   if(ds.libGo!==undefined){ libMonth=+ds.libGo; lastTab=null; dailyOpen=false; tab="lessons"; location.hash="lessons"; render(); window.scrollTo(0,0); return }
-  if(ds.recapPeriod!==undefined){ recapPeriod=ds.recapPeriod; recapPick=null; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapPeriod!==undefined){ recapSwitch(()=>{ recapPeriod=ds.recapPeriod; if(!/^own/.test(recapPick||"")) recapPick=null }); render(); return }
+  if(ds.recapUnit!==undefined){ recapOwnUnit=recapOwnUnit===ds.recapUnit?"":ds.recapUnit; render(); return }
   if(ds.recapFill!==undefined){ recapHead=ds.recapFill; render(); return }
-  if(ds.shareGo!==undefined){ const v=ds.shareGo; recapPeriod=v==="workout"?"day":v; recapPick=v==="workout"?"workout":null; recapHead=null; recapSub=null; recapCap=null; lastTab=null; dailyOpen=false; tab="recap"; location.hash="recap"; render(); window.scrollTo(0,0); return }
+  if(ds.shareGo!==undefined){ const v=ds.shareGo; recapSwitch(()=>{ recapPeriod=v==="workout"||v==="meal"?"day":v; recapPick=v==="workout"||v==="meal"?v:null }); lastTab=null; dailyOpen=false; tab="recap"; location.hash="recap"; render(); window.scrollTo(0,0); return }
   if(ds.recipeGo!==undefined){ recipeSel=RECIPES[ds.recipeGo]?ds.recipeGo:"smoothie"; lastTab=null; dailyOpen=false; tab="recipes"; location.hash="recipes"; render(); window.scrollTo(0,0); return }
   if(ds.recipeSel!==undefined){ recipeSel=ds.recipeSel; render(); return }
   if(ds.recipeReset!==undefined){ if(recipeSel==="smoothie") S.smoothie=DEFAULT_SMOOTHIE; else if(recipeSel==="drink") S.drink=DEFAULT_DRINK; if(S.recipes&&S.recipes[recipeSel]) S.recipes[recipeSel].note=""; save(); render(); toast("Back to the original"); return }
@@ -3540,7 +3565,7 @@ function render(){
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-plate],[data-plate-add],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
+  const t=e.target.closest("[data-plate],[data-plate-add],[data-plate-plan],[data-deck-meal-done],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
   const ds=t.dataset;
   if(ds.tab||ds.go){ lastTab=null; if(S.profile) dailyOpen=false; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
@@ -3560,8 +3585,12 @@ document.addEventListener("click",e=>{
   if(ds.plateAdd!==undefined){ const cur=(S.meals[nutDay]||{})[ds.plateAdd]||{}, f=ds.f==="p"?"p":"f", now=f==="p"?(+cur.p||0):(+cur.f||0)+(+cur.v||0), n=Math.max(0,Math.min(SNACK_MAX,now+(+ds.v)));
     if(n===now){ return } if(n===0&&!(f==="p"?(+cur.f||0)+(+cur.v||0):(+cur.p||0))){ const day=S.meals[nutDay]; if(day){ delete day[ds.plateAdd]; save() } render(); return }
     setPlate(nutDay,ds.plateAdd,{[f]:n}); render(); if(+ds.v>0) toast(f==="p"?"+1 high five 🙌":"+1 fist bump 👊"); return }
-  if(ds.platePlan!==undefined){ setPlate(nutDay,ds.platePlan,{p:1,f:2,rest:"ok"}); render(); toast("Quality +"+PTS.meal); return }
-  if(ds.plate!==undefined){ const r=setPlate(nutDay,ds.plate,{[ds.f]:ds.f==="rest"?ds.v:+ds.v}); render(); return }
+  if(ds.deckMealDone!==undefined){ deckMealEdit.clear(); render(); return }
+  if(ds.platePlan!==undefined){ setPlate(ds.k||nutDay,ds.platePlan,{p:1,f:2,rest:"ok"}); deckMealEdit.delete(ds.platePlan); render(); toast("Quality +"+PTS.meal); return }
+  if(ds.plate!==undefined){ const r=setPlate(ds.k||nutDay,ds.plate,{[ds.f]:ds.f==="rest"?ds.v:+ds.v});
+    /* on the opening card a meal is finished once all three questions are answered */
+    if(ds.deck){ const got=deckMealEdit.get(ds.plate)||new Set(); got.add(ds.f); if(got.size>=3){ deckMealEdit.delete(ds.plate); toast(r==="q"?"Quality +"+PTS.meal:r==="m"?"In-between · half credit":"Logged") } else deckMealEdit.set(ds.plate,got) }
+    render(); return }
   if(ds.mealset!==undefined){ if(ds.v===""){ const day=S.meals[nutDay]; if(day){ delete day[ds.mealset]; save() } } else setMealRating(nutDay,ds.mealset,ds.v); render(); return }
   if(ds.reward){ const k=nutDay; S.rewards[k]=S.rewards[k]||{}; S.rewards[k][ds.reward]=Math.max(0,(S.rewards[k][ds.reward]||0)+ +ds.dv); save(); render(); return }
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
@@ -3665,7 +3694,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.18.0';
+ const VERSION='9.19.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

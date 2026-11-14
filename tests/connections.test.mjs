@@ -19,9 +19,15 @@ const empty=()=>({entries:{},supplements:{},savedMeals:[],savedWorkouts:[],timez
 
 function fixture({enableAi=true,apiBase=base}={}){
   const workspaces=new Map(),credentials=new Map(),readings=new Map(),sync=new Map();
+  const inbox=[];
   const store={
     user:async token=>[first,second].includes(token)?{id:token}:null,
     getWorkspace:async user=>copy(workspaces.get(user)||{revision:0,state:{}}),
+    pendingMeals:async user=>copy(inbox.filter(row=>row.user===user&&row.status==='pending')),
+    finishInboxMeal:async (user,id,status)=>{
+      const row=inbox.find(item=>item.user===user&&item.id===id&&item.status==='pending');
+      if(row)row.status=status;
+    },
     saveWorkspace:async (user,revision,state)=>{
       if((workspaces.get(user)?.revision||0)!==revision)return null;
       const row={revision:revision+1,state:copy(state)};
@@ -86,10 +92,45 @@ function fixture({enableAi=true,apiBase=base}={}){
     assert.equal((await exchange()).status,400);
     return {...exchanged.data,client_id};
   }
-  return {request,enroll,oauth};
+  function enqueueMeal(user,payload){
+    const row={id:crypto.randomUUID(),user,payload,status:'pending'};
+    inbox.push(row);
+    return row;
+  }
+  return {request,enroll,oauth,enqueueMeal};
 }
 const call=(request,token,name,args={})=>request('/api/tools',{token,method:'POST',body:{name,arguments:args}});
 const meal=(id,date=day)=>({request_id:id,date,description:'Oat smoothie',mealSlot:'b',p:35,c:50});
+
+test('signed-in workspace imports its queued meals once, including after an acknowledgement retry',async()=>{
+  const {request,enroll,enqueueMeal}=fixture();
+  await enroll(first);
+  await enroll(second);
+  const {request_id,...payload}=meal('unused-test-id');
+  const bad=enqueueMeal(first,{...payload,description:''});
+  const good=enqueueMeal(first,payload);
+  assert.equal((await request('/workspace')).status,401);
+  const other=await request('/workspace',{token:second});
+  assert.deepEqual(other.data.data.entries,{});
+  assert.equal(good.status,'pending');
+
+  const results=await Promise.all([request('/workspace',{token:first}),request('/workspace',{token:first})]);
+  for(const result of results){
+    assert.equal(result.status,200);
+    assert.equal(Object.keys(result.data.data.entries).length,1);
+    assert.equal(Object.values(result.data.data.entries)[0].description,'Oat smoothie');
+    assert.equal(Object.values(result.data.data.entries)[0].p,35);
+    assert.equal(result.data.history[0].assistant,'ChatGPT inbox');
+  }
+  assert.equal(bad.status,'rejected');
+  assert.equal(good.status,'logged');
+
+  good.status='pending';
+  const retry=await request('/workspace',{token:first});
+  assert.equal(Object.keys(retry.data.data.entries).length,1);
+  assert.equal(retry.data.history.length,1);
+  assert.equal(good.status,'logged');
+});
 
 test('discovery, exact redirect allowlist, PKCE, origin, refresh and revocation',async()=>{
   const {request,enroll,oauth}=fixture();

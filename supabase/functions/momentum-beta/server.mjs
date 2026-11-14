@@ -1,4 +1,5 @@
 import {auditView,callTool,definitions,HttpError,publicWorkspace,resolveApproval,validateWorkspace} from './tools.mjs';
+import {readWorkspaceWithMealInbox} from './meal-inbox.mjs';
 
 const scope='momentum:log';
 const clients=new Map([
@@ -246,7 +247,7 @@ export function createHandler({store,base,app,aiEnabled=false}) {
         return json(req,{revoked:true});
       }
       if(path==='/workspace'&&method==='GET'){
-        const {revision,state}=await store.getWorkspace(user);
+        const {revision,state}=await readWorkspaceWithMealInbox(store,user);
         return json(req,{revision,data:publicWorkspace(state),...auditView(state)});
       }
       if(path==='/workspace'&&method==='PUT'){

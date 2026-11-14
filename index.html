@@ -3269,10 +3269,15 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   /* the workout just finished: a class from the plan, or anything logged by hand or pulled from a watch */
   if(d.per!=="last"){ const acts=fusionActivities(d.tk), a=acts[acts.length-1], main=sessOf(d.tk,"main"), wo=a?{name:String(a.description||"Workout").trim().replace(/[.!]+$/,""),min:Math.round(+a.minutes||0),cal:Math.round(+a.caloriesBurned||0)}:main.done?{name:dayDef(d.tk).title,min:Math.round(totalTrainingMinutes(d.tk)),cal:0}:null;
     if(wo){ const bits=[wo.min?wo.min+" minutes":"",wo.cal?big1(wo.cal)+" calories":""].filter(Boolean).join(", "); add("workout","Today's workout",wo.name+". Done."+(bits?" "+bits+".":""),"Just finished: "+wo.name+(bits?", "+bits:"")+".",wo.cal?big1(wo.cal):wo.min||null,(wo.cal?"calories":"minutes")+" · "+wo.name) } }
-  if(isDay){ if(d.hf+d.fb>0) add("hands","High fives",hands+" today.",hands+" today. A high five is a palm of protein. A fist bump is a fist of fruit or veg.");
+  /* written for someone who has never opened the app: say what the number means, then ask if they got theirs */
+  if(isDay){ const pg=palmGoal(), fullF=d.fb>=FIST_GOAL, fullP=d.hf>=pg;
+    if(fullF&&fullP) add("full","Full day",pl(d.hf,"high five")+", "+pl(d.fb,"fist bump")+". Protein and produce: done. You?","Protein and produce are both in for the day: "+hands+"."+EXPL+" Did you get yours?");
+    if(fullF) add("fb","Fist bumps","Got my "+d.fb+" fist bumps today. Fruit and veg: done. Did you?","Got my "+d.fb+" fist bumps today, so my fruit and veg are in. Did you get yours?"+EXPL,d.fb,"fist bumps. My fruit and veg are in. Did you?");
+    if(fullP) add("hf","High fives","Got my "+d.hf+" high fives today. Protein: done. Did you?","Got my "+d.hf+" high fives today, so my protein is in. Did you get yours?"+EXPL,d.hf,"high fives. My protein is in. Did you?");
+    if(d.hf+d.fb>0) add("hands",fullF||fullP?"Both numbers":"High fives",hands+" today.",hands+" today."+EXPL+" How did you do?");
     if(d.ppts>0) add("dpts","Today's points",d.ppts+" Stack points today.",d.ppts+" Stack points today from moving, eating well and sleeping.",d.ppts,"Stack points today") }
   if(isMonth){ if(d.mpct!=null&&d.units>=20&&d.mpct>=70) add("mq","Quality meals",d.mpct+"% quality meals this month.",d.mpct+" percent of my meals were quality over the last 30 days. Protein and produce on the plate, no calorie counting.",d.mpct+"%","quality meals, last 30 days");
-    if(d.hf+d.fb>0) add("hands","High fives",hands+" in 30 days.",hands+" in the last 30 days. A high five is a palm of protein. A fist bump is a fist of fruit or veg.");
+    if(d.hf+d.fb>0) add("hands","High fives",hands+" in 30 days.",hands+" in the last 30 days."+EXPL+" What did your month look like?");
     if(d.ppts>0) add("mpts","Month's points",big1(d.ppts)+" Stack points in 30 days.",big1(d.ppts)+" Stack points in the last 30 days.",big1(d.ppts),"Stack points in 30 days") }
   /* body */
   const mm=span("mm"), bf=span("bf");
@@ -3299,7 +3304,7 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   if(fed&&d.wn.pct>=80) add("q80","80 percent",d.wn.pct+"% quality meals. Stretch goal hit.",d.wn.pct+" percent of my meals were quality this week. Protein and produce on the plate, no calorie counting.",d.wn.pct+"%","quality meals this week");
   else if(fed&&d.wn.pct>=70) add("q70","70 percent",d.wn.pct+"% quality meals. Majority rules.",d.wn.pct+" percent quality meals this week. Majority rules: eat well most of the time and the rest is yours.",d.wn.pct+"%","quality meals this week");
   if(fed&&d.wn.protein!=null&&d.wn.protein>=100) add("protein","Protein","Averaged "+Math.round(d.wn.protein)+" g of protein a day.","Averaged about "+Math.round(d.wn.protein)+" grams of protein a day this week, from a palm-size serving at every meal.",Math.round(d.wn.protein),"grams of protein a day");
-  if(d.weekly&&d.hf+d.fb>0) add("hands","High fives",hands+" this week.",hands+" this week. A high five is a palm of protein. A fist bump is a fist of fruit or veg.");
+  if(d.weekly&&d.hf+d.fb>0) add("hands","High fives",hands+" this week.",hands+" this week."+EXPL+" How was your week?");
   /* volume: minutes this week, workouts this month, best week yet */
   const mins=d.wk.reduce((s,k)=>s+totalTrainingMinutes(k),0);
   if(mins>=90) add("mins","Minutes trained",Math.round(mins)+" minutes of training this week.",Math.round(mins)+" minutes of training this week. Strength, cardio and ten minutes of mobility a day.",Math.round(mins),"minutes trained this week",weeksBack(8,r=>weekKeys(r).reduce((s,k)=>s+totalTrainingMinutes(k),0)));
@@ -3326,12 +3331,13 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   add("ownw","✎ A workout","","Got it done today.");
   add("own","✎ Write your own","","Proud of this one.");
   /* week-only numbers stay out of the day and month views, and the day view leads with today */
-  const weekOnly=["strength","q80","q70","protein","mins","best","sleep","sauna","mob","dry","pts"], lead=["workout","hands","dpts"];
+  const weekOnly=["strength","q80","q70","protein","mins","best","sleep","sauna","mob","dry","pts"], lead=["workout","full","fb","hf","hands","dpts"];
   const list=d.weekly?out:out.filter(h=>!weekOnly.includes(h.id));
   return isDay?[...lead.map(id=>list.find(h=>h.id===id)).filter(Boolean),...list.filter(h=>!lead.includes(h.id))]:list }
 function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||(recapPick==="workout"&&hs.find(h=>h.id==="ownw"))||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own"||pick.id==="ownw";
   if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
   return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
+const EXPL=" A high five is a palm of protein. A fist bump is a fist of fruit or veg.";
 const OWN_HINT="Type what you are proud of";
 const WORKOUT_IDEAS=["Strength day. Done.","Cardio. Done.","Won at pickup hoops.","Long walk with the dog.","New personal best."];
 function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
@@ -3370,6 +3376,8 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
     [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
       x.font="700 28px "+F2; const lw=x.measureText(lab).width+36; rr(px+18,py+18,lw,50,25); x.fillStyle=i?"#e2512a":"rgba(8,12,24,.72)"; x.fill(); x.fillStyle="#fff"; x.fillText(lab,px+36,py+53) });
     let y=headTop; x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  /* a one-line key, so the words make sense to someone who is not on the app */
+  if((layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands"].includes(st.pick.id)){ shadow(true); x.font="600 25px "+F2; x.fillStyle="rgba(255,255,255,.74)"; x.textAlign="center"; x.fillText("High five = a palm of protein   ·   Fist bump = a fist of fruit or veg",W/2,H-(story?104:30)); x.textAlign="left" }
   shadow(false); return c }
 function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return;
   if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>paintRecap(); recapLogo.src="./sd-icon-192.png" }

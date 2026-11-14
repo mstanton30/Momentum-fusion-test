@@ -1799,7 +1799,7 @@ function vHomeDashboard(){
  const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
- return header(BRAND,now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))+todayCard(k)+shareCard()+recipesCard()+weighCard()+`
+ return header(BRAND,now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))+todayCard(k)+homeShareCard()+recipesCard()+weighCard()+`
  <section aria-labelledby="home-week-title">
  <h2 id="home-week-title">Your week</h2>
  <div class="card">
@@ -3470,7 +3470,7 @@ document.addEventListener("input",e=>{ const id=e.target&&e.target.id, field=id=
 /* Home: one card to share anything, one for recipes. The weekly and monthly summaries surface themselves when they are ready. */
 function shareReady(){ const t=today(), dow=t.getDay(), dom=t.getDate(), last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
   if(dom<=2||dom===last) return ["month","Your month is ready to share"]; if(dow===6) return ["week","Your week is ready to share"]; if(dow<=1) return ["last","Last week is ready to share"]; return null }
-function shareCard(){ let tease=""; const keep=recapPeriod; try{ recapPeriod="day"; const h=recapHighlights(recapData())[0]; if(h&&h.head&&h.id!=="showed") tease=h.head }catch(e){} recapPeriod=keep;
+function homeShareCard(){ let tease=""; const keep=recapPeriod; try{ recapPeriod="day"; const h=recapHighlights(recapData())[0]; if(h&&h.head&&h.id!=="showed") tease=h.head }catch(e){} recapPeriod=keep;
   const rd=shareReady(), b=(v,l)=>`<button type="button" data-share-go="${v}">${l}</button>`;
   return `<div class="card sharehome"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Share</h2>${rd?`<span class="pill hot" style="flex:0 0 auto">Summary ready</span>`:""}</div>
   <p class="muted sm" style="margin:6px 0 0">${tease?"<b>Today:</b> "+esc(tease):"A post-ready image from your numbers, any time. Send it to the group chat."}</p>

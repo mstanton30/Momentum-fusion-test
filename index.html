@@ -337,6 +337,15 @@ summary::-webkit-details-marker{display:none}
 .recap-canvas.story{max-height:70vh;width:auto;max-width:100%;margin-left:auto;margin-right:auto}
 .chips label{background:var(--soft);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;font-family:var(--display);color:var(--fg);display:inline-flex;align-items:center;cursor:pointer}
 [data-recap-pick][aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;align-items:end;margin-bottom:14px}
+.pgrid>div{min-width:0}.pgrid .full{grid-column:1/-1}
+.pgrid label.f{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 6px}
+.pgrid input,.pgrid select{width:100%;height:48px;box-sizing:border-box;margin:0}
+.bp{display:flex;gap:8px;align-items:center}.bp input{flex:1;min-width:0;padding-left:8px;padding-right:8px;text-align:center}.bp span{color:var(--muted)}
+.pgrid .full .bp{max-width:calc(50% - 6px)}
+.phead{margin:6px 0 4px}
+details.phow{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0 0;margin:0 0 14px;background:none}
+details.phow p{margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -851,24 +860,40 @@ function baselineStamp(b){ if(b.at){ const t=new Date(b.at); if(!isNaN(t)) retur
 function baselineLine(b){ return [b.weightLb&&b.weightLb+" lb",b.bf&&b.bf+"% body fat",b.mm&&b.mm+" lb muscle",b.waist&&b.waist+" in waist",b.grip&&b.grip+" lb grip",b.rhr&&"resting HR "+b.rhr,b.sys&&b.dia&&"BP "+b.sys+"/"+b.dia].filter(Boolean).join(" · ") }
 function vOnboard(){
   const p=S.profile||{}, b=baselineOf(p), has=!!S.profile;
-  const nums=`<div class="row"><div class="field"><label class="f">Weight (lb)</label><input name="weightLb" type="number" step="0.1" inputmode="decimal" required value="${esc(b.weightLb||"")}"></div><div class="field"><label class="f">Body fat % (if known)</label><input name="bf" type="number" step="0.1" inputmode="decimal" value="${esc(b.bf||"")}"></div><div class="field"><label class="f">Muscle lb (if known)</label><input name="mm" type="number" step="0.1" inputmode="decimal" value="${esc(b.mm||"")}"></div></div>
-    <p class="muted xs" style="margin:0 0 10px">The four below are optional. Each one is here because large studies tie it to how long and how well people live, and because training moves it.</p>
-    <div class="row"><div class="field"><label class="f">Waist at the navel (in)</label><input name="waist" type="number" step="0.1" min="15" max="90" inputmode="decimal" value="${esc(b.waist||"")}"><p class="muted xs" style="margin:4px 0 0">Tracks the fat around your organs. Aim for under half your height.</p></div>
-    <div class="field"><label class="f">Grip strength (lb)</label><input name="grip" type="number" step="0.1" min="0" max="300" inputmode="decimal" value="${esc(b.grip||"")}"><p class="muted xs" style="margin:4px 0 0">A stand-in for whole-body strength. Best of three squeezes, stronger hand.</p></div></div>
-    <div class="row"><div class="field"><label class="f">Resting heart rate (bpm)</label><input name="rhr" type="number" step="1" min="25" max="150" inputmode="numeric" value="${esc(b.rhr||"")}"><p class="muted xs" style="margin:4px 0 0">From a watch, or a morning pulse before you get up. It drifts down as you get fitter.</p></div>
-    <div class="field"><label class="f">Blood pressure</label><div class="row tight" style="gap:6px;align-items:center"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}" style="flex:1"><span class="muted">/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}" style="flex:1"></div><p class="muted xs" style="margin:4px 0 0">Home cuff, after five quiet minutes sitting. The best-studied risk number there is.</p></div></div>
-    <p class="muted xs" style="margin:0 0 12px">No gripper? Any digital hand dynamometer works; the Camry EH101 is a common low-cost one.</p>`;
+  const cell=(label,inner,cls)=>`<div class="${cls||""}"><label class="f">${label}</label>${inner}</div>`;
+  const numIn=(name,val,o)=>`<input name="${name}" type="number" step="${o.step||"0.1"}" min="${o.min}" max="${o.max}" inputmode="${o.step==="1"?"numeric":"decimal"}" value="${esc(val||"")}" ${o.req?"required":`placeholder="optional"`}>`;
+  const nums=`<div class="pgrid">
+    ${cell("Weight (lb)",numIn("weightLb",b.weightLb,{min:50,max:700,req:true}))}
+    ${cell("Waist (in)",numIn("waist",b.waist,{min:15,max:90}))}
+    ${cell("Body fat (%)",numIn("bf",b.bf,{min:2,max:70}))}
+    ${cell("Muscle (lb)",numIn("mm",b.mm,{min:20,max:400}))}
+    ${cell("Grip strength (lb)",numIn("grip",b.grip,{min:0,max:300}))}
+    ${cell("Resting heart rate",numIn("rhr",b.rhr,{step:"1",min:25,max:150}))}
+    ${cell("Blood pressure",`<div class="bp"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}"><span>/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}"></div>`,"full")}
+  </div>`;
+  const how=`<details class="phow"><summary class="sm">How to take these</summary><div class="muted sm">
+    <p><b>Waist:</b> at the navel, relaxed. Aim for under half your height.</p>
+    <p><b>Grip:</b> best of three squeezes, stronger hand, on a digital hand dynamometer (the Camry EH101 is a common low-cost one).</p>
+    <p><b>Resting heart rate:</b> from a watch, or a morning pulse before you get up.</p>
+    <p><b>Blood pressure:</b> home cuff, after five quiet minutes sitting.</p>
+    <p style="margin:0"><b>Photo:</b> take one in the mirror today and keep it. It makes the best before and after.</p></div></details>`;
   return `<div class="onb"><div class="eyebrow">${has?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
-  <p class="muted">${has?"Who you are and where you started. Your current numbers live on Progress.":"One screen. It records who you are and where you are starting from, so a year from now you can see how far you have come. Everything stays on this phone."}</p>
-  <div class="card hero"><p style="margin:0">One plan for everyone. Follow it and watch your body composition and VO2 max improve, and your fitness age come down.</p></div>
+  <div class="card hero" style="margin-top:14px"><p style="margin:0">One plan for everyone. Follow it and watch your body composition and VO2 max improve, and your fitness age come down.</p></div>
   ${has?`<div class="card"><div class="eyebrow">Your starting point</div><h3 style="margin:4px 0 6px">${esc(baselineStamp(b)||"Start date not recorded")}</h3><p class="muted sm" style="margin:0">${esc(baselineLine(b)||"No starting numbers recorded")}</p></div>`:""}
   <form id="fOnboard" class="card">
-    <div class="row"><div class="field"><label class="f">First name</label><input name="name" required value="${esc(p.name||"")}"></div><div class="field"><label class="f">Age</label><input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}"></div></div>
-    <div class="row"><div class="field"><label class="f">Sex</label><select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select></div><div class="field"><label class="f">Height</label><div class="row tight" style="gap:6px"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" value="${p.heightIn?Math.floor(p.heightIn/12):""}" style="flex:1"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" value="${p.heightIn?p.heightIn%12:""}" style="flex:1"></div></div></div>
-    ${has?`<details style="margin-bottom:12px"><summary class="sm">Correct a starting number</summary><div><p class="muted xs">Only for fixing a mistake. New weigh-ins and tests go on Home and Progress, and leave your starting point as it was.</p>${nums}</div></details>`:`<h3 style="margin:6px 0 10px">Where you are starting</h3>${nums}<p class="muted xs" style="margin:-4px 0 12px">Worth doing today as well: take a photo in the mirror and keep it in your camera roll. It makes the best before and after later.</p>`}
-    <div class="field"><label class="f">Fitness test you will repeat</label><select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select></div>
-    <div class="field"><label class="f">What does better health mean to you? (optional)</label><input name="why" value="${esc(p.why||"")}" placeholder="e.g. keep up with the kids, no shoulder pain"></div>
+    <div class="pgrid">
+      ${cell("First name",`<input name="name" required value="${esc(p.name||"")}">`)}
+      ${cell("Age",`<input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}">`)}
+      ${cell("Sex",`<select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select>`)}
+      ${cell("Height",`<div class="bp"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" aria-label="Feet" value="${p.heightIn?Math.floor(p.heightIn/12):""}"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" aria-label="Inches" value="${p.heightIn?p.heightIn%12:""}"></div>`)}
+    </div>
+    ${has?`<details class="phow"><summary class="sm">Correct a starting number</summary><div><p class="muted xs">For fixing a mistake only. New weigh-ins and tests go on Home and Progress.</p>${nums}</div></details>`:`<h3 class="phead">Where you are starting</h3><p class="muted xs" style="margin:0 0 10px">Only weight is needed today. Add the rest when you have them.</p>${nums}${how}`}
+    <div class="pgrid">
+      ${cell("Fitness test you will repeat",`<select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select>`,"full")}
+      ${cell("What does better health mean to you?",`<input name="why" value="${esc(p.why||"")}" placeholder="optional">`,"full")}
+    </div>
     <div class="row tight"><button class="btn" type="submit">${has?"Save":"Set my starting point →"}</button>${has?`<button class="btn ghost" type="button" data-go="home">Cancel</button>`:""}</div>
+    <p class="muted xs" style="margin:12px 0 0">Stays on this phone.</p>
   </form></div>`;
 }
 

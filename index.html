@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="Health Stack">
 <meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.17.0">
+<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.18.0">
 <link rel="manifest" href="./manifest.json?v=sd-3">
-<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.17.0">
+<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.18.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.17.0</title>
+<title>SD Health Stack — Beta v9.18.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -32,8 +32,8 @@
   --bg:#0f1113; --panel:#191c1f; --fg:#eef0f2; --muted:#9aa3ab; --line:#2a2f34; --soft:#22272c;
   --accent:#ff6a3d; --accent-ink:#1a0b05; --green:#4fc38a; --amber:#e7b046; --blue:#6f9ae8; --red:#f28b82; color-scheme:dark }
 *{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;display:flex;flex-direction:column;min-height:100%}
+html{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 main{flex:1;padding:14px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));max-width:560px;width:100%;margin:0 auto}
 h1,h2,h3{font-family:var(--display);margin:0;line-height:1.1;text-wrap:balance}
@@ -263,6 +263,9 @@ summary::-webkit-details-marker{display:none}
 .tabbar button{padding:10px 2px 8px;font-size:.66rem;font-weight:600;letter-spacing:0;text-transform:none;gap:4px;position:relative;transition:color .15s ease}
 .tabbar button[aria-selected="true"]::before{content:"";position:absolute;top:0;left:50%;width:22px;height:3px;border-radius:0 0 3px 3px;background:var(--accent);transform:translateX(-50%)}
 .tabbar svg{width:23px;height:23px}
+/* Keep the bar pinned on iPhone: its own layer, and out of the way while the keyboard is up (a fixed bar rides up with the keyboard and can stay there) */
+.tabbar{transform:translateZ(0);-webkit-transform:translateZ(0)}
+body.typing .tabbar{display:none}
 /* Home: today's three */
 .today-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 0;color:inherit;transition:transform .12s ease}
 .today-row:first-of-type{border-top:0;margin-top:8px}
@@ -318,6 +321,7 @@ summary::-webkit-details-marker{display:none}
 .morebox{background:transparent;border:0;padding:0;margin-top:8px}
 .morebox>summary{padding:14px 2px;color:var(--muted)}
 .morebox>div{padding-top:4px}
+.build{display:grid;gap:8px;margin-top:10px}.build div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;align-items:baseline;font-size:.88rem}.build b{font-family:var(--display)}.build span{color:var(--muted)}
 .recap-canvas{width:100%;height:auto;display:block;border-radius:16px;margin-bottom:14px;background:#0c1730}
 @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes bump{0%{transform:translateY(6px);opacity:.3}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
@@ -357,6 +361,7 @@ details.phow p{margin:0 0 8px}
 .hm-bar{height:8px;border-radius:8px;background:var(--soft);overflow:hidden;margin-top:6px}.hm-bar i{display:block;height:100%;border-radius:8px;background:var(--green);transition:width .3s ease}
 .mealcard .seg button{font-size:.8rem;padding:10px 2px}
 .mealcard label.f{display:block;margin:0 0 6px}
+.tally{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}.tally>div{display:flex;align-items:baseline;gap:8px}.tally b{font-family:var(--display);font-size:1.7rem;font-weight:800;line-height:1}.tally span{color:var(--muted);font-size:.86rem}.tally-minus{width:44px;height:44px;border-radius:12px;border:1px solid var(--line,rgba(0,0,0,.14));background:transparent;color:var(--fg);font-size:1.3rem;font-weight:700}.tally-minus:disabled,.tally .btn:disabled{opacity:.35}
 </style>
 </head>
 <body>
@@ -369,7 +374,7 @@ details.phow p{margin:0 0 8px}
 
 <script src="./backup.js"></script>
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.17.0"></script>
+<script src="./beta-config.js?v=9.18.0"></script>
 <script>
 (function(){
 "use strict";
@@ -379,7 +384,7 @@ const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19
 
 /* =========================== PROGRAM CONTENT =========================== */
 /* Temporary name (SD = Stanton and Day; navy is the brand colour, orange stays the one accent). Storage keys and file names keep the old name so nobody loses data. */
-const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.17.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
+const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.18.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
 const ICON={
  book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
@@ -493,7 +498,7 @@ const DEFAULT={
  swaps:{},           // per date: day type override for that date only
  lessons:{},         // per date: true once that day's lesson is read
  meals:{},rewards:{},supps:{},
- weigh:[],tests:[],heat:[],cold:[],medit:[],roll:[],light:[],sleep:{},extras:[]
+ weigh:[],tests:[],heat:[],cold:[],medit:[],roll:[],light:[],sleep:{},extras:[],recipes:{}
 };
 let activeWorkspace=null,guestWorkspace=null;
 let S=load()||structuredClone(DEFAULT);
@@ -531,7 +536,7 @@ function bmiLabel(b){ if(b==null) return ""; return b<18.5?"underweight":b<25?"n
 function idealWeightLb(){ const p=S.profile||{}, h=+p.heightIn||0; if(!h) return null; const over=h-60; return Math.round(p.sex==="f"?100+5*over:106+6*over) }
 function proteinRange(){ const w=idealWeightLb(); return w?[Math.round(w*0.75),Math.round(w)]:null }
 /* The whole plan in hands: a palm of protein is about 30 g, a fist of fruit or veg about 130 g, so 6 fists is roughly 800 g. */
-const FIST_GOAL=6, FIST_GRAMS=130;
+const SNACK_MAX=6, EXTRA_MAX=2, FIST_GOAL=6, FIST_GRAMS=130;
 function palmGoal(){ const w=idealWeightLb(); return w?Math.min(7,Math.max(3,Math.round(w*0.875/PROTEIN_PER_SERVING))):((S.profile||{}).sex==="f"?4:5) }
 /* A plate, answered in three taps: palms of protein, fists of produce, and whether the rest of the plate is about a fist or more.
    Quality needs a palm, a fist, and the rest kept to about a fist. One piece missing, or a heaped rest, is in-between. Nothing is off plan. */
@@ -625,7 +630,8 @@ function pointBreakdown(k){
   const supplements=S.supps[k]||{};
   for(const item of SUPPS)if(supplements[item.k])benefits+=item.pts;
   for(const key of ['heat','cold','medit','roll','light']){
-    benefits+=S[key].filter(entry=>entry.d===k).length*PTS[key];
+    const day=S[key].filter(entry=>entry.d===k); // each scores once a day, however many sessions are logged; sauna and hot soak score separately
+    if(key==='heat')benefits+=((day.some(e=>e.kind!=='soak')?1:0)+(day.some(e=>e.kind==='soak')?1:0))*PTS.heat; else if(day.length)benefits+=PTS[key];
   }
   if((S.lessons||{})[k])benefits+=PTS.lesson; // the daily lesson scores with the habit/benefit points
   const hours=sleepHours(k);
@@ -853,7 +859,8 @@ const TABS=[
  {id:"progress",label:"Progress",icon:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></svg>',view:()=>vTrack()+whyBlock("progress")},
  {id:"lessons",hidden:true,label:"Lessons",icon:"",view:()=>vLibrary()},
  {id:"grocery",hidden:true,label:"Groceries",icon:"",view:()=>header("Groceries","Your weekly list")+groceryPanel()+`<button class="btn small ghost" type="button" data-go="nutrition">Back to Nutrition</button>`},
- {id:"recap",hidden:true,label:"Recap",icon:"",view:()=>vRecap()}
+ {id:"recap",hidden:true,label:"Recap",icon:"",view:()=>vRecap()},
+ {id:"recipes",hidden:true,label:"Recipes",icon:"",view:()=>vRecipes()}
 ];
 const tabAliases={track:"progress",supps:"benefits",perks:"benefits"};
 let benefitPane=location.hash==="#perks"?"perks":"supplements";
@@ -1071,6 +1078,7 @@ function vNutrition(){
    <h2 style="margin:0 0 6px">The plate</h2>
    <div class="plate-row"><div><span class="hand">✋</span><b>1 palm</b><span>protein</span></div><div><span class="hand">✊✊</span><b>2 fists</b><span>fruit or veg</span></div><div><span class="hand">✊</span><b>1 fist</b><span>everything else</span></div></div>
    <p class="muted sm" style="margin:10px 0 0">Build most meals like that and the day takes care of itself: <b>${pg} palms</b> of protein and <b>${FIST_GOAL} fists</b> of produce. No counting, no weighing.</p>
+   <p class="muted sm" style="margin:8px 0 0">On the scoreboard every palm of protein is a <b>high five</b> 🙌 and every fist of produce is a <b>fist bump</b> 👊.</p>
    <details class="xs"><summary>Where those numbers come from</summary><div>
     <p><b>Protein:</b> 0.75 to 1 gram per pound of your <b>ideal</b> body weight, the weight a healthy build carries at your height. It is not your current weight.${iw&&pr?` For you that is about ${iw} lb, so ${pr[0]} to ${pr[1]} g a day. A palm is about ${PROTEIN_PER_SERVING} g, which makes ${pg} palms.`:` Add your height in your profile to see yours.`}</p>
     <p><b>Produce:</b> the research keeps landing near 800 grams of fruit and vegetables a day. A fist is roughly ${FIST_GRAMS} g, so ${FIST_GOAL} fists gets you there.</p>
@@ -1078,9 +1086,16 @@ function vNutrition(){
     <p style="margin:0"><b>A fist is</b> an apple, a banana, a cup of berries, a cup of cooked vegetables, or two big handfuls of salad.</p></div></details>
   </div>
   <div class="navrow"><button data-nut="-1" aria-label="Previous day">‹</button><h2 style="margin:0">${key===tk?"Today":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2><button data-nut="1" aria-label="Next day" ${key>=tk?"disabled":""}>›</button></div>
-  <div class="card"><div class="hmeters">${meter(palms,pg,"palms")}${meter(fists,FIST_GOAL,"fists")}</div></div>
+  <div class="card"><div class="hmeters">${meter(palms,pg,"high fives 🙌")}${meter(fists,FIST_GOAL,"fist bumps 👊")}</div></div>
   ${MEALS.map(([id,name])=>{
    const x=m[id]||{}, state=mealRating(x), touched=!!x.plate, p=touched?(+x.p||0):"", f=touched?Math.min(2,(+x.f||0)+(+x.v||0)):"", rest=touched?(x.rest||""):"";
+   /* Snacks add up through the day, so they tally one at a time instead of picking a size */
+   if(id==="s"){ const sp=+x.p||0, sf=(+x.f||0)+(+x.v||0), tally=(field,n,one,many,emoji)=>`<div class="tally"><button type="button" class="tally-minus" data-plate-add="s" data-f="${field}" data-v="-1" aria-label="Remove one ${one}" ${n>0?"":"disabled"}>−</button><div><b>${n}</b><span>${n===1?one:many}</span></div><button type="button" class="btn small" data-plate-add="s" data-f="${field}" data-v="1" ${n>=SNACK_MAX?"disabled":""}>+1 ${one} ${emoji}</button></div>`;
+    return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}s</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
+    <p class="muted sm" style="margin:6px 0 12px">Tap once for each one you have through the day.</p>
+    <label class="f">Protein</label>${tally("p",sp,"palm","palms","🙌")}
+    <label class="f" style="margin-top:12px">Fruit and veg</label>${tally("f",sf,"fist","fists","👊")}
+    ${state?`<button class="del xs" data-mealset="${id}" data-v="" style="text-decoration:underline;margin-top:10px">Clear</button>`:""}</div>` }
    return `<div class="card mealcard"><div class="meal" style="margin-top:0"><b>${name}</b><span class="${state==="q"?"pill ok":state==="m"?"pill warn":state==="n"?"pill bad":"pill"}">${state==="q"?"Quality +"+PTS.meal:state==="m"?"In-between · ½":state==="n"?"Off plan":"Not logged"}</span></div>
    <button class="btn small ${state==="q"&&touched&&x.p==1&&f==2&&rest!=="more"?"":"ghost"}" type="button" data-plate-plan="${id}" style="width:100%;justify-content:center;margin:10px 0 12px">✋ ✊✊ On plan: a palm and two fists</button>
    <label class="f">Protein</label>${pick(id,"p",p,[[0,"None"],[1,"1 palm"],[2,"2 palms"]])}
@@ -1149,7 +1164,7 @@ function vPerks(){
   const recent=l=>[...l].sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
   const tbl=(l,k)=>recent(l).length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent(l).map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:"";
   return `
-  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat} a session; the rest are +1.</p>
+  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat}; the rest are +1. Each one scores once a day, and you can log up to two sessions of each.</p>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Sauna</h3><span class="pill ${hm>=60?"ok":""}">${hm} / 60 min this week</span></div>
   <div class="meter"><i style="width:${Math.min(100,hm/60*100)}%"></i></div>
   <p style="margin-top:10px"><b>Target:</b> 3 sessions of ~20 minutes a week, 170–200°F.</p>
@@ -1784,7 +1799,7 @@ function vHomeDashboard(){
  const weekMin=wk.reduce((n,x)=>n+totalTrainingMinutes(x),0);
  const coach=fDailyCoach();const weight=latestWeight();
  const workoutNames=[...scheduled.map(x=>x.title),...activities.map(x=>x.description||'Custom workout')];
- return header(BRAND,now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))+todayCard(k)+weighCard()+`
+ return header(BRAND,now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))+todayCard(k)+homeShareCard()+recipesCard()+weighCard()+`
  <section aria-labelledby="home-week-title">
  <h2 id="home-week-title">Your week</h2>
  <div class="card">
@@ -1793,7 +1808,6 @@ function vHomeDashboard(){
  <div class="home-progress-row"><b>Strength days</b><span>${weekQuota(now).strengthDone} of ${weekQuota(now).strength}</span></div>
  <div class="home-progress-row"><b>Quality meals</b><span>${nutrition.pct==null?'—':nutrition.pct+'%'} · ${nutrition.q+nutrition.n} rated</span></div>
  <div class="home-progress-row"><b>Friday check-in</b><span>${checkIn}</span></div>
- <button class="btn small ghost" type="button" data-go="recap" style="margin-top:16px">${ICON.share} Share my week</button>
  </div></section>
  <details class="morebox"><summary>Stack points, activity and coach</summary><div>
  <div class="card home-points-summary"><h2>Stack points</h2>
@@ -1825,7 +1839,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.17.0</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.18.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -2066,8 +2080,8 @@ function nutritionProgress(weeks){
  return `<h2>Nutrition</h2><div class="card"><h3>Meal quality and goals</h3><p class="muted sm">The quality score uses rated meals and rewards. Palms and fists are averages for the days you logged.</p><button class="btn small ghost" data-go="nutrition">Open Nutrition</button></div>
  ${progressChart('Weekly meal quality',series(w=>w.n.pct),'%',{baseline:80,baselineLabel:'Program reference'})}
  ${progressChart('Days with meals logged',series(w=>w.mealDays),' days')}
- ${progressChart('Palms of protein a day',series(w=>w.n.protein==null?null:Math.round(w.n.protein/PROTEIN_PER_SERVING*10)/10),' palms',{baseline:palmGoal(),baselineLabel:'Your goal'})}
- ${progressChart('Fists of fruit and veg a day',series(w=>w.n.produce==null?null:Math.round(w.n.produce*10)/10),' fists',{baseline:FIST_GOAL,baselineLabel:'Goal'})}`;
+ ${progressChart('High fives a day · palms of protein',series(w=>w.n.protein==null?null:Math.round(w.n.protein/PROTEIN_PER_SERVING*10)/10),' high fives',{baseline:palmGoal(),baselineLabel:'Your goal'})}
+ ${progressChart('Fist bumps a day · fists of fruit and veg',series(w=>w.n.produce==null?null:Math.round(w.n.produce*10)/10),' fist bumps',{baseline:FIST_GOAL,baselineLabel:'Goal'})}`;
 }
 document.addEventListener('click',e=>{
  const button=e.target.closest('[data-benefit],[data-progress-pane],[data-progress-range]');if(!button)return;
@@ -2176,7 +2190,7 @@ async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=
 function backupHelp(){return `<div class="note sm"><b>Portable backup</b><p>Export this profile’s logs, plans, saved meals/workouts, preferences and locally saved photos to a private JSON file. Save it in Files and confirm it exists before removing the app. Imports replace this profile’s local data, not merge it. Other profiles, sign-in credentials, notification permissions and connections are not backed up. Cloud health readings already loaded here are saved as a snapshot; reconnect for newer readings.</p>${F.backupSyncPaused?'<p><b>Cloud sync is paused after restore.</b> Your restored data stays on this device until you choose to resume. This protects it from being replaced by an older cloud copy.</p><button class="btn small ghost" id="backup-resume">Review and resume cloud sync</button>':''}<p id="backup-status" role="status"></p></div>`}
 function exportData(){
  try{
-  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.17.0',accountId:activeWorkspace});
+  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.18.0',accountId:activeWorkspace});
   const text=JSON.stringify(bundle,null,1);if(new TextEncoder().encode(text).length>window.MomentumBackup.MAX_BYTES)throw Error('Backup exceeds 25 MB. Do not remove the app; reduce photo sizes or ask for help first.');
   const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='momentum-backup-'+ymd(today())+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -3238,24 +3252,45 @@ document.addEventListener('click',async e=>{
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null, altOther=null, lastScore=[];
 /* Weekly recap: a square image to post or send to the group, with an optional photo behind it */
-/* Share my week: a post-ready image. The app suggests the highlight from the week or the month, the words stay editable, photos are encouraged. */
-let recapPhoto=null, recapPhoto2=null, recapOffset=0, recapPick=null, recapHead=null, recapSub=null, recapCap=null, recapOwnBig="", recapLayout="big", recapSize="square", recapLogo=null;
+/* Share: a post-ready image for today, the week or the month. The app suggests the highlight, the words stay editable, photos are encouraged. */
+let recapPhoto=null, recapPhoto2=null, recapPeriod="week", recapPick=null, recapHead=null, recapSub=null, recapCap=null, recapOwnBig="", recapLayout="big", recapSize="square", recapLogo=null;
 const RECAP_TAGS="#StackTheDay #SDHealthStack";
 const PHOTO_IDEAS=["Before and after","Flexing a bicep","Mid push-up","Making the smoothie","A quality plate","Post-workout selfie","Your walk or ride","The weights you lifted"];
-function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref);
+function recapData(){ const per=recapPeriod, weekly=per==="week"||per==="last", ref=today(); if(per==="last") ref.setDate(ref.getDate()-7); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref), tk=ymd(today());
+  const keys=per==="day"?[tk]:per==="month"?Array.from({length:30},(_,i)=>shiftDate(tk,i-29)):wk.filter(k=>k<=tk);
   const mob=wk.filter(k=>sessOf(k,"mob").done||(dayTypeFor(k)==="yoga"&&sessOf(k,"main").done)).length, drinks=wn.alcohol||0, pts=weekPoints(ref), need=q.strength||3;
   const nudge=q.strengthDone<need?(need-q.strengthDone)+" more strength day"+(need-q.strengthDone===1?"":"s")+" would have made the full week. Put them on the calendar first.":wn.pct!=null&&wn.pct<70?"Meals came in under 70 percent. Start with protein at breakfast.":drinks>7?"Drinks were over seven. Aim to come in under next week.":mob<5?"Mobility was light. Ten minutes after each workout covers it.":"Nothing to fix. Do the same again.";
   const tiles=[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Stack points"]];
+  /* High fives are palms of protein, fist bumps are fists of produce: same count, friendlier words for the scoreboard */
+  const dn=keys.map(k=>dayNutrition(k)), r1=n=>Math.round(n*10)/10, hf=r1(dn.reduce((t,n)=>t+n.p+(n.drink?1:0),0)), fb=r1(dn.reduce((t,n)=>t+(n.produce||0),0));
+  const units=dn.reduce((t,n)=>t+n.units,0), mpct=units?Math.round(dn.reduce((t,n)=>t+n.credit,0)/units*100):null;
+  const ppts=per==="day"?dayPoints(tk):per==="month"?keys.reduce((t,k)=>t+dayPoints(k),0):pts, mins=Math.round(keys.reduce((t,k)=>t+totalTrainingMinutes(k),0)), workouts=keys.filter(k=>sessOf(k,"main").done||fusionActivities(k).length).length;
   /* On the image, only numbers worth showing: nothing empty, no zeros, and drinks stay private */
-  const show=[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]].filter(Boolean);
-  return {ref,wk,q,wn,mob,drinks,pts,need,nudge,tiles,show,top:show.slice(0,3)} }
+  const show=(per==="day"?[hf>0&&[hf+"/"+palmGoal(),"🙌 High fives"],fb>0&&[fb+"/"+FIST_GOAL,"👊 Fist bumps"],ppts>0&&[String(ppts),"Stack points"],mins>0&&[String(mins),"Minutes"]]
+    :per==="month"?[workouts>0&&[String(workouts),"Workouts"],mpct!=null&&units>=20&&[mpct+"%","Quality meals"],ppts>0&&[String(ppts),"Stack points"],hf>0&&[String(hf),"🙌 High fives"],fb>0&&[String(fb),"👊 Fist bumps"],mins>0&&[String(mins),"Minutes"]]
+    :[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],hf>0&&[String(hf),"🙌 High fives"],fb>0&&[String(fb),"👊 Fist bumps"],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]]).filter(Boolean).slice(0,6);
+  const label=per==="day"?today().toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}):per==="month"?"Last 30 days":fmt(wk[0])+" – "+fmt(wk[6]);
+  return {per,weekly,tk,keys,ref,wk,q,wn,mob,drinks,pts,need,nudge,tiles,show,top:show.slice(0,3),hf,fb,mpct,units,ppts,mins,workouts,label} }
 /* Every highlight the data supports, best first. The first one is the suggestion. Each can carry a big number and a trend line for the Big number look. */
 function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(1).replace(/\.0$/,""), sign=n=>(n>0?"+":"−")+num(Math.abs(n));
   const add=(id,label,head,cap,big,biglab,series)=>out.push({id,label,head,cap:cap+" What's your stack? "+RECAP_TAGS,big:big==null?null:String(big),biglab:biglab||"",series:(series||[]).filter(v=>v!=null&&isFinite(v))});
   const end=ymd(d.ref), from=shiftDate(end,-35), all=bodyRows().filter(r=>r.d<=end), rows=all.filter(r=>r.d>=from), col=(key,src)=>(src||all).map(r=>valueOrNull(r[key])).filter(v=>v!=null);
   const span=(key)=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
   const weeksBack=(n,fn)=>{ const xs=[]; for(let i=n-1;i>=0;i--){ const r=new Date(d.ref); r.setDate(r.getDate()-7*i); xs.push(fn(r)) } return xs };
-  const three=d.need===3?"three":String(d.need), fed=(d.wn.units||0)>=9;
+  const three=d.need===3?"three":String(d.need), fed=(d.wn.units||0)>=9, isDay=d.per==="day", isMonth=d.per==="month", pl=(n,w)=>n+" "+w+(n===1?"":"s"), hands=pl(d.hf,"high five")+" and "+pl(d.fb,"fist bump"), big1=n=>n.toLocaleString("en-US");
+  /* the workout just finished: a class from the plan, or anything logged by hand or pulled from a watch */
+  if(d.per!=="last"){ const acts=fusionActivities(d.tk), a=acts[acts.length-1], main=sessOf(d.tk,"main"), wo=a?{name:String(a.description||"Workout").trim().replace(/[.!]+$/,""),min:Math.round(+a.minutes||0),cal:Math.round(+a.caloriesBurned||0)}:main.done?{name:dayDef(d.tk).title,min:Math.round(totalTrainingMinutes(d.tk)),cal:0}:null;
+    if(wo){ const bits=[wo.min?wo.min+" minutes":"",wo.cal?big1(wo.cal)+" calories":""].filter(Boolean).join(", "); add("workout","Today's workout",wo.name+". Done."+(bits?" "+bits+".":""),"Just finished: "+wo.name+(bits?", "+bits:"")+".",wo.cal?big1(wo.cal):wo.min||null,(wo.cal?"calories":"minutes")+" · "+wo.name) } }
+  /* written for someone who has never opened the app: say what the number means, then ask if they got theirs */
+  if(isDay){ const pg=palmGoal(), fullF=d.fb>=FIST_GOAL, fullP=d.hf>=pg;
+    if(fullF&&fullP) add("full","Full day",pl(d.hf,"high five")+" 🙌 "+pl(d.fb,"fist bump")+" 👊 Protein and produce: done. You?","Protein and produce are both in for the day: "+hands+"."+EXPL+" Did you get yours?");
+    if(fullF) add("fb","Fist bumps","Got my "+d.fb+" fist bumps today 👊 Fruit and veg: done. Did you?","Got my "+d.fb+" fist bumps today 👊 so my fruit and veg are in. That is about 800 grams, the amount the research keeps landing on. Did you get yours?"+EXPL,d.fb,"fist bumps 👊 My fruit and veg are in. Did you?");
+    if(fullP) add("hf","High fives","Got my "+d.hf+" high fives today 🙌 Protein: done. Did you?","Got my "+d.hf+" high fives today 🙌 so my protein is in: about "+d.hf*PROTEIN_PER_SERVING+" grams. The target is 0.75 to 1 gram per pound of ideal body weight. Did you get yours?"+EXPL,d.hf,"high fives 🙌 My protein is in. Did you?");
+    if(d.hf+d.fb>0) add("hands",fullF||fullP?"Both numbers":"High fives",hands+" today.",hands+" today."+EXPL+" How did you do?");
+    if(d.ppts>0) add("dpts","Today's points",d.ppts+" Stack points today.",d.ppts+" Stack points today from moving, eating well and sleeping.",d.ppts,"Stack points today") }
+  if(isMonth){ if(d.mpct!=null&&d.units>=20&&d.mpct>=70) add("mq","Quality meals",d.mpct+"% quality meals this month.",d.mpct+" percent of my meals were quality over the last 30 days. Protein and produce on the plate, no calorie counting.",d.mpct+"%","quality meals, last 30 days");
+    if(d.hf+d.fb>0) add("hands","High fives",hands+" in 30 days.",hands+" in the last 30 days."+EXPL+" What did your month look like?");
+    if(d.ppts>0) add("mpts","Month's points",big1(d.ppts)+" Stack points in 30 days.",big1(d.ppts)+" Stack points in the last 30 days.",big1(d.ppts),"Stack points in 30 days") }
   /* body */
   const mm=span("mm"), bf=span("bf");
   if(mm!=null&&mm>=0.5) add("muscle","Muscle up","Up "+num(mm)+" lb of muscle this month.","Muscle is up "+num(mm)+" lb over the last month. Three strength days a week and protein at every meal.",sign(mm),"lb of muscle, this month",col("mm").slice(-12));
@@ -3281,6 +3316,7 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   if(fed&&d.wn.pct>=80) add("q80","80 percent",d.wn.pct+"% quality meals. Stretch goal hit.",d.wn.pct+" percent of my meals were quality this week. Protein and produce on the plate, no calorie counting.",d.wn.pct+"%","quality meals this week");
   else if(fed&&d.wn.pct>=70) add("q70","70 percent",d.wn.pct+"% quality meals. Majority rules.",d.wn.pct+" percent quality meals this week. Majority rules: eat well most of the time and the rest is yours.",d.wn.pct+"%","quality meals this week");
   if(fed&&d.wn.protein!=null&&d.wn.protein>=100) add("protein","Protein","Averaged "+Math.round(d.wn.protein)+" g of protein a day.","Averaged about "+Math.round(d.wn.protein)+" grams of protein a day this week, from a palm-size serving at every meal.",Math.round(d.wn.protein),"grams of protein a day");
+  if(d.weekly&&d.hf+d.fb>0) add("hands","High fives",hands+" this week.",hands+" this week."+EXPL+" How was your week?");
   /* volume: minutes this week, workouts this month, best week yet */
   const mins=d.wk.reduce((s,k)=>s+totalTrainingMinutes(k),0);
   if(mins>=90) add("mins","Minutes trained",Math.round(mins)+" minutes of training this week.",Math.round(mins)+" minutes of training this week. Strength, cardio and ten minutes of mobility a day.",Math.round(mins),"minutes trained this week",weeksBack(8,r=>weekKeys(r).reduce((s,k)=>s+totalTrainingMinutes(k),0)));
@@ -3291,25 +3327,31 @@ function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(
   /* recovery */
   const slept=d.wk.filter(k=>{ const h=sleepHours(k); return h!=null&&h>=7 }).length;
   if(slept>=5) add("sleep","Sleep","Seven hours or more, "+slept+" nights.","Seven-plus hours of sleep on "+slept+" nights this week. Sleep is when the work pays off.",slept+"/7","nights of 7+ hours");
-  const saunas=(S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).length;
-  if(saunas>=3) add("sauna","Sauna",saunas+" sauna sessions this week.",saunas+" sauna sessions this week, on top of the training.",saunas,"sauna sessions this week");
-  const streak=recapOffset?0:mobStreak();
+  const saunas=new Set((S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).map(x=>x.d)).size;
+  if(saunas>=3) add("sauna","Sauna","Sauna on "+saunas+" days this week.","Sauna on "+saunas+" days this week, on top of the training.",saunas,"sauna days this week");
+  const streak=d.per==="last"?0:mobStreak();
   if(streak>=7) add("streak","Days stacked",streak+" days stacked.",streak+" days in a row with mobility done. Ten minutes a day is the whole trick.",streak,"days stacked");
   else if(d.mob>=5) add("mob","Mobility","Mobility "+d.mob+" of 7 days.","Stretched on "+d.mob+" of seven days this week. It is the part everyone skips.",d.mob+"/7","days of mobility");
   /* the long view */
-  const w4=fourWeekWeight(0), p4=fourWeekWeight(4); if(!recapOffset&&w4!=null&&p4!=null&&p4-w4>=1) add("trend","Weight trend","Four-week average down "+num(p4-w4)+" lb.","My four-week average is down "+num(p4-w4)+" lb. One weigh-in a week and I read the trend, not the day.",sign(w4-p4),"lb, four-week average",weeklyWeights().map(x=>x.w).slice(-12));
+  const w4=fourWeekWeight(0), p4=fourWeekWeight(4); if(d.per!=="last"&&w4!=null&&p4!=null&&p4-w4>=1) add("trend","Weight trend","Four-week average down "+num(p4-w4)+" lb.","My four-week average is down "+num(p4-w4)+" lb. One weigh-in a week and I read the trend, not the day.",sign(w4-p4),"lb, four-week average",weeklyWeights().map(x=>x.w).slice(-12));
   const day=programDay(end)+1; if(S.profile&&S.profile.start&&day>=7) add("day","Day "+day,"Day "+day+" of 365.","Day "+day+" of a year-long program. One lesson, one workout and three meals at a time.",day,"of 365 days");
   const read=lessonsRead().size; if(read>=10) add("lessons","Lessons read",read+" lessons in.",read+" daily lessons read so far. One idea a day adds up.",read,"lessons read");
   if(fed&&d.drinks===0) add("dry","Zero drinks","Zero drinks this week.","A week with no drinks. Sleep and recovery noticed.","0","drinks this week");
   if(d.pts>0) add("pts","Stack points",d.pts+" Stack points this week.",d.pts+" Stack points this week from moving, eating well and sleeping.",d.pts,"Stack points this week",ptsWeeks);
-  add("showed","Showed up",d.pts>0?"Showed up and logged it.":"A new week starts now.","Showed up this week. Small steps, stacked.");
+  add("showed","Showed up",d.ppts>0?"Showed up and logged it.":isDay?"Today starts now.":"A new week starts now.","Showed up "+(isDay?"today":isMonth?"this month":"this week")+". Small steps, stacked.");
   /* always last: their own words, for the thing no tracker can see */
+  add("ownw","✎ A workout","","Got it done today.");
   add("own","✎ Write your own","","Proud of this one.");
-  return out }
-function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own";
+  /* week-only numbers stay out of the day and month views, and the day view leads with today */
+  const weekOnly=["strength","q80","q70","protein","mins","best","sleep","sauna","mob","dry","pts"], lead=["workout","full","fb","hf","hands","dpts"];
+  const list=d.weekly?out:out.filter(h=>!weekOnly.includes(h.id));
+  return isDay?[...lead.map(id=>list.find(h=>h.id===id)).filter(Boolean),...list.filter(h=>!lead.includes(h.id))]:list }
+function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||(recapPick==="workout"&&hs.find(h=>h.id==="ownw"))||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own"||pick.id==="ownw";
   if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
   return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
+const EXPL=" 🙌 A high five is a palm of protein, about "+PROTEIN_PER_SERVING+" grams. 👊 A fist bump is a fist of fruit or veg, and "+FIST_GOAL+" a day is about 800 grams.";
 const OWN_HINT="Type what you are proud of";
+const WORKOUT_IDEAS=["Strength day. Done.","Cardio. Done.","Won at pickup hoops.","Long walk with the dog.","New personal best."];
 function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
   const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
@@ -3317,6 +3359,7 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;;s=Math.max(44,s-6)){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
   x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
   const bg=layout==="split"?null:recapPhoto;
+  const keyOn=(layout==="stats"?d.show:d.top).some(t=>/High fives|Fist bumps/.test(t[1]))||["full","fb","hf","hands"].includes(st.pick.id), keyPad=keyOn?(story?20:44):0;
   if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);
     if(layout==="photo"){ g.addColorStop(0,"rgba(8,12,24,.66)"); g.addColorStop(.2,"rgba(8,12,24,.06)"); g.addColorStop(.48,"rgba(8,12,24,.1)"); g.addColorStop(.7,"rgba(8,12,24,.78)"); g.addColorStop(1,"rgba(8,12,24,.96)") }
     else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,layout==="big"?"rgba(8,12,24,.5)":"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
@@ -3326,37 +3369,41 @@ function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="s
   /* brand row */
   const top=story?150:66; if(recapLogo&&recapLogo.complete&&recapLogo.naturalWidth){ x.save(); rr(M,top,72,72,17); x.clip(); x.drawImage(recapLogo,M,top,72,72); x.restore() }
   shadow(true); x.fillStyle="#fff"; x.font="800 40px "+F1; x.fillText("SD HEALTH STACK",M+90,top+42); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.fillText("Stack the day.",M+91,top+80);
-  x.font="600 30px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-M,top+54); x.textAlign="left";
+  x.font="600 30px "+F2; x.textAlign="right"; x.fillText(d.label,W-M,top+54); x.textAlign="left";
   const strip=(yTop)=>{ shadow(false); const gap=24, tw=(W-2*M-gap*2)/3, th=150; d.top.forEach(([v,lab],i)=>{ const px=M+i*(tw+gap); rr(px,yTop,tw,th,26); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.font="800 64px "+F1; x.fillText(v,px+24,yTop+78); x.fillStyle="rgba(255,255,255,.78)"; x.font="600 26px "+F2; x.fillText(lab,px+24,yTop+122) }) };
   /* their own words are optional: the prompt shows in the preview only, never on the shared image */
   const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
   if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
-    shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-th*rows-gap*(rows-1);
+    shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-keyPad-th*rows-gap*(rows-1);
     d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
   else if(layout==="big"){ const p=st.pick, cy=story?560:290; shadow(true); x.fillStyle="#fff"; let s=story?420:300; x.font="800 "+s+"px "+F1; while(x.measureText(p.big).width>W-2*M&&s>120){ s-=20; x.font="800 "+s+"px "+F1 }
     const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; { let ls=story?52:42; x.font="700 "+ls+"px "+F2; while(x.measureText(subText).width>W-2*M&&ls>28){ ls-=2; x.font="700 "+ls+"px "+F2 } } x.fillText(subText,M,by+(story?112:100));
-    const stripY=H-(story?170:80)-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
+    const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
     if(ser.length>=3&&room>=100){ shadow(false); const lo=Math.min(...ser), hi=Math.max(...ser), ch=Math.min(room,story?420:200), w=W-2*M, px=i=>M+i*w/(ser.length-1), py=v=>top2+ch-(hi===lo?.5:(v-lo)/(hi-lo))*(ch-24)-12;
       const area=x.createLinearGradient(0,top2,0,top2+ch); area.addColorStop(0,"rgba(255,122,82,.35)"); area.addColorStop(1,"rgba(255,122,82,0)"); x.beginPath(); x.moveTo(px(0),top2+ch); ser.forEach((v,i)=>x.lineTo(px(i),py(v))); x.lineTo(px(ser.length-1),top2+ch); x.closePath(); x.fillStyle=area; x.fill();
       x.beginPath(); ser.forEach((v,i)=>i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v))); x.strokeStyle="#ff7a52"; x.lineWidth=8; x.lineJoin="round"; x.lineCap="round"; x.stroke();
       const lx=px(ser.length-1), ly=py(ser[ser.length-1]); x.beginPath(); x.arc(lx,ly,16,0,Math.PI*2); x.fillStyle="#fff"; x.fill(); x.beginPath(); x.arc(lx,ly,8,0,Math.PI*2); x.fillStyle="#ff7a52"; x.fill() }
     if(d.top.length) strip(stripY) }
-  else if(layout==="photo"){ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
-  else{ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
+  else if(layout==="photo"){ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  else{ const stripY=H-(story?170:80)-keyPad-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
     [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
       x.font="700 28px "+F2; const lw=x.measureText(lab).width+36; rr(px+18,py+18,lw,50,25); x.fillStyle=i?"#e2512a":"rgba(8,12,24,.72)"; x.fill(); x.fillStyle="#fff"; x.fillText(lab,px+36,py+53) });
     let y=headTop; x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  /* a two-line key with the numbers behind it, so the words make sense to someone who is not on the app */
+  if(keyOn){ shadow(true); x.font="600 "+(story?30:25)+"px "+F2; x.fillStyle="rgba(255,255,255,.8)"; const ky=H-(story?128:62), pg=palmGoal();
+    x.fillText("🙌 High five = a palm of protein, about "+PROTEIN_PER_SERVING+" g. My goal: "+pg+" a day.",M,ky); x.fillText("👊 Fist bump = a fist of fruit or veg. "+FIST_GOAL+" a day is about 800 g.",M,ky+(story?42:36)) }
   shadow(false); return c }
 function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return;
   if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>paintRecap(); recapLogo.src="./sd-icon-192.png" }
   try{ drawRecap(c); if(document.fonts&&document.fonts.ready&&!paintRecap.fonts){ paintRecap.fonts=true; document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) } }catch(e){} }
 function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length>3?2:opts.length},1fr);margin:0 0 14px">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${cur===v}">${l}</button>`).join("")}</div>`;
   const photoBtn=(id,img,label)=>`<label class="btn ghost" style="justify-content:center;cursor:pointer">${img?"Change "+label:"Add "+label}<input id="${id}" type="file" accept="image/*" hidden></label>`;
-  return header("What's your stack?","Share your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
-  <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your week and your month. Tap another if you like it better.</p>
+  const perWord=st.d.per==="day"?"day":st.d.per==="month"?"month":"week", ownw=st.pick.id==="ownw";
+  return header("What's your stack?","Share your "+perWord)+`<div class="card"><div class="seg" style="grid-template-columns:repeat(4,1fr);margin:0 0 14px">${[["day","Today"],["week","This week"],["last","Last week"],["month","30 days"]].map(([v,l])=>`<button type="button" data-recap-period="${v}" aria-pressed="${recapPeriod===v}">${l}</button>`).join("")}</div><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
+  <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your numbers. Tap another if you like it better.</p>
   <div class="chips" style="margin:10px 0 14px">${st.hs.map((h,i)=>`<button type="button" data-recap-pick="${h.id}" aria-pressed="${h.id===st.pick.id}">${i===0?"★ ":""}${esc(h.label)}</button>`).join("")}</div>
-  ${st.own?`<label class="f" for="recapHead">What are you proud of? (optional)</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="First pull-up. Ran the whole 5K. Down a belt notch.">
-  <label class="f" for="recapBig" style="margin-top:10px">A number to feature (optional)</label><input id="recapBig" maxlength="8" value="${esc(recapOwnBig||"")}" autocomplete="off" placeholder="225, 5K, 1st" style="max-width:10em">
+  ${st.own?`${ownw?`<p class="muted sm" style="margin:0 0 8px">Tap one to start, or type your own.</p><div class="chips" style="margin:0 0 12px">${WORKOUT_IDEAS.map(t=>`<button type="button" data-recap-fill="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}<label class="f" for="recapHead">${ownw?"What did you just do? (optional)":"What are you proud of? (optional)"}</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="${ownw?"Beat my buddies at 3-on-3. Legs day. Five miles before work.":"First pull-up. Ran the whole 5K. Down a belt notch."}">
+  <label class="f" for="recapBig" style="margin-top:10px">${ownw?"A number from your watch (optional)":"A number to feature (optional)"}</label><input id="recapBig" maxlength="8" value="${esc(recapOwnBig||"")}" autocomplete="off" placeholder="${ownw?"2,000":"225, 5K, 1st"}" style="max-width:10em">
   <p class="muted xs" style="margin:6px 0 0">With a number, the Big number look puts it front and centre with your words underneath.</p>`:recapLayout==="big"&&st.pick.big!=null?`<label class="f" for="recapSub">Line under the big number</label><input id="recapSub" maxlength="60" value="${esc(st.sub)}" autocomplete="off">`:`<label class="f" for="recapHead">Headline on the image</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off">`}
   <h3 style="margin-top:22px">2. Add a photo</h3><p class="muted sm">Posts with a real photo get noticed. A few that work:</p>
   <div class="chips" style="margin:10px 0 12px">${PHOTO_IDEAS.map((x,i)=>i===0?`<button type="button" data-recap-layout="split">${x}</button>`:`<label for="recapPhoto" role="button">${x}</label>`).join("")}</div>
@@ -3365,12 +3412,73 @@ function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr
   <p class="muted xs" style="margin:10px 0 0">Photos stay on your phone. Nothing is uploaded until you share the finished image yourself.</p>
   <h3 style="margin-top:22px">3. Choose the look</h3>
   ${seg("recap-layout",recapLayout,[["big","Big number"],["stats","All the numbers"],["photo","Photo first"],["split","Before / after"]])}${seg("recap-size",recapSize,[["square","Square post"],["story","Story"]])}
-  <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="4" maxlength="400">${esc(st.cap)}</textarea>
+  <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="5" maxlength="600">${esc(st.cap)}</textarea>
   <div class="row" style="margin-top:12px"><button class="btn" type="button" data-recap-share style="justify-content:center">${ICON.share} Share</button><button class="btn ghost" type="button" data-recap-copy style="justify-content:center">Copy caption</button></div>
   <p class="muted xs" style="margin:10px 0 0">Instagram does not take a caption from the share sheet. Copy it first, then paste it in.</p>
-  ${seg("recap-week",String(recapOffset),[["0","This week"],["1","Last week"]]).replace('margin:0 0 14px','margin:18px 0 0')}
-  <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(st.d.nudge)} This line stays here and is not on the image.</p></div>
+  ${st.d.weekly?`<p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(st.d.nudge)} This line stays here and is not on the image.</p>`:""}</div>
   <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
+/* Recipes: the two house recipes as templates, plus one of your own. Tweak it, add a photo, share the card. */
+let recipeSel="smoothie", recipePhoto=null;
+const RECIPES={
+ smoothie:{tab:"Smoothie",name:"Breakfast smoothie",title:"My breakfast smoothie",hands:"🙌 1 high five + 👊 2 fist bumps",build:[["Liquid","1 cup of milk, almond milk or coconut water"],["Protein","1 scoop of whey or plant protein. That is the high five."],["Fruit","1 fist, frozen: berries, mango or banana"],["Veg","1 fist: spinach, kale or riced cauliflower"],["Staying power","Oats, nut butter, chia or flax"]],ideas:["Mango, spinach and lime","Banana, peanut butter and cinnamon","Blueberry, kale and ginger","Cherry and cocoa"]},
+ drink:{tab:"Recovery drink",name:"Recovery drink",title:"My recovery drink",hands:"🙌 1 high five",build:[["Protein","1 scoop of whey or plant protein. That is the high five."],["Creatine","5 g of creatine monohydrate"],["Electrolytes","A pinch of sodium and potassium"],["Liquid","12 to 16 oz of water or milk"]],ideas:["Chocolate whey in milk","Vanilla whey and cold brew","Unflavored, in orange juice and water"]},
+ own:{tab:"Your own",name:"My recipe",title:"My recipe",hands:"",build:[["Protein","A palm. That is the high five."],["Produce","Two fists of fruit or veg. Those are the fist bumps."],["Everything else","About a fist of starch, fat or sauce"]],ideas:["Sheet-pan chicken and vegetables","Greek yogurt bowl with berries","Egg scramble with peppers and spinach"]}};
+function recipeGet(id){ const o=(S.recipes||{})[id]||{}; return {name:id==="own"?(o.name||""):RECIPES[id].name,title:id==="own"?(String(o.name||"").trim()||RECIPES.own.title):RECIPES[id].title,text:id==="smoothie"?(S.smoothie||DEFAULT_SMOOTHIE):id==="drink"?(S.drink||DEFAULT_DRINK):(o.text||""),note:o.note||"",changed:id==="smoothie"?(S.smoothie||DEFAULT_SMOOTHIE)!==DEFAULT_SMOOTHIE:id==="drink"?(S.drink||DEFAULT_DRINK)!==DEFAULT_DRINK:false} }
+function recipeSet(id,field,val){ if(field==="text"&&id==="smoothie") S.smoothie=val; else if(field==="text"&&id==="drink") S.drink=val; else{ S.recipes=S.recipes||{}; S.recipes[id]={...(S.recipes[id]||{}),[field]:val} } clearTimeout(recipeSet.h); recipeSet.h=setTimeout(save,500) }
+function recipeText(){ const r=recipeGet(recipeSel), R=RECIPES[recipeSel]; return [r.title,"",r.text.trim(),r.note.trim()?"\nMy tweak: "+r.note.trim():"",R.hands?"\nCounts as "+R.hands+"."+EXPL:"","\nWhat's your stack? "+RECAP_TAGS].filter(x=>x!=="").join("\n").replace(/\n{3,}/g,"\n\n") }
+function drawRecipe(c,final){ const id=recipeSel, R=RECIPES[id], r=recipeGet(id), W=1080, H=1080, M=80, F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial"; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
+  const x=c.getContext("2d"), rr=(px,py,w,h,rad)=>{ x.beginPath(); x.moveTo(px+rad,py); x.arcTo(px+w,py,px+w,py+h,rad); x.arcTo(px+w,py+h,px,py+h,rad); x.arcTo(px,py+h,px,py,rad); x.arcTo(px,py,px+w,py,rad); x.closePath() };
+  const fit=(text,maxW)=>{ let t=String(text); if(x.measureText(t).width<=maxW) return t; while(t.length>1&&x.measureText(t+"…").width>maxW) t=t.slice(0,-1); return t.trimEnd()+"…" };
+  x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
+  if(recipePhoto){ const img=recipePhoto, iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, sc=Math.max(W/iw,H/ih); x.drawImage(img,(W-iw*sc)/2,(H-ih*sc)/2,iw*sc,ih*sc); const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(8,12,24,.8)"); g.addColorStop(.35,"rgba(8,12,24,.72)"); g.addColorStop(1,"rgba(8,12,24,.93)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
+  else{ const g=x.createRadialGradient(W*.88,H*.06,0,W*.88,H*.06,W*.95); g.addColorStop(0,"rgba(226,81,42,.6)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
+  const top=66; if(recapLogo&&recapLogo.complete&&recapLogo.naturalWidth){ x.save(); rr(M,top,72,72,17); x.clip(); x.drawImage(recapLogo,M,top,72,72); x.restore() }
+  x.fillStyle="#fff"; x.font="800 40px "+F1; x.fillText("SD HEALTH STACK",M+90,top+42); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.fillText("Stack the day.",M+91,top+80);
+  x.font="600 30px "+F2; x.textAlign="right"; x.fillText("Recipe",W-M,top+54); x.textAlign="left";
+  let ts=84; x.font="800 "+ts+"px "+F1; while(x.measureText(r.title).width>W-2*M&&ts>48){ ts-=4; x.font="800 "+ts+"px "+F1 } let y=top+200; x.fillStyle="#fff"; x.fillText(fit(r.title,W-2*M),M,y);
+  x.fillStyle="#ff7a52"; x.fillRect(M,y+28,96,10); y+=28;
+  const note=r.note.trim(); if(note){ y+=66; x.font="700 36px "+F2; x.fillStyle="#ff9d7e"; x.fillText(fit("My tweak: "+note,W-2*M),M,y) }
+  const all=r.text.split(/\n+/).map(t=>t.trim()).filter(Boolean), max=10, lines=all.length>max?[...all.slice(0,max-1),"+ "+(all.length-max+1)+" more"]:all, foot=H-150, y0=y+56, room=foot-y0;
+  if(!lines.length){ if(!final){ x.font="600 38px "+F2; x.fillStyle="rgba(255,255,255,.45)"; x.fillText("Add your ingredients below",M,y0+60) } }
+  else{ const lh=Math.min(70,room/lines.length), fs=Math.round(Math.min(40,lh*.62)); lines.forEach((t,i)=>{ const ly=y0+lh*(i+.72); x.fillStyle="#ff7a52"; x.beginPath(); x.arc(M+9,ly-fs*.32,7,0,Math.PI*2); x.fill(); x.fillStyle="rgba(255,255,255,.94)"; x.font="600 "+fs+"px "+F2; x.fillText(fit(t,W-2*M-40),M+36,ly) }) }
+  if(R.hands){ x.font="700 30px "+F2; const t=R.hands, tw=x.measureText(t).width+56; rr(M,H-124,tw,64,32); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.fillText(t,M+28,H-82) }
+  x.font="700 30px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.textAlign="right"; x.fillText("What's your stack?",W-M,H-82); x.textAlign="left"; return c }
+function paintRecipe(){ const c=document.getElementById("recipeCanvas"); if(!c||!c.getContext) return;
+  if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>{ paintRecap(); paintRecipe() }; recapLogo.src="./sd-icon-192.png" }
+  try{ drawRecipe(c); if(document.fonts&&document.fonts.ready&&!paintRecipe.fonts){ paintRecipe.fonts=true; document.fonts.ready.then(()=>{ const c2=document.getElementById("recipeCanvas"); if(c2) drawRecipe(c2) }) } }catch(e){} }
+function vRecipes(){ const id=recipeSel, R=RECIPES[id], r=recipeGet(id);
+  return header("Recipes","Make it yours, then share it")+`<div class="card"><div class="seg" style="grid-template-columns:repeat(3,1fr);margin:0 0 14px">${Object.entries(RECIPES).map(([k,v])=>`<button type="button" data-recipe-sel="${k}" aria-pressed="${k===id}">${v.tab}</button>`).join("")}</div>
+  <canvas id="recipeCanvas" class="recap-canvas" width="1080" height="1080" role="img" aria-label="Preview of the recipe card you will share"></canvas>
+  <h3>How to build it</h3><div class="build">${R.build.map(([a,b])=>`<div><b>${a}</b><span>${b}</span></div>`).join("")}</div>
+  ${R.hands?`<p class="muted sm" style="margin:10px 0 0">Counts as <b>${R.hands}</b>.</p>`:""}
+  <p class="muted sm" style="margin:8px 0 0"><b>${id==="own"?"Ideas":"Tweaks to try"}:</b> ${R.ideas.join(" · ")}.</p>
+  <h3 style="margin-top:22px">Your version</h3>
+  ${id==="own"?`<label class="f" for="recipeName">Name</label><input id="recipeName" maxlength="40" value="${esc(r.name)}" autocomplete="off" placeholder="Sunday sheet-pan chicken">`:""}
+  <label class="f" for="recipeBody"${id==="own"?' style="margin-top:10px"':""}>Ingredients, one per line</label><textarea id="recipeBody" rows="7" maxlength="900" placeholder="1 palm of chicken&#10;2 fists of roasted vegetables&#10;1 fist of rice">${esc(r.text)}</textarea>
+  <label class="f" for="recipeNote" style="margin-top:10px">Your tweak (optional)</label><input id="recipeNote" maxlength="60" value="${esc(r.note)}" autocomplete="off" placeholder="Swapped the oats for chia. Added ginger.">
+  ${r.changed?`<button class="btn small ghost" type="button" data-recipe-reset style="margin-top:10px">Back to the original</button>`:""}
+  <h3 style="margin-top:22px">Add a photo</h3><div class="row"><label class="btn ghost" style="justify-content:center;cursor:pointer">${recipePhoto?"Change photo":"Add a photo"}<input id="recipePhoto" type="file" accept="image/*" hidden></label>${recipePhoto?`<button class="btn ghost" type="button" data-recipe-clear style="justify-content:center">Remove photo</button>`:""}</div>
+  <p class="muted xs" style="margin:10px 0 0">The blender, the glass or the plate. Photos stay on your phone until you share.</p>
+  <div class="row" style="margin-top:16px"><button class="btn" type="button" data-recipe-share style="justify-content:center">${ICON.share} Share</button><button class="btn ghost" type="button" data-recipe-copy style="justify-content:center">Copy recipe</button></div></div>
+  <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
+async function shareRecipe(){ const c=document.getElementById("recipeCanvas"); if(!c) return; clearTimeout(recipeSet.h); save(); drawRecipe(c,true); const text=recipeText();
+  c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-recipe.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:recipeGet(recipeSel).title,text}) }catch(e){} }
+    else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-recipe.png"; a.click(); toast("Image saved") } },"image/png") }
+document.addEventListener("change",e=>{ if(!e.target||e.target.id!=="recipePhoto") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ recipePhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
+document.addEventListener("input",e=>{ const id=e.target&&e.target.id, field=id==="recipeBody"?"text":id==="recipeNote"?"note":id==="recipeName"?"name":null; if(!field) return; recipeSet(recipeSel,field,e.target.value); const c=document.getElementById("recipeCanvas"); if(c) try{ drawRecipe(c) }catch(err){} });
+/* Home: one card to share anything, one for recipes. The weekly and monthly summaries surface themselves when they are ready. */
+function shareReady(){ const t=today(), dow=t.getDay(), dom=t.getDate(), last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
+  if(dom<=2||dom===last) return ["month","Your month is ready to share"]; if(dow===6) return ["week","Your week is ready to share"]; if(dow<=1) return ["last","Last week is ready to share"]; return null }
+function homeShareCard(){ let tease=""; const keep=recapPeriod; try{ recapPeriod="day"; const h=recapHighlights(recapData())[0]; if(h&&h.head&&h.id!=="showed") tease=h.head }catch(e){} recapPeriod=keep;
+  const rd=shareReady(), b=(v,l)=>`<button type="button" data-share-go="${v}">${l}</button>`;
+  return `<div class="card sharehome"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Share</h2>${rd?`<span class="pill hot" style="flex:0 0 auto">Summary ready</span>`:""}</div>
+  <p class="muted sm" style="margin:6px 0 0">${tease?"<b>Today:</b> "+esc(tease):"A post-ready image from your numbers, any time. Send it to the group chat."}</p>
+  ${rd?`<button class="btn" type="button" data-share-go="${rd[0]}" style="width:100%;justify-content:center;margin-top:12px">${ICON.share} ${rd[1]}</button>`:""}
+  <div class="chips" style="margin-top:12px">${b("day","Today")}${b("week","This week")}${b("month","This month")}${b("workout","A workout")}<button type="button" data-recipe-go="smoothie">A recipe</button></div></div>` }
+function recipesCard(){ const b=(v,l)=>`<button type="button" data-recipe-go="${v}">${l}</button>`;
+  return `<div class="card"><h2 style="margin:0">Recipes</h2><p class="muted sm" style="margin:6px 0 0">The smoothie and the recovery drink, your way. Tweak one, add a photo, share it.</p>
+  <div class="chips" style="margin-top:12px">${b("smoothie","Breakfast smoothie")}${b("drink","Recovery drink")}${b("own","Your own")}</div></div>` }
 async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; const st0=recapState(); drawRecap(c,true); const text=st0.cap;
   c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text}) }catch(e){} }
@@ -3382,11 +3490,19 @@ document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.
   if(ds.recapLayout!==undefined){ recapLayout=ds.recapLayout; render(); return }
   if(ds.recapSize!==undefined){ recapSize=ds.recapSize; render(); return }
   if(ds.recapCopy!==undefined){ try{ await navigator.clipboard.writeText(recapState().cap); toast("Caption copied") }catch(err){ toast("Copy is not available here") } } });
-document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-week],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
+document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-period],[data-recap-fill],[data-share-go],[data-recipe-go],[data-recipe-sel],[data-recipe-reset],[data-recipe-share],[data-recipe-copy],[data-recipe-clear],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
   if(ds.deckSkip!==undefined){ deckSkip(ds.deckSkip,1); return }
   if(ds.lib!==undefined){ libMonth=libMonth===+ds.lib?0:+ds.lib; render(); return }
   if(ds.libGo!==undefined){ libMonth=+ds.libGo; lastTab=null; dailyOpen=false; tab="lessons"; location.hash="lessons"; render(); window.scrollTo(0,0); return }
-  if(ds.recapWeek!==undefined){ recapOffset=+ds.recapWeek; recapPick=null; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapPeriod!==undefined){ recapPeriod=ds.recapPeriod; recapPick=null; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapFill!==undefined){ recapHead=ds.recapFill; render(); return }
+  if(ds.shareGo!==undefined){ const v=ds.shareGo; recapPeriod=v==="workout"?"day":v; recapPick=v==="workout"?"workout":null; recapHead=null; recapSub=null; recapCap=null; lastTab=null; dailyOpen=false; tab="recap"; location.hash="recap"; render(); window.scrollTo(0,0); return }
+  if(ds.recipeGo!==undefined){ recipeSel=RECIPES[ds.recipeGo]?ds.recipeGo:"smoothie"; lastTab=null; dailyOpen=false; tab="recipes"; location.hash="recipes"; render(); window.scrollTo(0,0); return }
+  if(ds.recipeSel!==undefined){ recipeSel=ds.recipeSel; render(); return }
+  if(ds.recipeReset!==undefined){ if(recipeSel==="smoothie") S.smoothie=DEFAULT_SMOOTHIE; else if(recipeSel==="drink") S.drink=DEFAULT_DRINK; if(S.recipes&&S.recipes[recipeSel]) S.recipes[recipeSel].note=""; save(); render(); toast("Back to the original"); return }
+  if(ds.recipeClear!==undefined){ recipePhoto=null; render(); return }
+  if(ds.recipeShare!==undefined){ shareRecipe(); return }
+  if(ds.recipeCopy!==undefined){ try{ await navigator.clipboard.writeText(recipeText()); toast("Recipe copied") }catch(err){ toast("Copy is not available here") } return }
   if(ds.recapClear!==undefined){ recapPhoto=null; recapPhoto2=null; render(); return }
   if(ds.recapShare!==undefined){ shareRecap(); return }
   if(ds.groceryStarter!==undefined){ const n=groceryStarter(); fsave(); render(); toast(n?n+" starter items added":"The starter list is already in"); return }
@@ -3394,6 +3510,13 @@ document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.
     if(share&&navigator.share){ try{ await navigator.share({title:"Grocery list",text}) }catch(e){} return }
     try{ await navigator.clipboard.writeText(text); toast("List copied") }catch(e){ toast("Copy is not available here") } return }
 });
+/* While a text field has focus the bar is hidden; when the keyboard goes away the page is nudged so the bar re-pins to the bottom edge */
+(function(){ const field=el=>el&&el.matches&&el.matches("textarea,select,input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=button]):not([type=submit]):not([type=range])");
+  const repin=()=>{ if(field(document.activeElement)) return; document.body.classList.remove("typing"); try{ window.scrollTo(window.scrollX||0,window.scrollY||0) }catch(e){} };
+  document.addEventListener("focusin",e=>{ if(field(e.target)) document.body.classList.add("typing") });
+  document.addEventListener("focusout",()=>setTimeout(repin,150));
+  window.addEventListener("pageshow",repin); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) repin() });
+  if(window.visualViewport&&window.visualViewport.addEventListener) window.visualViewport.addEventListener("resize",()=>setTimeout(repin,150)) })();
 function render(){
   const keep=lastTab===tab?window.scrollY:0; lastTab=tab;
   { const dl=document.getElementById("daily"); if(dl&&(!S.profile||tab==="why"||tab==="onboard"||accountScreen)) dl.hidden=true }
@@ -3412,11 +3535,12 @@ function render(){
   window.scrollTo(0,keep);
   { const nums=[...document.querySelectorAll("#main .scorestrip b")]; nums.forEach((b,i)=>{ if(lastScore[i]!==undefined&&lastScore[i]!==b.textContent) b.classList.add("bump") }); if(nums.length) lastScore=nums.map(b=>b.textContent) }
   if(tab==="recap") paintRecap();
+  if(tab==="recipes") paintRecipe();
   renderDaily();
 }
 function shiftDate(k,n){ const d=parseD(k); d.setDate(d.getDate()+n); return ymd(d) }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-plate],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
+  const t=e.target.closest("[data-plate],[data-plate-add],[data-plate-plan],[data-tab],[data-go],[data-sess],[data-alt],[data-alt-other],[data-lesson-read],[data-dmeal],[data-daily-close],[data-daily-open],[data-check-log],[data-check-clear],[data-unswap],[data-min-set],[data-sel],[data-week],[data-nut],[data-food],[data-mealset],[data-reward],[data-say],[data-supp],[data-vitd],[data-plan-reset],[data-log],[data-del],#wipe,#share,#export,#backup-import,#backup-resume"); if(!t) return;
   const ds=t.dataset;
   if(ds.tab||ds.go){ lastTab=null; if(S.profile) dailyOpen=false; tab=resolveTab(ds.tab||ds.go); if(tab==="onboard"&&!S.profile){ S.seenWhy=true; save() } if(tab!=="onboard"&&tab!=="why") location.hash=tab; if(tab==="workout") sel=ymd(today()); render(); return }
   if(ds.sess){ const k=ds.k; if(k>ymd(today())) return; S.sess[k]=S.sess[k]||{}; const s=S.sess[k][ds.sess]||{}; s.done=!s.done; if(s.done&&!s.min){ const def=dayDef(k).sessions.find(x=>x.id===ds.sess); s.min=def.range[1] } S.sess[k][ds.sess]=s; save(); render(); if(s.done) toast("+"+dayDef(k).sessions.find(x=>x.id===ds.sess).pts+" · "+dayMinutes(k)+" min today"); return }
@@ -3433,6 +3557,9 @@ document.addEventListener("click",e=>{
   if(ds.sel){ sel=ds.sel; lastTab=null; render(); return }
   if(ds.week){ sel=shiftDate(sel,7*+ds.week); lastTab=null; render(); return }
   if(ds.nut){ const n=shiftDate(nutDay,+ds.nut); if(n<=ymd(today())) nutDay=n; render(); return }
+  if(ds.plateAdd!==undefined){ const cur=(S.meals[nutDay]||{})[ds.plateAdd]||{}, f=ds.f==="p"?"p":"f", now=f==="p"?(+cur.p||0):(+cur.f||0)+(+cur.v||0), n=Math.max(0,Math.min(SNACK_MAX,now+(+ds.v)));
+    if(n===now){ return } if(n===0&&!(f==="p"?(+cur.f||0)+(+cur.v||0):(+cur.p||0))){ const day=S.meals[nutDay]; if(day){ delete day[ds.plateAdd]; save() } render(); return }
+    setPlate(nutDay,ds.plateAdd,{[f]:n}); render(); if(+ds.v>0) toast(f==="p"?"+1 high five 🙌":"+1 fist bump 👊"); return }
   if(ds.platePlan!==undefined){ setPlate(nutDay,ds.platePlan,{p:1,f:2,rest:"ok"}); render(); toast("Quality +"+PTS.meal); return }
   if(ds.plate!==undefined){ const r=setPlate(nutDay,ds.plate,{[ds.f]:ds.f==="rest"?ds.v:+ds.v}); render(); return }
   if(ds.mealset!==undefined){ if(ds.v===""){ const day=S.meals[nutDay]; if(day){ delete day[ds.mealset]; save() } } else setMealRating(nutDay,ds.mealset,ds.v); render(); return }
@@ -3440,7 +3567,9 @@ document.addEventListener("click",e=>{
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
   if(ds.vitd){ S.profile.vitd=!S.profile.vitd; save(); render(); return }
   if(ds.planReset){ const f=$("#fPlan"); const mk=f.dataset.mk, day=f.dataset.day; if(S.plans[mk]) delete S.plans[mk][day]; save(); render(); toast("Back to the default plan"); return }
-  if(ds.log){ S[ds.log].push({id:Date.now(),d:ymd(today()),min:+ds.min,...(ds.log==="heat"&&ds.kind==="soak"?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":"")); return }
+  if(ds.log){ const kd=ymd(today()), soak=ds.log==="heat"&&ds.kind==="soak", same=S[ds.log].filter(x=>x.d===kd&&(ds.log!=="heat"||(x.kind==="soak")===soak)).length, scored=same>0;
+    if(same>=EXTRA_MAX){ toast("Already logged "+(EXTRA_MAX===2?"twice":EXTRA_MAX+" times")+" today"); return }
+    S[ds.log].push({id:Date.now(),d:kd,min:+ds.min,...(soak?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min"+(scored?" · points count once a day":" · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":""))); return }
   if(ds.del){ S[ds.del]=S[ds.del].filter(x=>String(x.id)!==ds.id); save(); render(); return }
   if(ds.say){ startSpeech(); return }
   if(t.id==="share"){ shareCard(); return }
@@ -3536,7 +3665,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.17.0';
+ const VERSION='9.18.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

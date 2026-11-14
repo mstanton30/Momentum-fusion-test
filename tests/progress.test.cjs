@@ -70,7 +70,7 @@ test('Beta copies local records, preserves original keys, and renders five tabs 
  assert.match(document.querySelector('main').textContent,/Weekly Activity Score/);
  assert.match(document.querySelector('main').textContent,/Strength results/);
  click('[data-progress-pane="nutrition"]');
- assert.match(document.querySelector('main').textContent,/Palms of protein a day/);
+ assert.match(document.querySelector('main').textContent,/High fives a day/);
  click('[data-tab="benefits"]');
  assert.match(document.querySelector('main').textContent,/Post-workout recovery drink/);
  click('[data-benefit="perks"]');

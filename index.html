@@ -346,6 +346,9 @@ summary::-webkit-details-marker{display:none}
 .phead{margin:6px 0 4px}
 details.phow{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0 0;margin:0 0 14px;background:none}
 details.phow p{margin:0 0 8px}
+.ptip{align-self:start;margin-top:-4px;background:color-mix(in srgb,var(--accent) 8%,var(--panel));border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:10px 12px;font-size:.84rem;line-height:1.45;animation:deckIn .2s ease}
+.ptip p{margin:0}.ptip p+p{margin-top:6px}
+.pgrid [data-ptip].on label.f{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -858,44 +861,55 @@ function vWhy(){
 function baselineOf(p){ p=p||{}; return {waist:"",grip:"",rhr:"",sys:"",dia:"",...(p.baseline||{at:null,d:p.start||"",weightLb:p.weightLb||"",bf:p.bf||"",mm:p.mm||""})} }
 function baselineStamp(b){ if(b.at){ const t=new Date(b.at); if(!isNaN(t)) return t.toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})+" at "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) } return b.d?fmt(b.d):"" }
 function baselineLine(b){ return [b.weightLb&&b.weightLb+" lb",b.bf&&b.bf+"% body fat",b.mm&&b.mm+" lb muscle",b.waist&&b.waist+" in waist",b.grip&&b.grip+" lb grip",b.rhr&&"resting HR "+b.rhr,b.sys&&b.dia&&"BP "+b.sys+"/"+b.dia].filter(Boolean).join(" · ") }
+/* Tap a profile field and its how-to and reason appear under that row. */
+const PTIPS={
+ age:["","Fitness age compares your VO2 max with people of your age and sex."],
+ sex:["","The reference data for fitness age and grip strength is split by sex."],
+ height:["","Used for your waist-to-height ratio and BMI."],
+ weightLb:["First thing in the morning, after the bathroom, before eating or drinking.","The anchor for your trend. One reading a week is enough."],
+ waist:["Tape around your belly at the navel, relaxed, breathing out.","Tracks the fat around your organs, which matters more than total weight. Aim for under half your height."],
+ bf:["From a body-composition scale under the same conditions each time, or a DEXA scan.","Fat down while muscle holds is the result this program is built for."],
+ mm:["From a body-composition scale under the same conditions each time, or a DEXA scan.","Muscle protects joints, bones and blood sugar. Keeping it is the point of the strength days."],
+ grip:["Best of three squeezes with your stronger hand on a digital hand dynamometer. The Camry EH101 is a common low-cost one.","A stand-in for whole-body strength. In a study of 140,000 adults, weak grip predicted early death better than blood pressure did."],
+ rhr:["From a watch, or count your pulse for a minute before you get out of bed.","It drifts down as your heart gets fitter, and a lower resting rate is linked to longer life."],
+ bp:["Home cuff, seated, after five quiet minutes, arm resting at heart level.","The best-studied risk number there is, and it responds to training, weight and sleep."],
+ modality:["Pick the one you will repeat every second month.","The test gives your VO2 max, and VO2 max gives your fitness age."]
+};
 function vOnboard(){
   const p=S.profile||{}, b=baselineOf(p), has=!!S.profile;
-  const cell=(label,inner,cls)=>`<div class="${cls||""}"><label class="f">${label}</label>${inner}</div>`;
+  const cell=(key,label,inner,cls)=>({key,html:`<div class="${cls||""}" data-ptip="${key}"><label class="f">${label}</label>${inner}</div>`,full:cls==="full"});
+  const tip=k=>{ const x=PTIPS[k]; return x?`<div class="ptip full" id="ptip-${k}" hidden>${x[0]?`<p><b>How:</b> ${x[0]}</p>`:""}<p><b>Why:</b> ${x[1]}</p></div>`:"" };
+  /* each row's tips sit right after the row, so the one you tapped opens directly beneath it */
+  const grid=cells=>{ let out="", row=[]; const flush=()=>{ out+=row.map(c=>c.html).join("")+row.map(c=>tip(c.key)).join(""); row=[] };
+    for(const c of cells){ if(c.full){ flush(); row=[c]; flush() } else { row.push(c); if(row.length===2) flush() } } flush(); return `<div class="pgrid">${out}</div>` };
   const numIn=(name,val,o)=>`<input name="${name}" type="number" step="${o.step||"0.1"}" min="${o.min}" max="${o.max}" inputmode="${o.step==="1"?"numeric":"decimal"}" value="${esc(val||"")}" ${o.req?"required":`placeholder="optional"`}>`;
-  const nums=`<div class="pgrid">
-    ${cell("Weight (lb)",numIn("weightLb",b.weightLb,{min:50,max:700,req:true}))}
-    ${cell("Waist (in)",numIn("waist",b.waist,{min:15,max:90}))}
-    ${cell("Body fat (%)",numIn("bf",b.bf,{min:2,max:70}))}
-    ${cell("Muscle (lb)",numIn("mm",b.mm,{min:20,max:400}))}
-    ${cell("Grip strength (lb)",numIn("grip",b.grip,{min:0,max:300}))}
-    ${cell("Resting heart rate",numIn("rhr",b.rhr,{step:"1",min:25,max:150}))}
-    ${cell("Blood pressure",`<div class="bp"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}"><span>/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}"></div>`,"full")}
-  </div>`;
-  const how=`<details class="phow"><summary class="sm">How to take these</summary><div class="muted sm">
-    <p><b>Waist:</b> at the navel, relaxed. Aim for under half your height.</p>
-    <p><b>Grip:</b> best of three squeezes, stronger hand, on a digital hand dynamometer (the Camry EH101 is a common low-cost one).</p>
-    <p><b>Resting heart rate:</b> from a watch, or a morning pulse before you get up.</p>
-    <p><b>Blood pressure:</b> home cuff, after five quiet minutes sitting.</p>
-    <p style="margin:0"><b>Photo:</b> take one in the mirror today and keep it. It makes the best before and after.</p></div></details>`;
+  const nums=grid([
+    cell("weightLb","Weight (lb)",numIn("weightLb",b.weightLb,{min:50,max:700,req:true})),
+    cell("waist","Waist (in)",numIn("waist",b.waist,{min:15,max:90})),
+    cell("bf","Body fat (%)",numIn("bf",b.bf,{min:2,max:70})),
+    cell("mm","Muscle (lb)",numIn("mm",b.mm,{min:20,max:400})),
+    cell("grip","Grip strength (lb)",numIn("grip",b.grip,{min:0,max:300})),
+    cell("rhr","Resting heart rate",numIn("rhr",b.rhr,{step:"1",min:25,max:150})),
+    cell("bp","Blood pressure",`<div class="bp"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}"><span>/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}"></div>`,"full")]);
   return `<div class="onb"><div class="eyebrow">${has?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
   <div class="card hero" style="margin-top:14px"><p style="margin:0">One plan for everyone. Follow it and watch your body composition and VO2 max improve, and your fitness age come down.</p></div>
   ${has?`<div class="card"><div class="eyebrow">Your starting point</div><h3 style="margin:4px 0 6px">${esc(baselineStamp(b)||"Start date not recorded")}</h3><p class="muted sm" style="margin:0">${esc(baselineLine(b)||"No starting numbers recorded")}</p></div>`:""}
   <form id="fOnboard" class="card">
-    <div class="pgrid">
-      ${cell("First name",`<input name="name" required value="${esc(p.name||"")}">`)}
-      ${cell("Age",`<input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}">`)}
-      ${cell("Sex",`<select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select>`)}
-      ${cell("Height",`<div class="bp"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" aria-label="Feet" value="${p.heightIn?Math.floor(p.heightIn/12):""}"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" aria-label="Inches" value="${p.heightIn?p.heightIn%12:""}"></div>`)}
-    </div>
-    ${has?`<details class="phow"><summary class="sm">Correct a starting number</summary><div><p class="muted xs">For fixing a mistake only. New weigh-ins and tests go on Home and Progress.</p>${nums}</div></details>`:`<h3 class="phead">Where you are starting</h3><p class="muted xs" style="margin:0 0 10px">Only weight is needed today. Add the rest when you have them.</p>${nums}${how}`}
-    <div class="pgrid">
-      ${cell("Fitness test you will repeat",`<select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select>`,"full")}
-      ${cell("What does better health mean to you?",`<input name="why" value="${esc(p.why||"")}" placeholder="optional">`,"full")}
-    </div>
+    ${grid([
+      cell("name","First name",`<input name="name" required value="${esc(p.name||"")}">`),
+      cell("age","Age",`<input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}">`),
+      cell("sex","Sex",`<select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select>`),
+      cell("height","Height",`<div class="bp"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" aria-label="Feet" value="${p.heightIn?Math.floor(p.heightIn/12):""}"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" aria-label="Inches" value="${p.heightIn?p.heightIn%12:""}"></div>`)])}
+    ${has?`<details class="phow"><summary class="sm">Correct a starting number</summary><div><p class="muted xs">For fixing a mistake only. New weigh-ins and tests go on Home and Progress.</p>${nums}</div></details>`:`<h3 class="phead">Where you are starting</h3><p class="muted xs" style="margin:0 0 10px">Only weight is needed today. Tap any box to see how to take it and why it matters.</p>${nums}`}
+    ${grid([
+      cell("modality","Fitness test you will repeat",`<select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select>`,"full"),
+      cell("why","What does better health mean to you?",`<input name="why" value="${esc(p.why||"")}" placeholder="optional">`,"full")])}
     <div class="row tight"><button class="btn" type="submit">${has?"Save":"Set my starting point →"}</button>${has?`<button class="btn ghost" type="button" data-go="home">Cancel</button>`:""}</div>
-    <p class="muted xs" style="margin:12px 0 0">Stays on this phone.</p>
+    <p class="muted xs" style="margin:12px 0 0">${has?"":"Take a mirror photo today too; it makes the best before and after. "}Stays on this phone.</p>
   </form></div>`;
 }
+document.addEventListener("focusin",e=>{ const cell=e.target.closest&&e.target.closest("[data-ptip]"); if(!cell) return; const want=document.getElementById("ptip-"+cell.dataset.ptip);
+  document.querySelectorAll(".ptip").forEach(el=>{ el.hidden=el!==want }); document.querySelectorAll("[data-ptip].on").forEach(el=>el.classList.remove("on")); if(want) cell.classList.add("on") });
 
 const WEEKLY_SESSION_TYPES={aerobic:'Aerobic',strength:'Strength',mixed:'Mixed cardio + strength',mobility:'Mobility',other:'Other'};
 let weeklyEditorDay=null,weeklyEditorOpen=false;

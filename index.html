@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="Health Stack">
 <meta name="theme-color" content="#f5f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1012" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.15.3">
+<link rel="icon" type="image/png" href="./sd-icon-192.png?v=9.16.0">
 <link rel="manifest" href="./manifest.json?v=sd-3">
-<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.15.3">
+<link rel="apple-touch-icon" href="./sd-icon-180.png?v=9.16.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Health Stack">
-<title>SD Health Stack — Beta v9.15.3</title>
+<title>SD Health Stack — Beta v9.16.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -334,6 +334,21 @@ summary::-webkit-details-marker{display:none}
 .lab-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem}
 .lab-row input{width:auto;flex:none}.lab-row>span:nth-child(2){flex:1;min-width:0}.lab-val{font-family:var(--display);font-weight:700;white-space:nowrap}
 #lab-import{margin:4px 0 16px}
+.recap-canvas.story{max-height:70vh;width:auto;max-width:100%;margin-left:auto;margin-right:auto}
+.chips label{background:var(--soft);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;font-family:var(--display);color:var(--fg);display:inline-flex;align-items:center;cursor:pointer}
+[data-recap-pick][aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;align-items:end;margin-bottom:14px}
+.pgrid>div{min-width:0}.pgrid .full{grid-column:1/-1}
+.pgrid label.f{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 6px}
+.pgrid input,.pgrid select{width:100%;height:48px;box-sizing:border-box;margin:0}
+.bp{display:flex;gap:8px;align-items:center}.bp input{flex:1;min-width:0;padding-left:8px;padding-right:8px;text-align:center}.bp span{color:var(--muted)}
+.pgrid .full .bp{max-width:calc(50% - 6px)}
+.phead{margin:6px 0 4px}
+details.phow{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 0 0;margin:0 0 14px;background:none}
+details.phow p{margin:0 0 8px}
+.ptip{align-self:start;margin-top:-4px;background:color-mix(in srgb,var(--accent) 8%,var(--panel));border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:10px 12px;font-size:.84rem;line-height:1.45;animation:deckIn .2s ease}
+.ptip p{margin:0}.ptip p+p{margin-top:6px}
+.pgrid [data-ptip].on label.f{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -346,7 +361,7 @@ summary::-webkit-details-marker{display:none}
 
 <script src="./backup.js"></script>
 <script src="./vendor/supabase-2.49.10.js"></script>
-<script src="./beta-config.js?v=9.15.3"></script>
+<script src="./beta-config.js?v=9.16.0"></script>
 <script>
 (function(){
 "use strict";
@@ -356,7 +371,7 @@ const GEAR='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19
 
 /* =========================== PROGRAM CONTENT =========================== */
 /* Temporary name (SD = Stanton and Day; navy is the brand colour, orange stays the one accent). Storage keys and file names keep the old name so nobody loses data. */
-const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.15.3" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
+const BRAND='<span class="brand"><img class="brandmark" src="./sd-icon-192.png?v=9.16.0" width="34" height="34" alt=""><span>SD Health Stack</span></span>';
 const ICON={
  book:'<svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16v4M17 18h4"/></svg>',
@@ -700,7 +715,28 @@ function vo2FromTest(t,kg){
   return null;
 }
 function testValueLabel(t){ return t.mod==="bike"?t.v+" W":fmtTime(t.v) }
-function vo2Band(v,age,sex){ if(v==null) return ""; const a=age||40; let base=sex==="f"?36:44; base-=Math.max(0,(a-30))*0.3; if(v>=base+10) return "excellent"; if(v>=base+4) return "good"; if(v>=base-3) return "average"; return "below average" }
+/* Fitness age: the age at which this VO2 max would be exactly average for the person's sex.
+   Reference: FRIEND registry medians, measured treadmill VO2 max in 7,783 US adults aged 20–79 (Kaminsky, Arena, Myers. Mayo Clin Proc 2015), placed at each decade's midpoint. */
+const FRIEND={m:[[25,48.0],[35,42.4],[45,37.8],[55,32.6],[65,28.2],[75,24.4]],f:[[25,37.6],[35,30.2],[45,26.7],[55,23.4],[65,20.0],[75,18.3]]};
+function friendMedian(age,sex){ const T=FRIEND[sex==="f"?"f":sex==="m"?"m":""]; if(!T||!age) return null; const a=Math.min(75,Math.max(25,age)); for(let i=1;i<T.length;i++) if(a<=T[i][0]){ const [a0,v0]=T[i-1],[a1,v1]=T[i]; return v0+(v1-v0)*(a-a0)/(a1-a0) } return T[T.length-1][1] }
+function fitnessAge(v,sex){ const T=FRIEND[sex==="f"?"f":sex==="m"?"m":""]; if(!T||v==null||!isFinite(v)||v<=0) return null; let age;
+  if(v>=T[0][1]) age=T[0][0]-(v-T[0][1])*(T[1][0]-T[0][0])/(T[0][1]-T[1][1]);
+  else if(v<=T[T.length-1][1]){ const n=T.length-1; age=T[n][0]+(T[n][1]-v)*(T[n][0]-T[n-1][0])/(T[n-1][1]-T[n][1]) }
+  else for(let i=1;i<T.length;i++) if(v>=T[i][1]){ const [a0,v0]=T[i-1],[a1,v1]=T[i]; age=a0+(v0-v)*(a1-a0)/(v0-v1); break }
+  return Math.round(Math.min(79,Math.max(20,age))) }
+/* Latest VO2 max on or before a date, with the fitness age it implies. Only for people aged 20–79 with sex set in the profile. */
+function fitnessAgeNow(end){ const p=S.profile||{}, age=+p.age||null, kg=kgNow(), lim=end||ymd(today());
+  const xs=[...(S.tests||[])].filter(x=>x.d<=lim).sort((a,b)=>a.d<b.d?-1:1).map(x=>({d:x.d,est:!x.watch,v:x.watch?valueOrNull(x.watch):vo2FromTest(x,kg)})).filter(x=>x.v!=null&&isFinite(x.v));
+  if(!xs.length||!age||age<20||age>79) return null; const last=xs[xs.length-1], fa=fitnessAge(last.v,p.sex); if(fa==null) return null;
+  return {age,fa,younger:age-fa,v:last.v,est:last.est,d:last.d,series:xs.map(x=>fitnessAge(x.v,p.sex)),limit:fa<=20||fa>=79} }
+function fitnessAgeCard(){ const p=S.profile||{}, f=fitnessAgeNow();
+  if(!f) return `<div class="card"><h3>Fitness age</h3><p class="muted sm" style="margin:6px 0 0">${!(S.tests||[]).length?"Log a fitness test and this shows the age your heart and lungs are performing at.":p.sex!=="m"&&p.sex!=="f"?"Set sex in your profile to see a fitness age. The reference data is split by sex.":"Fitness age is available for ages 20 to 79."}</p></div>`;
+  const diff=f.younger, line=diff>0?diff+" year"+(diff===1?"":"s")+" younger than your age":diff<0?(-diff)+" year"+(diff===-1?"":"s")+" older than your age":"right at your age";
+  return `<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Fitness age</h3><span class="pill ${diff>0?"ok":""}" style="flex:0 0 auto">${line}</span></div>
+  <div class="weigh-nums"><div><b>${f.fa}${f.limit?(f.fa<=20?" or under":"+"):""}</b><span>fitness age${f.est?", estimated":""}</span></div><div><b>${f.age}</b><span>your age</span></div></div>
+  <p class="muted sm" style="margin:0">Your VO2 max of ${f.v.toFixed(1)} is what an average ${p.sex==="f"?"woman":"man"} of ${f.fa}${f.limit&&f.fa<=20?" or younger":""} scores. ${f.est?"It is estimated from your fitness test, so treat it as a guide and watch the direction.":""}</p>
+  <details><summary>Where this comes from</summary><p class="muted sm">Fitness age is the age at which your VO2 max would be exactly average for your sex. The averages come from the FRIEND registry: measured treadmill VO2 max in 7,783 US adults aged 20 to 79 (Kaminsky and colleagues, Mayo Clinic Proceedings, 2015). It reflects heart and lung fitness only. It says nothing about any other measure of health.</p></details></div>` }
+function vo2Band(v,age,sex){ const m=friendMedian(age,sex); if(v==null||m==null) return ""; return v>=m*1.05?"above average for your age":v<=m*0.95?"below average for your age":"about average for your age" }
 
 /* =========================== WEEKLY ACTIVITY SCORE (separate from habit and nutrition points) =========================== */
 const HEALTH_GOALS={health:{name:'General health',minutes:150},enhanced:{name:'Additional health benefits',minutes:300},weight:{name:'Weight management',minutes:225}};
@@ -820,21 +856,60 @@ function vWhy(){
   <div class="row tight" style="margin-top:8px"><button class="btn" data-go="${S.profile?"home":"onboard"}">${S.profile?"Back":"Set up my profile →"}</button></div>
   <p class="muted xs" style="margin-top:16px">Built on the evidence, not the algorithm. Questions and ideas go to Dan.</p></div>`;
 }
+/* The profile is a starting point: who you are and where you began, stamped with the date. It sets no goal and no schedule.
+   One plan for everyone; the numbers that matter are measured on Progress. */
+function baselineOf(p){ p=p||{}; return {waist:"",grip:"",rhr:"",sys:"",dia:"",...(p.baseline||{at:null,d:p.start||"",weightLb:p.weightLb||"",bf:p.bf||"",mm:p.mm||""})} }
+function baselineStamp(b){ if(b.at){ const t=new Date(b.at); if(!isNaN(t)) return t.toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})+" at "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) } return b.d?fmt(b.d):"" }
+function baselineLine(b){ return [b.weightLb&&b.weightLb+" lb",b.bf&&b.bf+"% body fat",b.mm&&b.mm+" lb muscle",b.waist&&b.waist+" in waist",b.grip&&b.grip+" lb grip",b.rhr&&"resting HR "+b.rhr,b.sys&&b.dia&&"BP "+b.sys+"/"+b.dia].filter(Boolean).join(" · ") }
+/* Tap a profile field and its how-to and reason appear under that row. */
+const PTIPS={
+ age:["","Fitness age compares your VO2 max with people of your age and sex."],
+ sex:["","The reference data for fitness age and grip strength is split by sex."],
+ height:["","Used for your waist-to-height ratio and BMI."],
+ weightLb:["First thing in the morning, after the bathroom, before eating or drinking.","The anchor for your trend. One reading a week is enough."],
+ waist:["Tape around your belly at the navel, relaxed, breathing out.","Tracks the fat around your organs, which matters more than total weight. Aim for under half your height."],
+ bf:["From a body-composition scale under the same conditions each time, or a DEXA scan.","Fat down while muscle holds is the result this program is built for."],
+ mm:["From a body-composition scale under the same conditions each time, or a DEXA scan.","Muscle protects joints, bones and blood sugar. Keeping it is the point of the strength days."],
+ grip:["Best of three squeezes with your stronger hand on a digital hand dynamometer. The Camry EH101 is a common low-cost one.","A stand-in for whole-body strength. In a study of 140,000 adults, weak grip predicted early death better than blood pressure did."],
+ rhr:["From a watch, or count your pulse for a minute before you get out of bed.","It drifts down as your heart gets fitter, and a lower resting rate is linked to longer life."],
+ bp:["Home cuff, seated, after five quiet minutes, arm resting at heart level.","The best-studied risk number there is, and it responds to training, weight and sleep."],
+ modality:["Pick the one you will repeat every second month.","The test gives your VO2 max, and VO2 max gives your fitness age."]
+};
 function vOnboard(){
-  const p=S.profile||{};
-  return `<div class="onb"><div class="eyebrow">${S.profile?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
-  <p class="muted">${S.profile?"Change anything here any time. Weight updates from your Friday weigh-ins automatically.":"One screen, then it lives behind the gear icon. This sets your protein target, your VO2 estimate and your baseline for the year. Everything stays on this phone."}</p>
+  const p=S.profile||{}, b=baselineOf(p), has=!!S.profile;
+  const cell=(key,label,inner,cls)=>({key,html:`<div class="${cls||""}" data-ptip="${key}"><label class="f">${label}</label>${inner}</div>`,full:cls==="full"});
+  const tip=k=>{ const x=PTIPS[k]; return x?`<div class="ptip full" id="ptip-${k}" hidden>${x[0]?`<p><b>How:</b> ${x[0]}</p>`:""}<p><b>Why:</b> ${x[1]}</p></div>`:"" };
+  /* each row's tips sit right after the row, so the one you tapped opens directly beneath it */
+  const grid=cells=>{ let out="", row=[]; const flush=()=>{ out+=row.map(c=>c.html).join("")+row.map(c=>tip(c.key)).join(""); row=[] };
+    for(const c of cells){ if(c.full){ flush(); row=[c]; flush() } else { row.push(c); if(row.length===2) flush() } } flush(); return `<div class="pgrid">${out}</div>` };
+  const numIn=(name,val,o)=>`<input name="${name}" type="number" step="${o.step||"0.1"}" min="${o.min}" max="${o.max}" inputmode="${o.step==="1"?"numeric":"decimal"}" value="${esc(val||"")}" ${o.req?"required":`placeholder="optional"`}>`;
+  const nums=grid([
+    cell("weightLb","Weight (lb)",numIn("weightLb",b.weightLb,{min:50,max:700,req:true})),
+    cell("waist","Waist (in)",numIn("waist",b.waist,{min:15,max:90})),
+    cell("bf","Body fat (%)",numIn("bf",b.bf,{min:2,max:70})),
+    cell("mm","Muscle (lb)",numIn("mm",b.mm,{min:20,max:400})),
+    cell("grip","Grip strength (lb)",numIn("grip",b.grip,{min:0,max:300})),
+    cell("rhr","Resting heart rate",numIn("rhr",b.rhr,{step:"1",min:25,max:150})),
+    cell("bp","Blood pressure",`<div class="bp"><input name="sys" type="number" step="1" min="60" max="260" inputmode="numeric" placeholder="120" aria-label="Systolic" value="${esc(b.sys||"")}"><span>/</span><input name="dia" type="number" step="1" min="30" max="160" inputmode="numeric" placeholder="80" aria-label="Diastolic" value="${esc(b.dia||"")}"></div>`,"full")]);
+  return `<div class="onb"><div class="eyebrow">${has?"Your profile":"Welcome"}</div><h1>SD Health Stack</h1>
+  <div class="card hero" style="margin-top:14px"><p style="margin:0">One plan for everyone. Follow it and watch your body composition and VO2 max improve, and your fitness age come down.</p></div>
+  ${has?`<div class="card"><div class="eyebrow">Your starting point</div><h3 style="margin:4px 0 6px">${esc(baselineStamp(b)||"Start date not recorded")}</h3><p class="muted sm" style="margin:0">${esc(baselineLine(b)||"No starting numbers recorded")}</p></div>`:""}
   <form id="fOnboard" class="card">
-    <div class="row"><div class="field"><label class="f">First name</label><input name="name" required value="${esc(p.name||"")}"></div><div class="field"><label class="f">Age</label><input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}"></div></div>
-    <div class="row"><div class="field"><label class="f">Sex</label><select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select></div><div class="field"><label class="f">Height</label><div class="row tight" style="gap:6px"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" value="${p.heightIn?Math.floor(p.heightIn/12):""}" style="flex:1"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" value="${p.heightIn?p.heightIn%12:""}" style="flex:1"></div></div><div class="field"><label class="f">Weight (lb)</label><input name="weightLb" type="number" step="0.1" inputmode="decimal" required value="${esc(p.weightLb||"")}"></div></div>
-    <div class="row"><div class="field"><label class="f">Body fat % (if known)</label><input name="bf" type="number" step="0.1" inputmode="decimal" value="${esc(p.bf||"")}"></div><div class="field"><label class="f">Muscle mass lb (if known)</label><input name="mm" type="number" step="0.1" inputmode="decimal" value="${esc(p.mm||"")}"></div></div>
-    <div class="field"><label class="f">Cardio you'll test on</label><select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select></div>
-    <div class="field"><label class="f">Goal for the year</label><select name="goal">${Object.entries(GOALS).map(([k,g])=>`<option value="${k}" ${p.goal===k?"selected":""}>${g}</option>`).join("")}</select></div>
-    <details style="margin-bottom:12px"><summary class="sm">My week (optional)</summary><div><p class="muted xs">The default is three strength days, two cardio, one yoga, one easy. If Thursday is always pickleball, make it a cardio day and move strength elsewhere. You can still change any single day later.</p>${WEEKDAYS.map(([k,n])=>`<div class="row" style="margin-bottom:6px;align-items:center"><span class="sm" style="flex:0 0 90px">${n}</span><select name="layout_${k}" style="flex:1;padding:6px 8px;font-size:.85rem">${Object.entries(DAY_TYPE_LABEL).map(([t,l])=>`<option value="${t}" ${((p.layout||{})[k]||DEFAULT_LAYOUT[k])===t?"selected":""}>${l}</option>`).join("")}</select></div>`).join("")}<p class="muted xs">Aim for three strength days. Sport counts as cardio, never as strength.</p></div></details>
-    <div class="field"><label class="f">What does better health mean to you this year? (optional)</label><input name="why" value="${esc(p.why||"")}" placeholder="e.g. 15% body fat, 3 W/kg, no shoulder pain"></div>
-    <div class="row tight"><button class="btn" type="submit">${S.profile?"Save":"Start the year →"}</button>${S.profile?`<button class="btn ghost" type="button" data-go="workout">Cancel</button>`:""}</div>
+    ${grid([
+      cell("name","First name",`<input name="name" required value="${esc(p.name||"")}">`),
+      cell("age","Age",`<input name="age" type="number" inputmode="numeric" min="14" max="99" required value="${esc(p.age||"")}">`),
+      cell("sex","Sex",`<select name="sex"><option value="m" ${p.sex==="m"?"selected":""}>Male</option><option value="f" ${p.sex==="f"?"selected":""}>Female</option></select>`),
+      cell("height","Height",`<div class="bp"><input name="ft" type="number" inputmode="numeric" min="4" max="7" required placeholder="ft" aria-label="Feet" value="${p.heightIn?Math.floor(p.heightIn/12):""}"><input name="inch" type="number" inputmode="numeric" min="0" max="11" required placeholder="in" aria-label="Inches" value="${p.heightIn?p.heightIn%12:""}"></div>`)])}
+    ${has?`<details class="phow"><summary class="sm">Correct a starting number</summary><div><p class="muted xs">For fixing a mistake only. New weigh-ins and tests go on Home and Progress.</p>${nums}</div></details>`:`<h3 class="phead">Where you are starting</h3><p class="muted xs" style="margin:0 0 10px">Only weight is needed today. Tap any box to see how to take it and why it matters.</p>${nums}`}
+    ${grid([
+      cell("modality","Fitness test you will repeat",`<select name="modality">${Object.entries(MODALITIES).map(([k,m])=>`<option value="${k}" ${p.modality===k?"selected":""}>${m.name} · ${m.test}</option>`).join("")}</select>`,"full"),
+      cell("why","What does better health mean to you?",`<input name="why" value="${esc(p.why||"")}" placeholder="optional">`,"full")])}
+    <div class="row tight"><button class="btn" type="submit">${has?"Save":"Set my starting point →"}</button>${has?`<button class="btn ghost" type="button" data-go="home">Cancel</button>`:""}</div>
+    <p class="muted xs" style="margin:12px 0 0">${has?"":"Take a mirror photo today too; it makes the best before and after. "}Stays on this phone.</p>
   </form></div>`;
 }
+document.addEventListener("focusin",e=>{ const cell=e.target.closest&&e.target.closest("[data-ptip]"); if(!cell) return; const want=document.getElementById("ptip-"+cell.dataset.ptip);
+  document.querySelectorAll(".ptip").forEach(el=>{ el.hidden=el!==want }); document.querySelectorAll("[data-ptip].on").forEach(el=>el.classList.remove("on")); if(want) cell.classList.add("on") });
 
 const WEEKLY_SESSION_TYPES={aerobic:'Aerobic',strength:'Strength',mixed:'Mixed cardio + strength',mobility:'Mobility',other:'Other'};
 let weeklyEditorDay=null,weeklyEditorOpen=false;
@@ -1748,7 +1823,7 @@ function vHomeDashboard(){
  <p class="muted sm">Daily averages use completed days, including zero-point days. The week starts Sunday. The all-time daily average starts on your first day with points. The lifetime weekly average uses completed Sunday–Saturday weeks from your first full week, including zero-point weeks.</p></details>
  </div></details>
  <div id="momentum-update-control" class="card sm" style="margin-top:18px;text-align:center">
-  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.15.3</button>
+  <button id="momentum-check-update" class="btn small ghost" type="button">Check for updates · v9.16.0</button>
   <p id="momentum-update-status" class="muted xs" role="status" style="margin:8px 0 0;display:none"></p>
  </div>`;
 }
@@ -1808,16 +1883,16 @@ function bodyPoints(key){return bodyRows().map(x=>({d:x.d,v:valueOrNull(x[key]),
 /* What to measure and when: the short list, with the date each was last done */
 function measurePlan(){ const last=(d)=>d?fmt(d):"not yet", extras=S.extras||[];
   const w=bodyRows().filter(x=>valueOrNull(x.wt)!=null).at(-1), test=[...(S.tests||[])].sort((a,b)=>a.d<b.d?-1:1).at(-1);
-  const dexa=extras.filter(x=>/^dexa\b/i.test(x.kind)).map(x=>x.d).sort().at(-1), lab=extras.filter(x=>!/^dexa\b/i.test(x.kind)&&!/blood pressure|vo2|grip/i.test(x.kind)).map(x=>x.d).sort().at(-1), bp=extras.filter(x=>/blood pressure/i.test(x.kind)).map(x=>x.d).sort().at(-1), grip=extras.filter(x=>/grip/i.test(x.kind)).map(x=>x.d).sort().at(-1);
+  const dexa=extras.filter(x=>/^dexa\b/i.test(x.kind)).map(x=>x.d).sort().at(-1), lab=extras.filter(x=>!/^dexa\b/i.test(x.kind)&&!/blood pressure|vo2|grip|waist|resting heart/i.test(x.kind)).map(x=>x.d).sort().at(-1), bp=extras.filter(x=>/blood pressure/i.test(x.kind)).map(x=>x.d).sort().at(-1), grip=extras.filter(x=>/grip/i.test(x.kind)).map(x=>x.d).sort().at(-1), waist=extras.filter(x=>/waist/i.test(x.kind)).map(x=>x.d).sort().at(-1), rhr=extras.filter(x=>/resting heart/i.test(x.kind)).map(x=>x.d).sort().at(-1);
   const rows=[
    ["Weigh-in, with body fat and muscle if your scale shows them","Every week, Friday morning","The trend between scans. Read the four-week average, not one day.",last(w&&w.d)],
-   ["Waist at the navel","Once a month","Tracks the fat that matters most. Aim for under half your height.",""],
+   ["Waist at the navel","Once a month","Tracks the fat that matters most. Aim for under half your height.",last(waist)],
    ["Fitness test: bike, 2K row or timed mile","Every second month","Your heart and lungs in one number. Same test each time.",last(test&&test.d)],
    ["Grip strength","Every second month, with the fitness test","A hand dynamometer, best of three squeezes each hand. A simple stand-in for whole-body strength.",last(grip)],
    ["DEXA body scan","Once or twice a year","The best measure of muscle, fat and bone most people can get.",last(dexa)],
    ["Blood work","Once a year","Lipids including ApoB, fasting glucose and A1c, kidney and liver panel, vitamin D. Fasting insulin and hs-CRP are worth asking about.",last(lab)],
    ["Blood pressure","A few times a year","A home cuff is fine. Sit quietly for five minutes first.",last(bp)],
-   ["Resting heart rate","Glance monthly","From a watch or a morning pulse. Drifting down over months means you are fitter.",""],
+   ["Resting heart rate","Glance monthly","From a watch or a morning pulse. Drifting down over months means you are fitter.",last(rhr)],
    ["Bone density","When your doctor says it is due","Recommended for women at 65, earlier with risk factors."," "]];
   return `<details class="card" id="measure-plan"><summary>What to measure and when</summary><div><p class="muted sm">Nine measurements cover what this program is trying to change. Anything beyond these is optional.</p>
   ${rows.map(([what,when,why,done])=>`<div class="measure-row"><div><b>${what}</b><br><span class="muted sm">${why}</span></div><div class="measure-when"><span class="pill">${when}</span>${done.trim()?`<span class="muted xs">Last: ${esc(done)}</span>`:""}</div></div>`).join("")}
@@ -1899,7 +1974,7 @@ function bodyProgress(){
  return `<h2>Body composition</h2>
  ${accountConnections()}
  <div class="card"><h3>Friday weigh-in</h3><p class="muted sm">${bodyRows().some(x=>x.d===nextFriday&&Number(x.wt)>0)?'This Friday is logged.':'Next Friday check-in: '+fmt(nextFriday)+'.'} Use the same scale under similar conditions. Missing measurements do not affect your scores.</p>
- <p class="muted xs">Baseline: ${esc(p.weightLb||'–')} lb · ${esc(p.bf||'–')}% body fat · ${esc(p.mm||'–')} lb muscle${bmi()?` · current BMI ${bmi()} (${bmiLabel(bmi())})`:''}</p><p class="muted xs">Four-week averages: ${esc(bodyFourWeekAverages())}</p></div>
+ <p class="muted xs">Starting point${baselineStamp(baselineOf(p))?' ('+esc(baselineStamp(baselineOf(p)))+')':''}: ${esc(baselineLine(baselineOf(p))||'not recorded')}${bmi()?` · current BMI ${bmi()} (${bmiLabel(bmi())})`:''}</p><p class="muted xs">Four-week averages: ${esc(bodyFourWeekAverages())}</p></div>
  ${progressChart('Weight',bodyPoints('wt'),' lb')}
  ${progressChart('Body fat estimate',bodyPoints('bf'),'%')}
  ${progressChart('Muscle mass estimate',bodyPoints('mm'),' lb')}
@@ -1936,7 +2011,7 @@ function dexaProgress(){
   <div class="card">
     <p class="muted sm">Anything measured outside the app: vitamin D, lipids, A1c, testosterone, blood pressure or lab VO2 max. Type one in, or import a whole report.</p>
     ${labImportHtml()}
-    <form id="fExtra"><div class="row"><div class="field"><label class="f">Date</label><input type="date" name="d" value="${ymd(today())}" required></div><div class="field"><label class="f">Type</label><select name="kind"><option>Vitamin D (ng/mL)</option><option>Lipids (LDL / HDL / TG)</option><option>A1c</option><option>Testosterone</option><option>Blood pressure</option><option>Grip strength (lb, best hand)</option><option>VO2 max (lab)</option><option>Other</option></select></div></div>
+    <form id="fExtra"><div class="row"><div class="field"><label class="f">Date</label><input type="date" name="d" value="${ymd(today())}" required></div><div class="field"><label class="f">Type</label><select name="kind"><option>Vitamin D (ng/mL)</option><option>Lipids (LDL / HDL / TG)</option><option>A1c</option><option>Testosterone</option><option>Blood pressure</option><option>Grip strength (lb, best hand)</option><option>Waist (in)</option><option>Resting heart rate (bpm)</option><option>VO2 max (lab)</option><option>Other</option></select></div></div>
     <div class="row"><div class="field"><label class="f">Result</label><input name="v" required placeholder="e.g. 18.4"></div><div class="field"><label class="f">Note</label><input name="note" placeholder="where, who ordered it"></div></div><button class="btn" type="submit">Log result</button></form>
     ${labs.length?`<table><tr><th>Date</th><th>Type</th><th class="r">Result</th><th></th></tr>${[...labs].sort((a,b)=>a.d<b.d?1:-1).map(x=>`<tr><td>${fmt(x.d)}</td><td>${esc(x.kind)}${x.note?`<br><span class="muted xs">${esc(x.note)}</span>`:""}</td><td class="r">${esc(x.v)}</td><td class="r"><button class="del" data-del="extras" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:""}
   </div>
@@ -1966,6 +2041,7 @@ function fitnessProgress(weeks){
  ${progressChart('Active days per week',series('active'),' days')}
  ${progressChart('Weekly Activity Score',weeks.map(w=>({d:w.d,label:w.label,v:w.active?w.activity.score:null})),' / 100',{baseline:100})}
  ${progressChart('Training minutes per week',series('minutes'),' min')}
+ ${fitnessAgeCard()}
  ${progressChart('VO₂ max (estimated or recorded)',t.map(x=>({d:x.d,v:x.watch?valueOrNull(x.watch):vo2FromTest(x,kg)})),' mL/kg/min')}
  ${progressChart('Weekly sleep average',series('sleep'),' h',{baseline:SLEEP_GOAL})}
  ${progressChart('Weekly habit points',series('points'))}
@@ -2095,7 +2171,7 @@ async function shareCard(){ try{ await document.fonts.ready }catch(e){} const c=
 function backupHelp(){return `<div class="note sm"><b>Portable backup</b><p>Export this profile’s logs, plans, saved meals/workouts, preferences and locally saved photos to a private JSON file. Save it in Files and confirm it exists before removing the app. Imports replace this profile’s local data, not merge it. Other profiles, sign-in credentials, notification permissions and connections are not backed up. Cloud health readings already loaded here are saved as a snapshot; reconnect for newer readings.</p>${F.backupSyncPaused?'<p><b>Cloud sync is paused after restore.</b> Your restored data stays on this device until you choose to resume. This protects it from being replaced by an older cloud copy.</p><button class="btn small ghost" id="backup-resume">Review and resume cloud sync</button>':''}<p id="backup-status" role="status"></p></div>`}
 function exportData(){
  try{
-  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.15.3',accountId:activeWorkspace});
+  const bundle=window.MomentumBackup.create(S,F,healthReadings,{appVersion:'9.16.0',accountId:activeWorkspace});
   const text=JSON.stringify(bundle,null,1);if(new TextEncoder().encode(text).length>window.MomentumBackup.MAX_BYTES)throw Error('Backup exceeds 25 MB. Do not remove the app; reduce photo sizes or ask for help first.');
   const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='momentum-backup-'+ymd(today())+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -3162,48 +3238,156 @@ document.addEventListener('click',async e=>{
 /* =========================== RENDER + EVENTS =========================== */
 let lastTab=null, altOther=null, lastScore=[];
 /* Weekly recap: a square image to post or send to the group, with an optional photo behind it */
-let recapPhoto=null, recapOffset=0;
+/* Share my week: a post-ready image. The app suggests the highlight from the week or the month, the words stay editable, photos are encouraged. */
+let recapPhoto=null, recapPhoto2=null, recapOffset=0, recapPick=null, recapHead=null, recapSub=null, recapCap=null, recapOwnBig="", recapLayout="big", recapSize="square", recapLogo=null;
+const RECAP_TAGS="#StackTheDay #SDHealthStack";
+const PHOTO_IDEAS=["Before and after","Flexing a bicep","Mid push-up","Making the smoothie","A quality plate","Post-workout selfie","Your walk or ride","The weights you lifted"];
 function recapData(){ const ref=today(); ref.setDate(ref.getDate()-7*recapOffset); const wk=weekKeys(ref), q=weekQuota(ref), wn=weekNutrition(ref);
   const mob=wk.filter(k=>sessOf(k,"mob").done||(dayTypeFor(k)==="yoga"&&sessOf(k,"main").done)).length, drinks=wn.alcohol||0, pts=weekPoints(ref), need=q.strength||3;
-  const praise=q.strengthDone>=need?"All "+(need===3?"three":need)+" strength days done.":wn.pct!=null&&wn.pct>=80?wn.pct+" percent quality meals. That is the stretch goal.":wn.pct!=null&&wn.pct>=70?"Majority rules. "+wn.pct+" percent quality meals.":mob>=5?"Mobility on "+mob+" of seven days.":pts>0?"Showed up and logged it.":"A new week starts now.";
   const nudge=q.strengthDone<need?(need-q.strengthDone)+" more strength day"+(need-q.strengthDone===1?"":"s")+" would have made the full week. Put them on the calendar first.":wn.pct!=null&&wn.pct<70?"Meals came in under 70 percent. Start with protein at breakfast.":drinks>7?"Drinks were over seven. Aim to come in under next week.":mob<5?"Mobility was light. Ten minutes after each workout covers it.":"Nothing to fix. Do the same again.";
-  return {wk,praise,nudge,tiles:[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Stack points"]]} }
-function drawRecap(c){ const x=c.getContext("2d"), W=c.width, H=c.height, d=recapData(), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial";
+  const tiles=[[q.strengthDone+"/"+need,"Strength"],[String(q.cardioDone),"Cardio days"],[mob+"/7","Mobility"],[wn.pct==null?"–":wn.pct+"%","Quality meals"],[String(drinks),"Drinks"],[String(pts),"Stack points"]];
+  /* On the image, only numbers worth showing: nothing empty, no zeros, and drinks stay private */
+  const show=[q.strengthDone>0&&tiles[0],wn.pct!=null&&(wn.units||0)>=9&&tiles[3],pts>0&&tiles[5],mob>0&&tiles[2],q.cardioDone>0&&tiles[1]].filter(Boolean);
+  return {ref,wk,q,wn,mob,drinks,pts,need,nudge,tiles,show,top:show.slice(0,3)} }
+/* Every highlight the data supports, best first. The first one is the suggestion. Each can carry a big number and a trend line for the Big number look. */
+function recapHighlights(d){ const out=[], num=n=>(Math.round(n*10)/10).toFixed(1).replace(/\.0$/,""), sign=n=>(n>0?"+":"−")+num(Math.abs(n));
+  const add=(id,label,head,cap,big,biglab,series)=>out.push({id,label,head,cap:cap+" What's your stack? "+RECAP_TAGS,big:big==null?null:String(big),biglab:biglab||"",series:(series||[]).filter(v=>v!=null&&isFinite(v))});
+  const end=ymd(d.ref), from=shiftDate(end,-35), all=bodyRows().filter(r=>r.d<=end), rows=all.filter(r=>r.d>=from), col=(key,src)=>(src||all).map(r=>valueOrNull(r[key])).filter(v=>v!=null);
+  const span=(key)=>{ const xs=rows.filter(r=>valueOrNull(r[key])!=null); if(xs.length<2) return null; const a=xs[0], z=xs[xs.length-1]; return (parseD(z.d)-parseD(a.d))/864e5>=13?valueOrNull(z[key])-valueOrNull(a[key]):null };
+  const weeksBack=(n,fn)=>{ const xs=[]; for(let i=n-1;i>=0;i--){ const r=new Date(d.ref); r.setDate(r.getDate()-7*i); xs.push(fn(r)) } return xs };
+  const three=d.need===3?"three":String(d.need), fed=(d.wn.units||0)>=9;
+  /* body */
+  const mm=span("mm"), bf=span("bf");
+  if(mm!=null&&mm>=0.5) add("muscle","Muscle up","Up "+num(mm)+" lb of muscle this month.","Muscle is up "+num(mm)+" lb over the last month. Three strength days a week and protein at every meal.",sign(mm),"lb of muscle, this month",col("mm").slice(-12));
+  if(bf!=null&&bf<=-0.5) add("fat","Body fat down","Body fat down "+num(-bf)+" points this month.","Body fat is down "+num(-bf)+" points in a month, without counting a calorie.",sign(bf),"points of body fat, this month",col("bf").slice(-12));
+  /* fitness: VO2 max, recorded on a watch or estimated from the fitness test */
+  const kg=kgNow(), tests=[...(S.tests||[])].filter(x=>x.d<=end).sort((x,y)=>x.d<y.d?-1:1), vo=x=>x.watch?valueOrNull(x.watch):vo2FromTest(x,kg), vs=tests.map(x=>({d:x.d,v:vo(x),est:!x.watch})).filter(x=>x.v!=null&&isFinite(x.v));
+  const lastV=vs[vs.length-1], prevV=vs[vs.length-2];
+  if(lastV&&lastV.d>=shiftDate(end,-70)){ const v=Math.round(lastV.v*10)/10, up=prevV?lastV.v-prevV.v:null, est=lastV.est?" (estimated)":"";
+    if(up!=null&&up>=0.5) add("vo2","VO2 max up","VO2 max up "+num(up)+" to "+num(v)+".","VO2 max is up "+num(up)+" to "+num(v)+est+". Fitness is one of the best predictors of how long and how well you live.",num(v),"VO2 max"+est+", up "+num(up),vs.map(x=>x.v));
+    else add("vo2","VO2 max","VO2 max: "+num(v)+".","VO2 max "+num(v)+est+". Retesting every two months to push it up.",num(v),"VO2 max"+est,vs.map(x=>x.v)) }
+  const fage=fitnessAgeNow(end);
+  if(fage&&fage.d>=shiftDate(end,-70)&&fage.younger>=1){ const y=fage.younger, est=fage.est?" (estimated)":"", prevFa=fage.series[fage.series.length-2], got=prevFa!=null?prevFa-fage.fa:0;
+    add("fage","Fitness age","Fitness age "+fage.fa+". Actual age "+fage.age+".",(got>=1?"My fitness age dropped "+got+" year"+(got===1?"":"s")+" to "+fage.fa:"My fitness age is "+fage.fa)+est+", and I am "+fage.age+". That is "+y+" year"+(y===1?"":"s")+" younger where it counts.",y,"year"+(y===1?"":"s")+" younger. Fitness age "+fage.fa+", actual "+fage.age+".") }
+  const lastT=tests[tests.length-1], prevT=lastT&&tests.filter(x=>x.mod===lastT.mod&&x.d<lastT.d).pop();
+  if(lastT&&prevT&&lastT.d>=shiftDate(end,-21)){ const bike=lastT.mod==="bike", gain=bike?lastT.v-prevT.v:prevT.v-lastT.v; if(gain>0) add("fit","Fitness test",bike?"Fitness test up "+Math.round(gain)+" watts.":"Fitness test "+fmtTime(Math.round(gain))+" faster.","Repeated my fitness test and beat the last one. The engine is getting bigger.",bike?"+"+Math.round(gain):fmtTime(Math.round(gain)),bike?"watts on the fitness test":"faster on the fitness test") }
+  /* strength */
+  let run=0; for(let i=0;i<12;i++){ const r=new Date(d.ref); r.setDate(r.getDate()-7*i); const q=weekQuota(r); if(q.strengthDone>=(q.strength||3)) run++; else break }
+  if(run>=2) add("run","Strength streak",run+" weeks straight of "+three+" strength days.","That is "+run+" weeks in a row with all "+three+" strength days done. Lifting is the habit that changes the most.",run,"weeks straight, every strength day");
+  else if(d.q.strengthDone>=d.need) add("strength","Strength goal","All "+three+" strength days. Done.","All "+three+" strength days done this week. Lifting is the habit that changes the most.",d.q.strengthDone+"/"+d.need,"strength days this week");
+  const grips=(S.extras||[]).filter(x=>/grip/i.test(x.kind)&&x.d<=end&&valueOrNull(x.v)!=null).sort((x,y)=>x.d<y.d?-1:1), g1=grips[grips.length-1], g0=grips[grips.length-2];
+  if(g1&&g0&&valueOrNull(g1.v)>valueOrNull(g0.v)&&g1.d>=shiftDate(end,-21)) add("grip","Grip strength","Grip strength up to "+num(valueOrNull(g1.v))+" lb.","Grip strength is up to "+num(valueOrNull(g1.v))+" lb. A simple test that tracks whole-body strength.",num(valueOrNull(g1.v)),"lb grip strength, a new best",grips.map(x=>valueOrNull(x.v)));
+  /* food */
+  if(fed&&d.wn.pct>=80) add("q80","80 percent",d.wn.pct+"% quality meals. Stretch goal hit.",d.wn.pct+" percent of my meals were quality this week. Protein and produce on the plate, no calorie counting.",d.wn.pct+"%","quality meals this week");
+  else if(fed&&d.wn.pct>=70) add("q70","70 percent",d.wn.pct+"% quality meals. Majority rules.",d.wn.pct+" percent quality meals this week. Majority rules: eat well most of the time and the rest is yours.",d.wn.pct+"%","quality meals this week");
+  if(fed&&d.wn.protein!=null&&d.wn.protein>=100) add("protein","Protein","Averaged "+Math.round(d.wn.protein)+" g of protein a day.","Averaged about "+Math.round(d.wn.protein)+" grams of protein a day this week, from a palm-size serving at every meal.",Math.round(d.wn.protein),"grams of protein a day");
+  /* volume: minutes this week, workouts this month, best week yet */
+  const mins=d.wk.reduce((s,k)=>s+totalTrainingMinutes(k),0);
+  if(mins>=90) add("mins","Minutes trained",Math.round(mins)+" minutes of training this week.",Math.round(mins)+" minutes of training this week. Strength, cardio and ten minutes of mobility a day.",Math.round(mins),"minutes trained this week",weeksBack(8,r=>weekKeys(r).reduce((s,k)=>s+totalTrainingMinutes(k),0)));
+  let month=0; for(let i=0;i<30;i++){ if(sessOf(shiftDate(end,-i),"main").done) month++ }
+  if(month>=8) add("month","30-day count",month+" workouts in 30 days.",month+" workouts in the last 30 days. Showing up is most of it.",month,"workouts in 30 days");
+  const ptsWeeks=weeksBack(12,r=>weekPoints(r)), earlier=ptsWeeks.slice(0,-1).filter(v=>v>0);
+  if(d.pts>0&&earlier.length>=3&&d.pts>Math.max(...earlier)) add("best","Best week yet","Best week yet: "+d.pts+" Stack points.","My best week so far: "+d.pts+" Stack points.",d.pts,"Stack points, my best week yet",ptsWeeks);
+  /* recovery */
+  const slept=d.wk.filter(k=>{ const h=sleepHours(k); return h!=null&&h>=7 }).length;
+  if(slept>=5) add("sleep","Sleep","Seven hours or more, "+slept+" nights.","Seven-plus hours of sleep on "+slept+" nights this week. Sleep is when the work pays off.",slept+"/7","nights of 7+ hours");
+  const saunas=(S.heat||[]).filter(x=>x.kind!=="soak"&&d.wk.includes(x.d)).length;
+  if(saunas>=3) add("sauna","Sauna",saunas+" sauna sessions this week.",saunas+" sauna sessions this week, on top of the training.",saunas,"sauna sessions this week");
+  const streak=recapOffset?0:mobStreak();
+  if(streak>=7) add("streak","Days stacked",streak+" days stacked.",streak+" days in a row with mobility done. Ten minutes a day is the whole trick.",streak,"days stacked");
+  else if(d.mob>=5) add("mob","Mobility","Mobility "+d.mob+" of 7 days.","Stretched on "+d.mob+" of seven days this week. It is the part everyone skips.",d.mob+"/7","days of mobility");
+  /* the long view */
+  const w4=fourWeekWeight(0), p4=fourWeekWeight(4); if(!recapOffset&&w4!=null&&p4!=null&&p4-w4>=1) add("trend","Weight trend","Four-week average down "+num(p4-w4)+" lb.","My four-week average is down "+num(p4-w4)+" lb. One weigh-in a week and I read the trend, not the day.",sign(w4-p4),"lb, four-week average",weeklyWeights().map(x=>x.w).slice(-12));
+  const day=programDay(end)+1; if(S.profile&&S.profile.start&&day>=7) add("day","Day "+day,"Day "+day+" of 365.","Day "+day+" of a year-long program. One lesson, one workout and three meals at a time.",day,"of 365 days");
+  const read=lessonsRead().size; if(read>=10) add("lessons","Lessons read",read+" lessons in.",read+" daily lessons read so far. One idea a day adds up.",read,"lessons read");
+  if(fed&&d.drinks===0) add("dry","Zero drinks","Zero drinks this week.","A week with no drinks. Sleep and recovery noticed.","0","drinks this week");
+  if(d.pts>0) add("pts","Stack points",d.pts+" Stack points this week.",d.pts+" Stack points this week from moving, eating well and sleeping.",d.pts,"Stack points this week",ptsWeeks);
+  add("showed","Showed up",d.pts>0?"Showed up and logged it.":"A new week starts now.","Showed up this week. Small steps, stacked.");
+  /* always last: their own words, for the thing no tracker can see */
+  add("own","✎ Write your own","","Proud of this one.");
+  return out }
+function recapState(){ const d=recapData(), hs=recapHighlights(d); let pick=hs.find(h=>h.id===recapPick)||hs[0]; const head=recapHead==null?pick.head:recapHead, own=pick.id==="own";
+  if(own) pick={...pick,big:String(recapOwnBig||"").trim()||null,biglab:head};
+  return {d,hs,pick,own,head,sub:own?head:recapSub==null?pick.biglab:recapSub,cap:recapCap==null?pick.cap:recapCap} }
+const OWN_HINT="Type what you are proud of";
+function drawRecap(c,final){ const st=recapState(), d=st.d, story=recapSize==="story", W=1080, H=story?1920:1080; if(c.width!==W||c.height!==H){ c.width=W; c.height=H }
+  const x=c.getContext("2d"), F1="Archivo, Helvetica, Arial", F2="Inter, Helvetica, Arial", M=80, layout=recapLayout==="split"&&!(recapPhoto||recapPhoto2)?"stats":recapLayout==="big"&&st.pick.big==null?"stats":recapLayout;
   const rr=(px,py,w,h,r)=>{ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath() };
-  x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
-  if(recapPhoto){ const iw=recapPhoto.naturalWidth||recapPhoto.width, ih=recapPhoto.naturalHeight||recapPhoto.height, s=Math.max(W/iw,H/ih); x.drawImage(recapPhoto,(W-iw*s)/2,(H-ih*s)/2,iw*s,ih*s);
-    const g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(10,12,14,.72)"); g.addColorStop(.5,"rgba(10,12,14,.55)"); g.addColorStop(1,"rgba(10,12,14,.92)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
-  else{ const g=x.createRadialGradient(W*.85,H*.1,0,W*.85,H*.1,W*.9); g.addColorStop(0,"rgba(226,81,42,.55)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
-  x.textBaseline="alphabetic"; if(recapPhoto){ x.shadowColor="rgba(0,0,0,.55)"; x.shadowBlur=18 } x.fillStyle="#fff"; x.font="800 40px "+F1;
-  { x.save(); x.shadowColor="transparent"; x.translate(80,66); x.scale(72/64,72/64); x.fillStyle="#12244a"; rr(0,0,64,64,15); x.fill(); x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=1.2; x.stroke(); x.translate(-1,-1); x.strokeStyle="#fff"; x.lineWidth=7.5; x.stroke(new Path2D("M29.5 17.5C27 11.5 11.5 11.5 11.5 19.5 11.5 28.5 30 24 30 33 30 41 14.5 41.5 11 35")); x.stroke(new Path2D("M38.2 13.2h5.3a12.6 12.6 0 0 1 0 25.2h-5.3z")); x.translate(1,1); [["#e2512a",46],["rgba(255,255,255,.55)",51.6],["rgba(255,255,255,.28)",57.2]].forEach(([c,y])=>{ x.fillStyle=c; rr(9.5,y,45,3.6,1.8); x.fill() }); x.restore() }
-  x.fillStyle="#fff"; x.fillText("SD HEALTH STACK",170,108); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.8)"; x.fillText("Stack the day.",171,146); x.fillStyle="#fff";
-  x.fillStyle="rgba(255,255,255,.8)"; x.font="600 32px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-80,120); x.textAlign="left";
-  x.fillStyle="#fff"; x.font="800 84px "+F1; const words=d.praise.split(" "); let line="", y=330; const lines=[];
-  for(const w of words){ const test=line?line+" "+w:w; if(x.measureText(test).width>W-160&&line){ lines.push(line); line=w } else line=test } lines.push(line);
-  for(const l of lines.slice(0,3)){ x.fillText(l,80,y); y+=96 }
-  const cols=3, gap=28, tw=(W-160-gap*(cols-1))/cols, th=190, top=H-80-th*2-gap;
-  d.tiles.forEach(([v,lab],i)=>{ const px=80+(i%cols)*(tw+gap), py=top+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill();
-    x.fillStyle="#fff"; x.font="800 80px "+F1; x.fillText(v,px+28,py+104); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 28px "+F2; x.fillText(lab,px+28,py+154) });
-  return c }
-function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return; try{ drawRecap(c); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) }catch(e){} }
-function vRecap(){ const d=recapData();
-  return header("What's your stack?","Your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas" width="1080" height="1080" role="img" aria-label="Weekly recap image"></canvas>
-  <div class="seg" style="grid-template-columns:repeat(2,1fr);margin:0 0 12px"><button type="button" data-recap-week="0" aria-pressed="${recapOffset===0}">This week</button><button type="button" data-recap-week="1" aria-pressed="${recapOffset===1}">Last week</button></div>
-  <div class="row"><label class="btn ghost" style="justify-content:center;cursor:pointer">${recapPhoto?"Change photo":"Add a photo"}<input id="recapPhoto" type="file" accept="image/*" hidden></label>${recapPhoto?`<button class="btn ghost" type="button" data-recap-clear style="justify-content:center">Remove photo</button>`:""}</div>
-  <button class="btn" type="button" data-recap-share style="width:100%;justify-content:center;margin-top:10px">${ICON.share} Share</button>
-  <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(d.nudge)} This line stays here and is not on the image.</p></div>
+  const cover=(img,px,py,w,h)=>{ const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, s=Math.max(w/iw,h/ih); x.drawImage(img,px+(w-iw*s)/2,py+(h-ih*s)/2,iw*s,ih*s) };
+  const wrap=(text,maxW,font,size,maxLines)=>{ for(let s=size;;s=Math.max(44,s-6)){ x.font="800 "+s+"px "+font; const lines=[]; let line=""; for(const w of String(text).split(/\s+/)){ const test=line?line+" "+w:w; if(x.measureText(test).width>maxW&&line){ lines.push(line); line=w } else line=test } lines.push(line); if(lines.length<=maxLines||s<=44) return {lines:lines.slice(0,maxLines),s} } };
+  x.shadowColor="transparent"; x.shadowBlur=0; x.textAlign="left"; x.textBaseline="alphabetic"; x.fillStyle="#0c1730"; x.fillRect(0,0,W,H);
+  const bg=layout==="split"?null:recapPhoto;
+  if(bg){ cover(bg,0,0,W,H); const g=x.createLinearGradient(0,0,0,H);
+    if(layout==="photo"){ g.addColorStop(0,"rgba(8,12,24,.66)"); g.addColorStop(.2,"rgba(8,12,24,.06)"); g.addColorStop(.48,"rgba(8,12,24,.1)"); g.addColorStop(.7,"rgba(8,12,24,.78)"); g.addColorStop(1,"rgba(8,12,24,.96)") }
+    else{ g.addColorStop(0,"rgba(8,12,24,.74)"); g.addColorStop(.5,layout==="big"?"rgba(8,12,24,.5)":"rgba(8,12,24,.58)"); g.addColorStop(1,"rgba(8,12,24,.93)") }
+    x.fillStyle=g; x.fillRect(0,0,W,H) }
+  else{ const g=x.createRadialGradient(W*.88,H*.06,0,W*.88,H*.06,W*.95); g.addColorStop(0,"rgba(226,81,42,.6)"); g.addColorStop(1,"rgba(226,81,42,0)"); x.fillStyle=g; x.fillRect(0,0,W,H) }
+  const shadow=on=>{ x.shadowColor=on&&bg?"rgba(0,0,0,.6)":"transparent"; x.shadowBlur=on&&bg?20:0 };
+  /* brand row */
+  const top=story?150:66; if(recapLogo&&recapLogo.complete&&recapLogo.naturalWidth){ x.save(); rr(M,top,72,72,17); x.clip(); x.drawImage(recapLogo,M,top,72,72); x.restore() }
+  shadow(true); x.fillStyle="#fff"; x.font="800 40px "+F1; x.fillText("SD HEALTH STACK",M+90,top+42); x.font="600 28px "+F2; x.fillStyle="rgba(255,255,255,.82)"; x.fillText("Stack the day.",M+91,top+80);
+  x.font="600 30px "+F2; x.textAlign="right"; x.fillText(fmt(d.wk[0])+" – "+fmt(d.wk[6]),W-M,top+54); x.textAlign="left";
+  const strip=(yTop)=>{ shadow(false); const gap=24, tw=(W-2*M-gap*2)/3, th=150; d.top.forEach(([v,lab],i)=>{ const px=M+i*(tw+gap); rr(px,yTop,tw,th,26); x.fillStyle="rgba(255,255,255,.16)"; x.fill(); x.fillStyle="#fff"; x.font="800 64px "+F1; x.fillText(v,px+24,yTop+78); x.fillStyle="rgba(255,255,255,.78)"; x.font="600 26px "+F2; x.fillText(lab,px+24,yTop+122) }) };
+  /* their own words are optional: the prompt shows in the preview only, never on the shared image */
+  const dim=st.own&&!String(st.head).trim(), hint=final?"":OWN_HINT, headText=dim?(st.pick.big&&layout!=="big"?st.pick.big:hint):st.own&&st.pick.big&&layout!=="big"?st.pick.big+" "+st.head:st.head, subText=dim?hint:st.sub, ink=dim?"rgba(255,255,255,.45)":"#fff";
+  if(layout==="stats"){ const h=wrap(headText,W-2*M,F1,story?104:88,story?4:3), lh=h.s*1.14; let y=story?520:320; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh }
+    shadow(false); const n=d.show.length, cols=story?(n===1?1:2):(n===4?2:Math.min(3,n||1)), gap=28, tw=(W-2*M-gap*(cols-1))/cols, th=story?230:190, rows=Math.ceil(n/cols), topY=H-(story?170:80)-th*rows-gap*(rows-1);
+    d.show.forEach(([v,lab],i)=>{ const px=M+(i%cols)*(tw+gap), py=topY+Math.floor(i/cols)*(th+gap); rr(px,py,tw,th,28); x.fillStyle="rgba(255,255,255,.14)"; x.fill(); x.fillStyle="#fff"; x.font="800 "+(story?96:80)+"px "+F1; x.fillText(v,px+28,py+(story?124:104)); x.fillStyle="rgba(255,255,255,.75)"; x.font="600 "+(story?32:28)+"px "+F2; x.fillText(lab,px+28,py+(story?180:154)) }) }
+  else if(layout==="big"){ const p=st.pick, cy=story?560:290; shadow(true); x.fillStyle="#fff"; let s=story?420:300; x.font="800 "+s+"px "+F1; while(x.measureText(p.big).width>W-2*M&&s>120){ s-=20; x.font="800 "+s+"px "+F1 }
+    const by=cy+s*.72; x.fillText(p.big,M-6,by); x.fillStyle="#ff7a52"; x.fillRect(M,by+34,96,10); x.fillStyle="rgba(255,255,255,.92)"; { let ls=story?52:42; x.font="700 "+ls+"px "+F2; while(x.measureText(subText).width>W-2*M&&ls>28){ ls-=2; x.font="700 "+ls+"px "+F2 } } x.fillText(subText,M,by+(story?112:100));
+    const stripY=H-(story?170:80)-(d.top.length?150:-40), ser=p.series, top2=by+(story?150:128), room=stripY-36-top2;
+    if(ser.length>=3&&room>=100){ shadow(false); const lo=Math.min(...ser), hi=Math.max(...ser), ch=Math.min(room,story?420:200), w=W-2*M, px=i=>M+i*w/(ser.length-1), py=v=>top2+ch-(hi===lo?.5:(v-lo)/(hi-lo))*(ch-24)-12;
+      const area=x.createLinearGradient(0,top2,0,top2+ch); area.addColorStop(0,"rgba(255,122,82,.35)"); area.addColorStop(1,"rgba(255,122,82,0)"); x.beginPath(); x.moveTo(px(0),top2+ch); ser.forEach((v,i)=>x.lineTo(px(i),py(v))); x.lineTo(px(ser.length-1),top2+ch); x.closePath(); x.fillStyle=area; x.fill();
+      x.beginPath(); ser.forEach((v,i)=>i?x.lineTo(px(i),py(v)):x.moveTo(px(i),py(v))); x.strokeStyle="#ff7a52"; x.lineWidth=8; x.lineJoin="round"; x.lineCap="round"; x.stroke();
+      const lx=px(ser.length-1), ly=py(ser[ser.length-1]); x.beginPath(); x.arc(lx,ly,16,0,Math.PI*2); x.fillStyle="#fff"; x.fill(); x.beginPath(); x.arc(lx,ly,8,0,Math.PI*2); x.fillStyle="#ff7a52"; x.fill() }
+    if(d.top.length) strip(stripY) }
+  else if(layout==="photo"){ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?100:84,3), lh=h.s*1.14; let y=stripY-40-(h.lines.length-1)*lh; shadow(true); x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  else{ const stripY=H-(story?170:80)-(d.top.length?150:-40), h=wrap(headText,W-2*M,F1,story?92:72,2), lh=h.s*1.14, headTop=stripY-40-(h.lines.length-1)*lh, py=top+120, ph=headTop-h.s-40-py, gap=16, pw=(W-2*M-gap)/2;
+    [[recapPhoto2,"Before"],[recapPhoto,"After"]].forEach(([img,lab],i)=>{ const px=M+i*(pw+gap); x.save(); rr(px,py,pw,ph,28); x.clip(); if(img) cover(img,px,py,pw,ph); else{ x.fillStyle="rgba(255,255,255,.1)"; x.fillRect(px,py,pw,ph); x.fillStyle="rgba(255,255,255,.55)"; x.font="600 30px "+F2; x.textAlign="center"; x.fillText("Add the "+lab.toLowerCase()+" photo",px+pw/2,py+ph/2); x.textAlign="left" } x.restore();
+      x.font="700 28px "+F2; const lw=x.measureText(lab).width+36; rr(px+18,py+18,lw,50,25); x.fillStyle=i?"#e2512a":"rgba(8,12,24,.72)"; x.fill(); x.fillStyle="#fff"; x.fillText(lab,px+36,py+53) });
+    let y=headTop; x.fillStyle=ink; x.font="800 "+h.s+"px "+F1; for(const l of h.lines){ x.fillText(l,M,y); y+=lh } if(d.top.length) strip(stripY) }
+  shadow(false); return c }
+function paintRecap(){ const c=document.getElementById("recapCanvas"); if(!c||!c.getContext) return;
+  if(!recapLogo&&typeof Image!=="undefined"){ recapLogo=new Image(); recapLogo.onload=()=>paintRecap(); recapLogo.src="./sd-icon-192.png" }
+  try{ drawRecap(c); if(document.fonts&&document.fonts.ready&&!paintRecap.fonts){ paintRecap.fonts=true; document.fonts.ready.then(()=>{ const c2=document.getElementById("recapCanvas"); if(c2) drawRecap(c2) }) } }catch(e){} }
+function vRecap(){ const st=recapState(), split=recapLayout==="split", seg=(attr,cur,opts)=>`<div class="seg" style="grid-template-columns:repeat(${opts.length>3?2:opts.length},1fr);margin:0 0 14px">${opts.map(([v,l])=>`<button type="button" data-${attr}="${v}" aria-pressed="${cur===v}">${l}</button>`).join("")}</div>`;
+  const photoBtn=(id,img,label)=>`<label class="btn ghost" style="justify-content:center;cursor:pointer">${img?"Change "+label:"Add "+label}<input id="${id}" type="file" accept="image/*" hidden></label>`;
+  return header("What's your stack?","Share your week")+`<div class="card"><canvas id="recapCanvas" class="recap-canvas${recapSize==="story"?" story":""}" width="1080" height="${recapSize==="story"?1920:1080}" role="img" aria-label="Preview of the image you will share"></canvas>
+  <h3>1. Pick the highlight</h3><p class="muted sm">Suggested from your week and your month. Tap another if you like it better.</p>
+  <div class="chips" style="margin:10px 0 14px">${st.hs.map((h,i)=>`<button type="button" data-recap-pick="${h.id}" aria-pressed="${h.id===st.pick.id}">${i===0?"★ ":""}${esc(h.label)}</button>`).join("")}</div>
+  ${st.own?`<label class="f" for="recapHead">What are you proud of? (optional)</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off" placeholder="First pull-up. Ran the whole 5K. Down a belt notch.">
+  <label class="f" for="recapBig" style="margin-top:10px">A number to feature (optional)</label><input id="recapBig" maxlength="8" value="${esc(recapOwnBig||"")}" autocomplete="off" placeholder="225, 5K, 1st" style="max-width:10em">
+  <p class="muted xs" style="margin:6px 0 0">With a number, the Big number look puts it front and centre with your words underneath.</p>`:recapLayout==="big"&&st.pick.big!=null?`<label class="f" for="recapSub">Line under the big number</label><input id="recapSub" maxlength="60" value="${esc(st.sub)}" autocomplete="off">`:`<label class="f" for="recapHead">Headline on the image</label><input id="recapHead" maxlength="70" value="${esc(st.head)}" autocomplete="off">`}
+  <h3 style="margin-top:22px">2. Add a photo</h3><p class="muted sm">Posts with a real photo get noticed. A few that work:</p>
+  <div class="chips" style="margin:10px 0 12px">${PHOTO_IDEAS.map((x,i)=>i===0?`<button type="button" data-recap-layout="split">${x}</button>`:`<label for="recapPhoto" role="button">${x}</label>`).join("")}</div>
+  <div class="row">${split?photoBtn("recapPhoto2",recapPhoto2,"before photo")+photoBtn("recapPhoto",recapPhoto,"after photo"):photoBtn("recapPhoto",recapPhoto,"a photo")}</div>
+  ${recapPhoto||recapPhoto2?`<button class="btn small ghost" type="button" data-recap-clear style="margin-top:10px">Remove photo${recapPhoto&&recapPhoto2?"s":""}</button>`:""}
+  <p class="muted xs" style="margin:10px 0 0">Photos stay on your phone. Nothing is uploaded until you share the finished image yourself.</p>
+  <h3 style="margin-top:22px">3. Choose the look</h3>
+  ${seg("recap-layout",recapLayout,[["big","Big number"],["stats","All the numbers"],["photo","Photo first"],["split","Before / after"]])}${seg("recap-size",recapSize,[["square","Square post"],["story","Story"]])}
+  <h3 style="margin-top:8px">4. Caption</h3><textarea id="recapCap" rows="4" maxlength="400">${esc(st.cap)}</textarea>
+  <div class="row" style="margin-top:12px"><button class="btn" type="button" data-recap-share style="justify-content:center">${ICON.share} Share</button><button class="btn ghost" type="button" data-recap-copy style="justify-content:center">Copy caption</button></div>
+  <p class="muted xs" style="margin:10px 0 0">Instagram does not take a caption from the share sheet. Copy it first, then paste it in.</p>
+  ${seg("recap-week",String(recapOffset),[["0","This week"],["1","Last week"]]).replace('margin:0 0 14px','margin:18px 0 0')}
+  <p class="muted sm" style="margin:14px 0 0"><b>For next week:</b> ${esc(st.d.nudge)} This line stays here and is not on the image.</p></div>
   <button class="btn small ghost" type="button" data-go="home">Back to Home</button>` }
-async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; drawRecap(c);
+async function shareRecap(){ const c=document.getElementById("recapCanvas"); if(!c) return; const st0=recapState(); drawRecap(c,true); const text=st0.cap;
   c.toBlob(async blob=>{ if(!blob) return toast("Could not make the image"); const file=new File([blob],"sd-health-stack-week.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text:"My week on SD Health Stack. What's your stack?"}) }catch(e){} }
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"What's your stack?",text}) }catch(e){} }
     else{ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="sd-health-stack-week.png"; a.click(); toast("Image saved") } },"image/png") }
-document.addEventListener("change",e=>{ if(!e.target||e.target.id!=="recapPhoto") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
+document.addEventListener("change",e=>{ const id=e.target&&e.target.id; if(id!=="recapPhoto"&&id!=="recapPhoto2") return; const f=e.target.files&&e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ if(id==="recapPhoto2") recapPhoto2=img; else recapPhoto=img; render() }; img.onerror=()=>toast("That photo would not open"); img.src=URL.createObjectURL(f) });
+document.addEventListener("input",e=>{ const id=e.target&&e.target.id; if(id==="recapHead"||id==="recapSub"||id==="recapBig"){ if(id==="recapSub") recapSub=e.target.value; else if(id==="recapBig") recapOwnBig=e.target.value; else recapHead=e.target.value; const c=document.getElementById("recapCanvas"); if(c) try{ drawRecap(c) }catch(err){} } else if(id==="recapCap") recapCap=e.target.value });
+document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-recap-pick],[data-recap-layout],[data-recap-size],[data-recap-copy]"); if(!b) return; const ds=b.dataset;
+  if(ds.recapPick!==undefined){ recapPick=ds.recapPick; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapLayout!==undefined){ recapLayout=ds.recapLayout; render(); return }
+  if(ds.recapSize!==undefined){ recapSize=ds.recapSize; render(); return }
+  if(ds.recapCopy!==undefined){ try{ await navigator.clipboard.writeText(recapState().cap); toast("Caption copied") }catch(err){ toast("Copy is not available here") } } });
 document.addEventListener("click",async e=>{ const b=e.target.closest&&e.target.closest("[data-deck-skip],[data-lib],[data-lib-go],[data-recap-week],[data-recap-clear],[data-recap-share],[data-grocery-share],[data-grocery-copy],[data-grocery-starter]"); if(!b) return; const ds=b.dataset;
   if(ds.deckSkip!==undefined){ deckSkip(ds.deckSkip,1); return }
   if(ds.lib!==undefined){ libMonth=libMonth===+ds.lib?0:+ds.lib; render(); return }
   if(ds.libGo!==undefined){ libMonth=+ds.libGo; lastTab=null; dailyOpen=false; tab="lessons"; location.hash="lessons"; render(); window.scrollTo(0,0); return }
-  if(ds.recapWeek!==undefined){ recapOffset=+ds.recapWeek; render(); return }
-  if(ds.recapClear!==undefined){ recapPhoto=null; render(); return }
+  if(ds.recapWeek!==undefined){ recapOffset=+ds.recapWeek; recapPick=null; recapHead=null; recapSub=null; recapCap=null; render(); return }
+  if(ds.recapClear!==undefined){ recapPhoto=null; recapPhoto2=null; render(); return }
   if(ds.recapShare!==undefined){ shareRecap(); return }
   if(ds.groceryStarter!==undefined){ const n=groceryStarter(); fsave(); render(); toast(n?n+" starter items added":"The starter list is already in"); return }
   if(ds.groceryShare!==undefined||ds.groceryCopy!==undefined){ const share=ds.groceryShare!==undefined, text=groceryText(share); if(!text) return toast("Nothing left on the list");
@@ -3299,9 +3483,14 @@ document.addEventListener('change',async e=>{
 document.addEventListener("submit",async e=>{
   if(e.defaultPrevented)return;
   e.preventDefault(); const f=e.target, fd=new FormData(f), d=Object.fromEntries(fd);
-  if(f.id==="fOnboard"){ const prev=S.profile||{}; S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,goal:d.goal,why:d.why.trim(),layout:Object.fromEntries(WEEKDAYS.map(([k])=>[k,d["layout_"+k]||DEFAULT_LAYOUT[k]])),start:prev.start||ymd(today())};
+  if(f.id==="fOnboard"){ const prev=S.profile||{}; const first=!prev.name, start=prev.start||ymd(today()), was=baselineOf(prev);
+    /* the starting point is stamped once, on the first save; later saves can correct a number but never move the date */
+    const baseline={at:first?new Date().toISOString():was.at||null,d:was.d||start,weightLb:d.weightLb,bf:d.bf||"",mm:d.mm||"",waist:d.waist||"",grip:d.grip||"",rhr:d.rhr||"",sys:d.sys||"",dia:d.dia||""};
+    S.profile={...prev,name:d.name.trim(),age:+d.age,sex:d.sex,heightIn:(+d.ft)*12+(+d.inch),weightLb:d.weightLb,bf:d.bf,mm:d.mm,modality:d.modality,why:d.why.trim(),layout:prev.layout||{...DEFAULT_LAYOUT},baseline,start};
     if(!S.weigh.length) S.weigh.push({id:Date.now(),d:S.profile.start,wt:d.weightLb,bf:d.bf,mm:d.mm});
-    tab="home"; location.hash=tab; save(); render(); toast(prev.name?"Profile saved":"Baseline set. Let's go."); return }
+    if(first){ if(d.waist) S.extras.push({id:fusionId(),d:start,kind:"Waist (in)",v:String(d.waist),note:"Starting point"}); if(d.grip) S.extras.push({id:fusionId(),d:start,kind:"Grip strength (lb, best hand)",v:String(d.grip),note:"Starting point"});
+      if(d.rhr) S.extras.push({id:fusionId(),d:start,kind:"Resting heart rate (bpm)",v:String(d.rhr),note:"Starting point"}); if(d.sys&&d.dia) S.extras.push({id:fusionId(),d:start,kind:"Blood pressure",v:d.sys+"/"+d.dia,note:"Starting point"}) }
+    tab="home"; location.hash=tab; save(); render(); toast(prev.name?"Profile saved":"Starting point set. Let's go."); return }
   if(f.id==="fWeigh"){ let photo=null; const file=fd.get("photo"); if(file&&file.size) photo=await shrinkImage(file); if(!validLogDate(d.d))return toast("Choose a valid measurement date"); S.weigh=S.weigh.filter(x=>x.d!==d.d||x.source!=="manual"); S.weigh.push({id:Date.now(),d:d.d,wt:d.wt,bf:d.bf,mm:d.mm,photo,source:"manual"}); toast("Weigh-in logged") }
   if(f.id==="fTest"){ let v=d.mod==="bike"?+d.v:parseTime(d.v); if(v==null||isNaN(v)){ toast("Check the result format"); return } S.tests.push({id:Date.now(),d:d.d,mod:d.mod,v,watch:d.watch,note:d.note}); toast("Test logged") }
   if(f.id==="fPlan"){ const mk=f.dataset.mk, day=f.dataset.day; S.plans[mk]=S.plans[mk]||{}; S.plans[mk][day]={text:d.text.trim(),link:d.link.trim()}; toast("Plan saved for the month") }
@@ -3351,7 +3540,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* SD Health Stack PWA update manager. App data stays in browser storage; never clear storage to update. */
 (function(){
- const VERSION='9.15.3';
+ const VERSION='9.16.0';
  let pending=false;
   async function activateUpdate(){
     const status=document.getElementById('momentum-update-status');

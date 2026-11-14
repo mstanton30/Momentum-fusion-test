@@ -627,7 +627,8 @@ function pointBreakdown(k){
   const supplements=S.supps[k]||{};
   for(const item of SUPPS)if(supplements[item.k])benefits+=item.pts;
   for(const key of ['heat','cold','medit','roll','light']){
-    if(S[key].some(entry=>entry.d===k))benefits+=PTS[key]; // once a day, however many sessions are logged
+    const day=S[key].filter(entry=>entry.d===k); // each scores once a day, however many sessions are logged; sauna and hot soak score separately
+    if(key==='heat')benefits+=((day.some(e=>e.kind!=='soak')?1:0)+(day.some(e=>e.kind==='soak')?1:0))*PTS.heat; else if(day.length)benefits+=PTS[key];
   }
   if((S.lessons||{})[k])benefits+=PTS.lesson; // the daily lesson scores with the habit/benefit points
   const hours=sleepHours(k);
@@ -1160,7 +1161,7 @@ function vPerks(){
   const recent=l=>[...l].sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
   const tbl=(l,k)=>recent(l).length?`<table><tr><th>Date</th><th class="r">Min</th><th></th></tr>${recent(l).map(x=>`<tr><td>${fmt(x.d)}</td><td class="r">${esc(x.min)}</td><td class="r"><button class="del" data-del="${k}" data-id="${x.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:"";
   return `
-  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat}; the rest are +1. Each scores once a day, and you can log up to two sessions.</p>
+  <p class="muted">The add-ons that optimize everything else. Sauna, hot tub, and cold are +${PTS.heat}; the rest are +1. Each one scores once a day, and you can log up to two sessions of each.</p>
   <div class="card"><div class="row" style="justify-content:space-between"><h3>Sauna</h3><span class="pill ${hm>=60?"ok":""}">${hm} / 60 min this week</span></div>
   <div class="meter"><i style="width:${Math.min(100,hm/60*100)}%"></i></div>
   <p style="margin-top:10px"><b>Target:</b> 3 sessions of ~20 minutes a week, 170–200°F.</p>
@@ -3556,7 +3557,7 @@ document.addEventListener("click",e=>{
   if(ds.supp){ const k=ds.k; S.supps[k]=S.supps[k]||{}; const on=!S.supps[k][ds.supp]; S.supps[k][ds.supp]=on; if(ds.supp==="drink"){ for(const x of IN_DRINK) S.supps[k][x]=on } save(); render(); if(ds.supp==="drink"&&on) toast("Drink logged: +"+DRINK_PROTEIN+" g protein, creatine and collagen ticked"); return }
   if(ds.vitd){ S.profile.vitd=!S.profile.vitd; save(); render(); return }
   if(ds.planReset){ const f=$("#fPlan"); const mk=f.dataset.mk, day=f.dataset.day; if(S.plans[mk]) delete S.plans[mk][day]; save(); render(); toast("Back to the default plan"); return }
-  if(ds.log){ const kd=ymd(today()), soak=ds.log==="heat"&&ds.kind==="soak", same=S[ds.log].filter(x=>x.d===kd&&(ds.log!=="heat"||(x.kind==="soak")===soak)).length, scored=S[ds.log].some(x=>x.d===kd);
+  if(ds.log){ const kd=ymd(today()), soak=ds.log==="heat"&&ds.kind==="soak", same=S[ds.log].filter(x=>x.d===kd&&(ds.log!=="heat"||(x.kind==="soak")===soak)).length, scored=same>0;
     if(same>=EXTRA_MAX){ toast("Already logged "+(EXTRA_MAX===2?"twice":EXTRA_MAX+" times")+" today"); return }
     S[ds.log].push({id:Date.now(),d:kd,min:+ds.min,...(soak?{kind:"soak"}:{})}); save(); render(); toast("+"+ds.min+" min"+(scored?" · points count once a day":" · +"+PTS[ds.log]+" pt"+(PTS[ds.log]>1?"s":""))); return }
   if(ds.del){ S[ds.del]=S[ds.del].filter(x=>String(x.id)!==ds.id); save(); render(); return }
